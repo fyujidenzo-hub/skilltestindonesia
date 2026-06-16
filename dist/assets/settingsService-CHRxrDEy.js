@@ -1,0 +1,1 @@
+import{d as n,f as i,e as s,s as o}from"./index-CQjPrm8l.js";const e="settings",a="account";async function c(){if(!n)return null;const t=await i(s(n,e,a));return t.exists()?t.data():null}async function u(t){if(!n)throw new Error("Firebase not initialized");await o(s(n,e,a),t,{merge:!0})}export{c as getSettings,u as updateSettings};

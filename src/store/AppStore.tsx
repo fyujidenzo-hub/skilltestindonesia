@@ -1,12 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import { firebaseReady } from "../firebase";
 import { loadStoredState, saveStoredState } from "../services/appStateRepository";
-import * as adminsService from "../services/adminsService";
-import * as membersService from "../services/membersService";
-import * as productsService from "../services/productsService";
-import * as ordersService from "../services/ordersService";
-import * as transactionsService from "../services/transactionsService";
-import * as settingsService from "../services/settingsService";
 import type { AppState, BankPlacement, Member, Product, Transaction } from "../types";
 
 type Action =
@@ -165,72 +159,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready) void saveStoredState(state);
   }, [ready, state]);
-
-  // Sync state changes to Firestore collections
-  useEffect(() => {
-    if (!ready || !firebaseReady) return;
-
-    const syncToFirebase = async () => {
-      try {
-        // Sync admins
-        for (const admin of state.admins) {
-          const existing = await adminsService.getAdminById(admin.id);
-          if (!existing) {
-            await adminsService.createAdmin(admin);
-          } else {
-            await adminsService.updateAdmin(admin.id, admin);
-          }
-        }
-
-        // Sync members
-        for (const member of state.members) {
-          const existing = await membersService.getMemberById(member.id);
-          if (!existing) {
-            await membersService.createMember(member);
-          } else {
-            await membersService.updateMember(member.id, member);
-          }
-        }
-
-        // Sync products
-        for (const product of state.products) {
-          const existing = await productsService.getProductById(product.id);
-          if (!existing) {
-            await productsService.createProduct(product);
-          } else {
-            await productsService.updateProduct(product.id, product);
-          }
-        }
-
-        // Sync orders
-        for (const order of state.orders) {
-          const existing = await ordersService.getOrderById(order.id);
-          if (!existing) {
-            await ordersService.createOrder(order);
-          } else {
-            await ordersService.updateOrder(order.id, order);
-          }
-        }
-
-        // Sync transactions
-        for (const transaction of state.transactions) {
-          const existing = await transactionsService.getTransactionById(transaction.id);
-          if (!existing) {
-            await transactionsService.createTransaction(transaction);
-          } else {
-            await transactionsService.updateTransaction(transaction.id, transaction);
-          }
-        }
-
-        // Sync settings
-        await settingsService.updateSettings(state.account);
-      } catch (error) {
-        console.error("Error syncing to Firebase:", error);
-      }
-    };
-
-    syncToFirebase();
-  }, [state, ready]);
 
   const value = useMemo(
     () => ({
