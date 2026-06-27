@@ -27,6 +27,7 @@ if (!gmailEmail || !gmailPassword) {
 const midtransServerKey = process.env.MIDTRANS_SERVER_KEY;
 const midtransClientKey = process.env.MIDTRANS_CLIENT_KEY;
 const midtransMerchantId = process.env.MIDTRANS_MERCHANT_ID;
+const paymentMode = process.env.PAYMENT_MODE || "live"; // "test" or "live"
 
 if (!midtransServerKey || !midtransClientKey || !midtransMerchantId) {
   console.warn("⚠️  Warning: Midtrans credentials not found in .env. Payment features disabled.");
@@ -84,10 +85,6 @@ app.post("/api/send-email", async (req, res) => {
 
 app.post("/api/payment/create-transaction", async (req, res) => {
   try {
-    if (!midtransServerKey) {
-      return res.status(500).json({ error: "Midtrans not configured" });
-    }
-
     const { member, amount, type } = req.body;
 
     if (!member || !amount || !type) {
@@ -95,6 +92,23 @@ app.post("/api/payment/create-transaction", async (req, res) => {
     }
 
     const orderId = `${type}_${member}_${Date.now()}`;
+
+    // TEST MODE - return mock token
+    if (paymentMode === "test") {
+      console.log(`🧪 TEST MODE: Payment token created for ${member} - Rp ${amount.toLocaleString("id-ID")}`);
+      return res.json({
+        success: true,
+        token: `test_token_${orderId}`,
+        redirect_url: `https://app.sandbox.midtrans.com/snap/v2/${orderId}`,
+        orderId: orderId,
+      });
+    }
+
+    // LIVE MODE - use real Midtrans
+    if (!midtransServerKey) {
+      return res.status(500).json({ error: "Midtrans not configured" });
+    }
+
     const parameter = {
       transaction_details: {
         order_id: orderId,
@@ -205,7 +219,5 @@ const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`✓ Server running on port ${PORT}`);
-  if (midtransServerKey) {
-    console.log(`✓ Midtrans payment gateway ready (Sandbox mode)`);
-  }
+  console.log(`✓ Payment mode: ${paymentMode === "test" ? "🧪 TEST (mock)" : "💳 LIVE (Midtrans)"}`);
 });
