@@ -118,7 +118,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
-          {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} />}
+          {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
           {activeTab === "Account" && <AccountPanel account={state.account} />}

@@ -20,9 +20,12 @@ type Action =
   | { type: "createTransaction"; payload: Pick<Transaction, "member" | "type" | "amount"> }
   | { type: "addTransaction"; payload: Transaction }
   | { type: "updateTransaction"; payload: { id: string; status: "approved" | "rejected" } }
-  | { type: "createOrder"; payload: { member: string; productId: string } }
+  | { type: "updateMember"; payload: Member }
+  | { type: "createOrder"; payload: { member: string; productId?: string } }
   | { type: "addOrder"; payload: Order }
+  | { type: "updateOrder"; payload: Order }
   | { type: "completeOrder"; payload: { orderId: string } }
+  | { type: "completeOrderWithMember"; payload: { order: Order; member: Member } }
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
   | { type: "addBank"; payload: Omit<BankPlacement, "id"> & { id?: string } }
   | { type: "addAdmin"; payload: StaffAdmin }
@@ -127,28 +130,30 @@ function reducer(state: AppState, action: Action): AppState {
   }
 
   if (action.type === "createOrder") {
-    const product = state.products.find((item) => item.id === action.payload.productId);
     const member = state.members.find((item) => item.username === action.payload.member);
-    if (!product || !member || product.quantity <= 0) return state;
+    const product = action.payload.productId ? state.products.find((item) => item.id === action.payload.productId) : undefined;
+    if (!member) return state;
+
+    const order: Order = {
+      id: nextId("ord"),
+      referenceNumber: `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+      memberId: member.id,
+      member: member.username,
+      admin: member.referredBy,
+      productCode: product?.code,
+      productName: product?.name,
+      value: product?.price ?? 0,
+      commission: product?.commission ?? 0,
+      requiredBalance: product?.requiredBalance ?? 0,
+      status: product ? "assigned" : "waiting",
+      createdAt: nowStamp(),
+      assignedAt: product ? nowStamp() : undefined,
+    };
 
     return {
       ...state,
-      products: state.products.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity - 1 } : item)),
-      members: state.members.map((item) => (item.id === member.id ? { ...item, totalOrders: item.totalOrders + 1 } : item)),
-      orders: [
-        {
-          id: nextId("ord"),
-          member: member.username,
-          admin: member.referredBy,
-          productCode: product.code,
-          productName: product.name,
-          value: product.price,
-          commission: product.commission,
-          status: "assigned",
-          createdAt: nowStamp(),
-        },
-        ...state.orders,
-      ],
+      products: product ? state.products.map((item) => (item.id === product.id ? { ...item, quantity: Math.max(0, item.quantity - 1) } : item)) : state.products,
+      orders: [order, ...state.orders],
     };
   }
 
@@ -171,11 +176,38 @@ function reducer(state: AppState, action: Action): AppState {
       ...state,
       orders: [order, ...state.orders],
       products: state.products.map((product) =>
-        product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - 1) } : product,
+        order.status === "assigned" && product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - 1) } : product,
       ),
-      members: state.members.map((member) =>
-        member.username === order.member ? { ...member, totalOrders: member.totalOrders + 1 } : member,
-      ),
+    };
+  }
+
+  if (action.type === "updateOrder") {
+    const order = action.payload;
+    const previousOrder = state.orders.find((item) => item.id === order.id);
+    const newlyAssigned = previousOrder?.status === "waiting" && order.status === "assigned";
+    return {
+      ...state,
+      orders: state.orders.map((item) => (item.id === order.id ? order : item)),
+      products: newlyAssigned && order.productCode
+        ? state.products.map((product) =>
+            product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - 1) } : product,
+          )
+        : state.products,
+    };
+  }
+
+  if (action.type === "completeOrderWithMember") {
+    return {
+      ...state,
+      orders: state.orders.map((item) => (item.id === action.payload.order.id ? action.payload.order : item)),
+      members: state.members.map((member) => (member.id === action.payload.member.id ? action.payload.member : member)),
+    };
+  }
+
+  if (action.type === "updateMember") {
+    return {
+      ...state,
+      members: state.members.map((member) => (member.id === action.payload.id ? action.payload : member)),
     };
   }
 

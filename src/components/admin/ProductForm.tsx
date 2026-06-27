@@ -24,6 +24,7 @@ export default function ProductForm() {
     name: "",
     price: 0,
     commission: 0,
+    requiredBalance: 0,
     quantity: 1,
     category: "Electronics",
     image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=600&q=80",
@@ -59,6 +60,7 @@ export default function ProductForm() {
             name: "",
             price: 0,
             commission: 0,
+            requiredBalance: 0,
             quantity: 1,
             category: "Electronics",
             image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=600&q=80",
@@ -142,6 +144,17 @@ export default function ProductForm() {
             onChange={(event) => setForm({ ...form, quantity: Number(event.target.value) || 1 })}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-bold text-slate-600">Required work balance (IDR)</label>
+        <input
+          className={inputClass}
+          type="number"
+          placeholder="0"
+          value={form.requiredBalance || ""}
+          onChange={(event) => setForm({ ...form, requiredBalance: Number(event.target.value) || 0 })}
+        />
       </div>
 
       <div>

@@ -2,13 +2,21 @@ import { CheckCircle2, Eye, KeyRound, LockKeyhole, XCircle } from "lucide-react"
 import { useState } from "react";
 import { Panel } from "../common";
 import { statusStyles } from "../../constants";
-import { updateTransaction as updateFirebaseTransaction } from "../../services/transactionsService";
+import { approveTransactionRequest } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
-import type { Transaction } from "../../types";
+import type { Member, Transaction } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
 import SecurityItem from "./SecurityItem";
 
-export default function FinanceTable({ transactions }: { transactions: Transaction[] }) {
+export default function FinanceTable({
+  transactions,
+  members,
+  canApprove,
+}: {
+  transactions: Transaction[];
+  members: Member[];
+  canApprove: boolean;
+}) {
   const { dispatch } = useAppStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"pending" | "past">("pending");
@@ -20,11 +28,19 @@ export default function FinanceTable({ transactions }: { transactions: Transacti
   const pendingTopUps = pendingTransactions.filter((transaction) => transaction.type === "topup").length;
   const pendingWithdrawals = pendingTransactions.filter((transaction) => transaction.type === "withdrawal").length;
 
-  const updateStatus = async (id: string, status: "approved" | "rejected") => {
-    setUpdatingId(id);
+  const updateStatus = async (transactionItem: Transaction, status: "approved" | "rejected") => {
+    if (!canApprove) return;
+    const member = members.find((item) => item.username === transactionItem.member);
+    if (!member) {
+      console.error("Unable to find member for transaction:", transactionItem);
+      return;
+    }
+
+    setUpdatingId(transactionItem.id);
     try {
-      await updateFirebaseTransaction(id, { status });
-      dispatch({ type: "updateTransaction", payload: { id, status } });
+      const updatedMember = await approveTransactionRequest(transactionItem, member, status);
+      dispatch({ type: "updateTransaction", payload: { id: transactionItem.id, status } });
+      dispatch({ type: "updateMember", payload: updatedMember });
     } catch (error) {
       console.error("Failed to update transaction status:", error);
     } finally {
@@ -57,6 +73,7 @@ export default function FinanceTable({ transactions }: { transactions: Transacti
             emptyText={activeView === "pending" ? "No pending top-up requests in this admin scope." : "No past top-up transactions in this admin scope."}
             transactions={topUps}
             updatingId={updatingId}
+            canApprove={canApprove}
             onUpdateStatus={updateStatus}
           />
           <ApprovalColumn
@@ -64,6 +81,7 @@ export default function FinanceTable({ transactions }: { transactions: Transacti
             emptyText={activeView === "pending" ? "No pending withdrawal requests in this admin scope." : "No past withdrawal transactions in this admin scope."}
             transactions={withdrawals}
             updatingId={updatingId}
+            canApprove={canApprove}
             onUpdateStatus={updateStatus}
           />
         </div>
@@ -98,13 +116,15 @@ function ApprovalColumn({
   emptyText,
   transactions,
   updatingId,
+  canApprove,
   onUpdateStatus,
 }: {
   title: string;
   emptyText: string;
   transactions: Transaction[];
   updatingId: string | null;
-  onUpdateStatus: (id: string, status: "approved" | "rejected") => void;
+  canApprove: boolean;
+  onUpdateStatus: (transaction: Transaction, status: "approved" | "rejected") => void;
 }) {
   return (
     <section>
@@ -117,6 +137,9 @@ function ApprovalColumn({
                 <div>
                   <p className="font-bold">{transaction.member}</p>
                   <p className="text-sm text-slate-500">{transaction.admin} · {shortDate(transaction.createdAt)}</p>
+                  {transaction.requestId && <p className="text-xs font-bold text-forest">{transaction.requestId}</p>}
+                  {transaction.senderName && <p className="text-xs text-slate-500">Sender: {transaction.senderName}</p>}
+                  {transaction.proofName && <p className="text-xs text-slate-500">Proof: {transaction.proofName}</p>}
                 </div>
                 <div className="text-left sm:text-right">
                   <p className={`text-sm font-bold capitalize ${transaction.type === "topup" ? "text-emerald-700" : "text-coral"}`}>{transaction.type}</p>
@@ -125,16 +148,17 @@ function ApprovalColumn({
               </div>
               <div className="mt-3 flex items-center justify-between gap-3">
                 <span className={`rounded px-2 py-1 text-xs font-bold capitalize ${statusStyles[transaction.status]}`}>{transaction.status}</span>
-                {transaction.status === "pending" && (
+                {transaction.status === "pending" && canApprove && (
                   <div className="flex gap-2">
-                    <button disabled={updatingId === transaction.id} className="inline-flex items-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" onClick={() => onUpdateStatus(transaction.id, "approved")}>
+                    <button disabled={updatingId === transaction.id} className="inline-flex items-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" onClick={() => onUpdateStatus(transaction, "approved")}>
                       <CheckCircle2 size={15} /> Approve
                     </button>
-                    <button disabled={updatingId === transaction.id} className="inline-flex items-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" onClick={() => onUpdateStatus(transaction.id, "rejected")}>
+                    <button disabled={updatingId === transaction.id} className="inline-flex items-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" onClick={() => onUpdateStatus(transaction, "rejected")}>
                       <XCircle size={15} /> Cancel
                     </button>
                   </div>
                 )}
+                {transaction.status === "pending" && !canApprove && <span className="text-xs font-bold text-slate-400">Super Admin approval required</span>}
               </div>
             </div>
           ))

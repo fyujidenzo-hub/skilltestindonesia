@@ -2,7 +2,7 @@ import { Filter, Plus } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { statusStyles } from "../../constants";
-import { createOrder } from "../../services/ordersService";
+import { assignOrderProduct, createOrder } from "../../services/ordersService";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
@@ -35,17 +35,24 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
     setMessage("Assigning task...");
 
     try {
-      const order = await createOrder({
-        member: member.username,
-        admin: member.referredBy,
-        productCode: product.code,
-        productName: product.name,
-        value: product.price,
-        commission: product.commission,
-        status: "assigned",
-        createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
-      });
-      dispatch({ type: "addOrder", payload: order });
+      const waitingOrder = orders.find((order) => order.member === member.username && order.status === "waiting");
+      if (waitingOrder) {
+        const order = await assignOrderProduct(waitingOrder, product);
+        dispatch({ type: "updateOrder", payload: order });
+      } else {
+        const waitingTask = await createOrder({
+          memberId: member.id,
+          member: member.username,
+          admin: member.referredBy,
+          value: 0,
+          commission: 0,
+          requiredBalance: 0,
+          status: "waiting",
+          createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+        });
+        const order = await assignOrderProduct(waitingTask, product);
+        dispatch({ type: "addOrder", payload: order });
+      }
       setMemberId("");
       setProductId("");
       setShowAssignForm(false);
@@ -116,8 +123,8 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             </div>
             <div>
               <p className="text-xs uppercase text-slate-500">Product</p>
-              <p className="font-semibold">{order.productName}</p>
-              <p className="text-xs text-slate-500">{order.productCode}</p>
+              <p className="font-semibold">{order.productName ?? "Waiting for assignment"}</p>
+              <p className="text-xs text-slate-500">{order.productCode ?? order.referenceNumber ?? order.id}</p>
             </div>
             <div>
               <p className="font-bold">{formatRupiah(order.value)}</p>
@@ -125,11 +132,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             </div>
             <div className="grid gap-2">
               <span className={`w-fit rounded px-3 py-1 text-xs font-bold capitalize ${statusStyles[order.status]}`}>{order.status}</span>
-              {order.status === "assigned" && (
-                <button className="rounded bg-forest px-3 py-2 text-xs font-bold text-white" onClick={() => dispatch({ type: "completeOrder", payload: { orderId: order.id } })}>
-                  Complete
-                </button>
-              )}
+              {order.status === "assigned" && <span className="text-xs font-bold text-slate-500">Waiting for worker submission</span>}
             </div>
           </article>
         )) : (

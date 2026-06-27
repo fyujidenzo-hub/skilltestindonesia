@@ -23,6 +23,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                 <p><span className="block text-xs text-slate-500">Commission</span>{formatRupiah(product.commission)}</p>
                 <p><span className="block text-xs text-slate-500">Quantity</span>{product.quantity}</p>
                 <p><span className="block text-xs text-slate-500">Category</span>{product.category}</p>
+                <p><span className="block text-xs text-slate-500">Required balance</span>{formatRupiah(product.requiredBalance ?? 0)}</p>
               </div>
             </div>
           </article>

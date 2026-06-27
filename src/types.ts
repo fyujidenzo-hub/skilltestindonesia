@@ -40,6 +40,7 @@ export interface Product {
   name: string;
   price: number;
   commission: number;
+  requiredBalance?: number;
   quantity: number;
   category: string;
   image: string;
@@ -56,24 +57,33 @@ export interface BankPlacement {
 
 export interface Transaction {
   id: string;
+  requestId?: string;
   member: string;
   admin: string;
   type: "topup" | "withdrawal";
   amount: number;
   status: TransactionStatus;
   createdAt: string;
+  senderName?: string;
+  proofName?: string;
+  proofType?: string;
 }
 
 export interface Order {
   id: string;
+  referenceNumber?: string;
+  memberId?: string;
   member: string;
   admin?: string;
-  productCode: string;
-  productName: string;
+  productCode?: string;
+  productName?: string;
   value: number;
   commission: number;
-  status: "assigned" | "completed" | "frozen";
+  requiredBalance?: number;
+  status: "waiting" | "assigned" | "completed" | "frozen";
   createdAt: string;
+  assignedAt?: string;
+  completedAt?: string;
 }
 
 export interface AppState {
