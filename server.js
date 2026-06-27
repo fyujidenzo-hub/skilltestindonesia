@@ -2,10 +2,16 @@ import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
+
+// Required for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Gmail SMTP configuration
 const gmailEmail = process.env.GMAIL_EMAIL;
@@ -13,9 +19,6 @@ const gmailPassword = process.env.GMAIL_APP_PASSWORD;
 
 if (!gmailEmail || !gmailPassword) {
   console.error("❌ Error: GMAIL_EMAIL or GMAIL_APP_PASSWORD not found in .env");
-  console.error("Add these to .env:");
-  console.error("GMAIL_EMAIL=your_email@gmail.com");
-  console.error("GMAIL_APP_PASSWORD=your_16_char_app_password");
   process.exit(1);
 }
 
@@ -31,6 +34,8 @@ const transporter = nodemailer.createTransport({
 app.use(express.json());
 app.use(cors());
 
+// ==================== EMAIL API ====================
+
 app.post("/api/send-email", async (req, res) => {
   try {
     const { to, subject, html } = req.body;
@@ -39,28 +44,37 @@ app.post("/api/send-email", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    console.log(`📧 Sending email to: ${to}`);
-    
-    const mailOptions = {
+    const info = await transporter.sendMail({
       from: gmailEmail,
-      to: to,
-      subject: subject,
-      html: html,
-    };
+      to,
+      subject,
+      html,
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log(`✓ Email sent successfully. ID: ${info.messageId}`);
-    res.json({ success: true, id: info.messageId });
+    res.json({
+      success: true,
+      id: info.messageId,
+    });
   } catch (error) {
-    console.error("❌ Email sending error:", error.message);
-    res.status(500).json({ error: error.message || "Failed to send email" });
+    console.error(error);
+    res.status(500).json({
+      error: error.message || "Failed to send email",
+    });
   }
 });
 
+// ==================== SERVE REACT ====================
+
+app.use(express.static(path.join(__dirname, "dist")));
+
+app.get("/{*any}", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
+
+// ==================== START SERVER ====================
+
 const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
-  console.log(`✓ Email server running on http://localhost:${PORT}`);
-  console.log(`✓ Gmail configured: ${gmailEmail}`);
-  console.log(`✓ Ready to send emails!`);
+  console.log(`✓ Server running on port ${PORT}`);
 });
