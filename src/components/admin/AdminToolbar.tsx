@@ -2,6 +2,8 @@ import { Search } from "lucide-react";
 import { Select } from "../common";
 import type { StaffAdmin } from "../../types";
 
+const publicSiteUrl = "https://tokopediakaririndonesia.onrender.com";
+
 interface AdminToolbarProps {
   admins: StaffAdmin[];
   registrationCode: string;
@@ -19,7 +21,7 @@ export default function AdminToolbar({ admins, registrationCode, adminCode, sele
         <p className="text-sm text-slate-500">Admin code: <span className="font-bold text-slate-700">{adminCode || "-"}</span></p>
         <p className="text-sm text-slate-500">Invitation registration link</p>
         {registrationCode ? (
-          <p className="break-all text-lg font-bold text-forest">http://127.0.0.1:5173/register?code={registrationCode}</p>
+          <p className="break-all text-lg font-bold text-forest">{publicSiteUrl}/register?code={registrationCode}</p>
         ) : (
           <p className="text-sm font-semibold text-coral">No Firebase admin invitation code available.</p>
         )}

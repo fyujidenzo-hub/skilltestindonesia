@@ -1,3 +1,4 @@
+import { CheckCircle2, Database } from "lucide-react";
 import { adminTabIcon, type AdminTab } from "../../constants";
 import { firebaseReady } from "../../firebase";
 
@@ -11,56 +12,46 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange }: AdminSidebarProps) {
   return (
     <aside className="h-fit border-b border-slate-200 pb-4 lg:sticky lg:top-20 lg:border-b-0">
-<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 p-5 text-white shadow-xl">
-  {/* Background Glow */}
-  <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10 blur-2xl"></div>
-  <div className="absolute -left-6 -bottom-6 h-24 w-24 rounded-full bg-white/10 blur-xl"></div>
+      <div className="mb-4 overflow-hidden rounded bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-panel">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">System Status</p>
+            <h3 className="mt-3 text-xl font-black leading-tight">
+              {firebaseReady ? "Connected & Ready" : "Offline Mode"}
+            </h3>
+          </div>
+          <span
+            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
+              firebaseReady ? "border-emerald-200/50 bg-white/15 text-emerald-100" : "border-amber-200/50 bg-white/15 text-amber-100"
+            }`}
+          >
+            <CheckCircle2 size={20} />
+          </span>
+        </div>
 
-  <div className="relative flex items-center justify-between">
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-100">
-        System Status
-      </p>
+        <p className="mt-3 text-sm leading-6 text-emerald-50">
+          {firebaseReady
+            ? "All services are online. Your team can manage customer records."
+            : "Running in local mode. Data will be stored locally until the connection is restored."}
+        </p>
 
-      <h3 className="mt-2 text-xl font-bold">
-        {firebaseReady ? "Connected & Ready" : "Offline Mode"}
-      </h3>
-
-      <p className="mt-2 text-sm text-emerald-100">
-        {firebaseReady
-          ? "All services are online. Your team can start managing appointments and customer records."
-          : "Running in local mode. Data will be stored locally until the connection is restored."}
-      </p>
-    </div>
-
-    <div
-      className={`flex h-14 w-14 items-center justify-center rounded-full border border-white/20 ${
-        firebaseReady ? "bg-emerald-400/20" : "bg-amber-400/20"
-      }`}
-    >
-      <span
-        className={`h-4 w-4 rounded-full ${
-          firebaseReady ? "animate-pulse bg-emerald-300" : "bg-amber-300"
-        }`}
-      />
-    </div>
-  </div>
-
-  <div className="relative mt-5 flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-    <div>
-      <p className="text-xs uppercase tracking-wide text-emerald-100">
-        Database
-      </p>
-      <p className="font-semibold">
-        {firebaseReady ? "Firebase Cloud Connected" : "Local Storage"}
-      </p>
-    </div>
-
-    <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
-      {firebaseReady ? "🟢 LIVE" : "🟡 LOCAL"}
-    </span>
-  </div>
-</div>
+        <div className="mt-5 rounded bg-white/12 p-4 ring-1 ring-white/15">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded bg-white/15">
+              <Database size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Database</p>
+              <p className="mt-0.5 text-sm font-black leading-5">
+                {firebaseReady ? "Firebase Cloud Connected" : "Local Storage"}
+              </p>
+            </div>
+            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${firebaseReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+              {firebaseReady ? "LIVE" : "LOCAL"}
+            </span>
+          </div>
+        </div>
+      </div>
       <nav className="grid grid-cols-2 gap-2 lg:grid-cols-1">
         {tabs.map((tab) => (
           <button

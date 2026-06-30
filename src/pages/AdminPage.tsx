@@ -84,11 +84,11 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
 
   const selectedAdminCode =
     selectedAdmin === "All admins"
-      ? visibleAdmins[0]?.invitationCode ?? visibleAdmins[0]?.code ?? ""
+      ? activeAdmin?.invitationCode ?? activeAdmin?.code ?? visibleAdmins[0]?.invitationCode ?? visibleAdmins[0]?.code ?? ""
       : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.invitationCode ?? visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.invitationCode ?? visibleAdmins[0]?.code ?? "";
   const selectedAdminDisplayCode =
     selectedAdmin === "All admins"
-      ? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? ""
+      ? activeAdmin?.adminCode ?? activeAdmin?.code ?? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? ""
       : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.adminCode ?? visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? "";
 
   if (!ready) {
