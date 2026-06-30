@@ -121,7 +121,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
           onClick={() => setShowAssignForm(!showAssignForm)}
           className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white"
         >
-          <Plus size={16} /> Add Product
+          <Plus size={16} /> Add Task
         </button>
       }
     >
@@ -244,7 +244,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               disabled={isAssigning}
               className="flex-1 rounded bg-forest px-3 py-2 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400"
             >
-              {isAssigning ? "Assigning..." : "Save Products"}
+              {isAssigning ? "Assigning..." : "Save Task"}
             </button>
           </div>
         </form>

@@ -66,7 +66,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
     try {
       const updatedOrder = await assignOrderProduct(targetOrder, selectedProduct);
       dispatch({ type: "updateOrder", payload: updatedOrder });
-      setMessage("Produk berhasil ditambahkan ke pesanan.");
+      setMessage("Product was added to the pending order.");
       closeProductModal();
       window.setTimeout(() => setMessage(""), 3500);
     } catch (error) {
@@ -88,7 +88,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
         }
       >
         {message && (
-          <p className={`mb-4 rounded px-3 py-2 text-sm font-bold ${message.includes("berhasil") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+          <p className={`mb-4 rounded px-3 py-2 text-sm font-bold ${message.includes("added") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
             {message}
           </p>
         )}
@@ -141,6 +141,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                   const orderState = getOrderState(order);
                   const isCompleted = orderState === "diserahkan";
                   const hasProduct = assignedProducts.length > 0;
+                  const taskLabel = isCompleted ? "Completed" : hasProduct ? "Pending delivery" : "Pending assignment";
 
                   return (
                     <tr key={order.id} className="border-t border-slate-200 align-top">
@@ -169,7 +170,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                           {isCompleted ? "Completed" : "Pending"}
                         </span>
                       </Td>
-                      <Td>{hasProduct ? "Product assigned" : "Waiting assignment"}</Td>
+                      <Td>{taskLabel}</Td>
                       <Td>{shortDate(order.createdAt)}</Td>
                       <Td>
                         {!hasProduct && !isCompleted ? (
@@ -179,9 +180,13 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                           >
                             <PackagePlus size={14} /> Add Product
                           </button>
+                        ) : hasProduct && !isCompleted ? (
+                          <span className="inline-flex max-w-[140px] rounded bg-amber-100 px-3 py-2 text-xs font-black leading-4 text-amber-700">
+                            Product selected, waiting for completion
+                          </span>
                         ) : (
-                          <span className="inline-flex rounded bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                            Product Selected
+                          <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">
+                            Completed
                           </span>
                         )}
                       </Td>
@@ -205,7 +210,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
           <div className="w-full max-w-2xl rounded bg-white shadow-panel">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <h3 className="text-lg font-black">Tambah Produk ke Pesanan</h3>
+                <h3 className="text-lg font-black">Add Product to Order</h3>
                 <p className="text-xs font-semibold text-slate-500">{getOrderCode(targetOrder)}</p>
               </div>
               <button className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={closeProductModal}>
