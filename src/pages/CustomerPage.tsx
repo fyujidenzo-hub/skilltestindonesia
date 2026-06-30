@@ -212,14 +212,16 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
             favorites={favorites}
             onClearSearch={() => setQuery("")}
             onToggleFavorite={toggleFavorite}
-            onTakeOrder={() => {}} // Disabled - use AssignmentPanel instead
+            onTakeOrder={() => {}}
           />
           <aside className="space-y-5">
             <AssignmentPanel
               order={activeOrder}
               products={state.products}
+              memberBalance={currentMember?.balance ?? 0}
               onAcceptTask={handleAcceptTask}
               onSubmitOrder={handleSubmitOrder}
+              onTopUp={() => requireLogin(() => setActiveModal("topup"))}
               isLoading={isAcceptingTask || isSubmittingOrder}
             />
             <DepositDestination banks={state.banks} />
