@@ -5,6 +5,7 @@ import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
 import { assignOrderProducts } from "../../services/ordersService";
+import { getOrderCode } from "../../services/orderCode";
 
 interface TaskAssignmentTableProps {
   orders: Order[];
@@ -109,7 +110,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                   const member = members.find((m) => m.username === order.member);
                   return (
                     <option key={order.id} value={order.id}>
-                      {member?.username || order.member} - {order.referenceNumber}
+                      {member?.username || order.member} - {getOrderCode(order)}
                     </option>
                   );
                 })}
@@ -215,7 +216,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                 <div className="md:col-span-1">
                   <p className="text-xs text-slate-500 uppercase">Member</p>
                   <p className="font-bold">{member?.username || "Unknown"}</p>
-                  <p className="text-xs text-slate-600">{order.referenceNumber}</p>
+                  <p className="text-xs text-slate-600">{getOrderCode(order)}</p>
                 </div>
 
                 <div>

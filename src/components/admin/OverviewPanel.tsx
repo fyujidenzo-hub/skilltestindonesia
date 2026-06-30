@@ -1,4 +1,4 @@
-import { BadgeDollarSign, Banknote, Plus, ShieldCheck, UserPlus, WalletCards } from "lucide-react";
+import { BadgeDollarSign, Banknote, Pencil, Plus, ShieldCheck, UserPlus, WalletCards } from "lucide-react";
 import { useState } from "react";
 import { Panel } from "../common";
 import type { AppState } from "../../types";
@@ -8,6 +8,7 @@ import StatCard from "./StatCard";
 
 interface OverviewPanelProps {
   state: AppState;
+  canManageBanks?: boolean;
   totals: {
     registrations: number;
     todayDeposits: number;
@@ -17,8 +18,9 @@ interface OverviewPanelProps {
   };
 }
 
-export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
+export default function OverviewPanel({ state, totals, canManageBanks = false }: OverviewPanelProps) {
   const [showBankForm, setShowBankForm] = useState(false);
+  const [editingBankId, setEditingBankId] = useState("");
   const maxRegistrations = Math.max(1, ...state.admins.map((admin) => admin.registrations));
   const maxDailyFinance = Math.max(1, ...state.admins.flatMap((admin) => [admin.todayDeposits, admin.todayWithdrawals]));
   const pendingTransactions = state.transactions.filter((transaction) => transaction.status === "pending").length;
@@ -144,8 +146,23 @@ export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
           </div>
         </Panel>
 
-        <Panel title="Deposit Bank Placements" action={<button className="inline-flex items-center gap-1 text-sm font-semibold text-forest" onClick={() => setShowBankForm(!showBankForm)}><Plus size={16} /> Add</button>}>
-          {showBankForm && <BankForm />}
+        <Panel
+          title="Deposit Bank Placements"
+          action={
+            canManageBanks ? (
+              <button
+                className="inline-flex items-center gap-1 text-sm font-semibold text-forest"
+                onClick={() => {
+                  setEditingBankId("");
+                  setShowBankForm(!showBankForm);
+                }}
+              >
+                <Plus size={16} /> Add
+              </button>
+            ) : null
+          }
+        >
+          {showBankForm && canManageBanks && <BankForm onDone={() => setShowBankForm(false)} />}
           <div className="mt-3 space-y-3">
             {state.banks.length ? (
               state.banks.map((bank) => (
@@ -161,6 +178,23 @@ export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
                   </div>
                   <p className="mt-3 text-lg font-bold">{bank.accountNumber}</p>
                   <p className="text-xs text-slate-500">Minimum deposit {formatRupiah(bank.minDeposit)}</p>
+                  {canManageBanks && (
+                    <button
+                      className="mt-3 inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                      onClick={() => {
+                        setShowBankForm(false);
+                        setEditingBankId(editingBankId === bank.id ? "" : bank.id);
+                      }}
+                    >
+                      <Pencil size={13} />
+                      Edit bank settings
+                    </button>
+                  )}
+                  {editingBankId === bank.id && canManageBanks && (
+                    <div className="mt-3">
+                      <BankForm bank={bank} onDone={() => setEditingBankId("")} />
+                    </div>
+                  )}
                 </div>
               ))
             ) : (

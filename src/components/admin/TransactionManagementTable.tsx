@@ -1,175 +1,101 @@
 import { CheckCircle2, Download, Eye, ReceiptText, X, XCircle } from "lucide-react";
-import { useState } from "react";
-import { Field, inputClass, Panel } from "../common";
+import { useMemo, useState } from "react";
+import { Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
 import { approveTransactionRequest } from "../../services/transactionsService";
 import type { Member, Transaction } from "../../types";
 
-export default function TransactionManagementTable({ transactions, members }: { transactions: Transaction[]; members: Member[] }) {
+export default function TransactionManagementTable({
+  transactions,
+  members,
+  canApprove,
+}: {
+  transactions: Transaction[];
+  members: Member[];
+  canApprove: boolean;
+}) {
   const { dispatch } = useAppStore();
-  const [selectedTransactionId, setSelectedTransactionId] = useState("");
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
 
-  const pendingTransactions = transactions.filter((t) => t.status === "pending");
+  const topUps = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "topup")), [transactions]);
+  const withdrawals = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "withdrawal")), [transactions]);
+  const pendingTopUps = topUps.filter((transaction) => transaction.status === "pending").length;
+  const pendingWithdrawals = withdrawals.filter((transaction) => transaction.status === "pending").length;
 
-  const handleApprove = async (transactionId: string) => {
-    const transaction = transactions.find((t) => t.id === transactionId);
-    if (!transaction) return;
+  const handleStatusChange = async (transactionItem: Transaction, status: "approved" | "rejected") => {
+    if (!canApprove) return;
+    if (transactionItem.status !== "pending") {
+      setMessage("This request has already been reviewed.");
+      return;
+    }
 
-    setIsProcessing(true);
+    const member = members.find((item) => item.username === transactionItem.member);
+    if (!member) {
+      setMessage("Unable to find the customer for this request.");
+      return;
+    }
+
+    setIsProcessingId(transactionItem.id);
+    setMessage("");
     try {
-      const member = members.find((item) => item.username === transaction.member);
-      if (!member) throw new Error("Member not found");
-      const updatedMember = await approveTransactionRequest(transaction, member, "approved");
-      dispatch({
-        type: "updateTransaction",
-        payload: {
-          id: transactionId,
-          status: "approved",
-        },
-      });
+      const updatedMember = await approveTransactionRequest(transactionItem, member, status);
+      dispatch({ type: "updateTransaction", payload: { id: transactionItem.id, status } });
       dispatch({ type: "updateMember", payload: updatedMember });
-      setMessage(`${transaction.type === "topup" ? "Top-up" : "Withdrawal"} approved successfully!`);
-      setSelectedTransactionId("");
+      setMessage(`${transactionItem.type === "topup" ? "Top Up" : "Withdrawal"} request ${status}.`);
     } catch (error) {
-      setMessage("Error approving transaction");
+      console.error("Failed to update transaction:", error);
+      setMessage(error instanceof Error ? error.message : "Unable to update request. Check Firestore rules.");
     } finally {
-      setIsProcessing(false);
+      setIsProcessingId(null);
     }
-  };
-
-  const handleReject = async (transactionId: string) => {
-    const transaction = transactions.find((t) => t.id === transactionId);
-    if (!transaction) return;
-
-    setIsProcessing(true);
-    try {
-      const member = members.find((item) => item.username === transaction.member);
-      if (!member) throw new Error("Member not found");
-      await approveTransactionRequest(transaction, member, "rejected");
-      dispatch({
-        type: "updateTransaction",
-        payload: {
-          id: transactionId,
-          status: "rejected",
-        },
-      });
-      setMessage(`${transaction.type === "topup" ? "Top-up" : "Withdrawal"} rejected.`);
-      setSelectedTransactionId("");
-    } catch (error) {
-      setMessage("Error rejecting transaction");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: "bg-amber-100 text-amber-700",
-      approved: "bg-emerald-100 text-emerald-700",
-      rejected: "bg-rose-100 text-rose-700",
-    };
-    return styles[status] || "bg-slate-100 text-slate-700";
-  };
-
-  const getTransactionTypeLabel = (type: string) => {
-    return type === "topup" ? "💰 Top-up" : "💸 Withdrawal";
   };
 
   return (
-    <Panel title="Withdrawal & Deposit Management">
+    <Panel
+      title="Finance Request Management"
+      action={
+        <div className="flex flex-wrap gap-2 text-xs font-black">
+          <span className="rounded bg-emerald-100 px-2 py-1 text-emerald-700">{pendingTopUps} top-up pending</span>
+          <span className="rounded bg-rose-100 px-2 py-1 text-rose-700">{pendingWithdrawals} withdrawal pending</span>
+        </div>
+      }
+    >
       {message && (
-        <p className="mb-4 rounded px-3 py-2 text-sm font-semibold bg-emerald-50 text-emerald-700">
+        <p className={`mb-4 rounded px-3 py-2 text-sm font-semibold ${message.includes("Unable") || message.includes("already") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
           {message}
         </p>
       )}
 
-      <div className="grid gap-4">
-        {transactions.length === 0 ? (
-          <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No transactions.</p>
-        ) : (
-          transactions.map((transaction) => {
-            const member = members.find((m) => m.username === transaction.member);
-            const isPending = transaction.status === "pending";
-
-            return (
-              <div
-                key={transaction.id}
-                className={`rounded border-2 p-4 transition-all ${
-                  isPending ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"
-                }`}
-              >
-                <div className="grid gap-4 md:grid-cols-[auto_1fr_auto_auto] md:items-center">
-                  <div className="text-3xl">{transaction.type === "topup" ? "💰" : "💸"}</div>
-
-                  <div>
-                    <div className="font-bold">{getTransactionTypeLabel(transaction.type)}</div>
-                    <p className="text-sm text-slate-600">
-                      Member: <span className="font-semibold">{transaction.member}</span>
-                    </p>
-                    <p className="text-xs text-slate-500">{shortDate(transaction.createdAt)}</p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-forest">{formatRupiah(transaction.amount)}</p>
-                    <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-bold ${getStatusBadge(transaction.status)}`}>
-                      {transaction.status === "pending"
-                        ? "Menunggu"
-                        : transaction.status === "approved"
-                          ? "Selesai"
-                          : "Ditolak"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {transaction.type === "topup" && (
-                      <button
-                        onClick={() => setDetailTransaction(transaction)}
-                        className="flex items-center gap-1 rounded border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
-                        title="View payment receipt and proof"
-                      >
-                        <Eye size={16} />
-                        View details
-                      </button>
-                    )}
-                    {isPending && (
-                      <>
-                      <button
-                        onClick={() => handleApprove(transaction.id)}
-                        disabled={isProcessing}
-                        className="flex items-center gap-1 rounded bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
-                        title="Accept and complete"
-                      >
-                        <CheckCircle2 size={16} />
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleReject(transaction.id)}
-                        disabled={isProcessing}
-                        className="flex items-center gap-1 rounded bg-rose-600 px-3 py-2 text-sm font-bold text-white hover:bg-rose-700 disabled:bg-slate-400"
-                        title="Reject transaction"
-                      >
-                        <XCircle size={16} />
-                        Reject
-                      </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
+      <div className="grid gap-6">
+        <RequestTable
+          title="Top Up Requests"
+          tone="topup"
+          emptyText="No top-up requests found."
+          transactions={topUps}
+          members={members}
+          canApprove={canApprove}
+          isProcessingId={isProcessingId}
+          onViewDetails={setDetailTransaction}
+          onApprove={(transaction) => handleStatusChange(transaction, "approved")}
+          onReject={(transaction) => handleStatusChange(transaction, "rejected")}
+        />
+        <RequestTable
+          title="Withdrawal Requests"
+          tone="withdrawal"
+          emptyText="No withdrawal requests found."
+          transactions={withdrawals}
+          members={members}
+          canApprove={canApprove}
+          isProcessingId={isProcessingId}
+          onViewDetails={setDetailTransaction}
+          onApprove={(transaction) => handleStatusChange(transaction, "approved")}
+          onReject={(transaction) => handleStatusChange(transaction, "rejected")}
+        />
       </div>
 
-      {pendingTransactions.length > 0 && (
-        <div className="mt-4 rounded bg-amber-50 p-3 text-xs text-amber-700 border border-amber-200">
-          <p className="font-bold">{pendingTransactions.length} pending transaction(s) awaiting approval</p>
-        </div>
-      )}
       {detailTransaction && (
         <TransactionReceiptModal transaction={detailTransaction} member={members.find((item) => item.username === detailTransaction.member)} onClose={() => setDetailTransaction(null)} />
       )}
@@ -177,8 +103,149 @@ export default function TransactionManagementTable({ transactions, members }: { 
   );
 }
 
+function sortTransactions(transactions: Transaction[]) {
+  return [...transactions].sort((left, right) => new Date(right.createdAt.replace(" ", "T")).getTime() - new Date(left.createdAt.replace(" ", "T")).getTime());
+}
+
+function RequestTable({
+  title,
+  tone,
+  emptyText,
+  transactions,
+  members,
+  canApprove,
+  isProcessingId,
+  onViewDetails,
+  onApprove,
+  onReject,
+}: {
+  title: string;
+  tone: "topup" | "withdrawal";
+  emptyText: string;
+  transactions: Transaction[];
+  members: Member[];
+  canApprove: boolean;
+  isProcessingId: string | null;
+  onViewDetails: (transaction: Transaction) => void;
+  onApprove: (transaction: Transaction) => void;
+  onReject: (transaction: Transaction) => void;
+}) {
+  const headerTone = tone === "topup" ? "from-emerald-950 to-slate-900" : "from-slate-950 to-slate-800";
+
+  return (
+    <section className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-4">
+        <div>
+          <h3 className="text-lg font-black text-slate-900">{title}</h3>
+          <p className="text-sm text-slate-500">Review request details, proof, and approval status.</p>
+        </div>
+        <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
+          {transactions.length} records
+        </span>
+      </div>
+
+      <div className="max-h-[460px] overflow-auto">
+        <table className="min-w-[1020px] w-full border-separate border-spacing-0 text-left text-sm">
+          <thead className={`sticky top-0 z-20 bg-gradient-to-r ${headerTone} text-xs uppercase text-white shadow-sm`}>
+            <tr>
+              <Th className="w-[190px]">Request Code</Th>
+              <Th>Customer/User</Th>
+              <Th className="w-[130px]">Amount</Th>
+              <Th className="w-[150px]">Sender Name</Th>
+              <Th>Payment Proof</Th>
+              <Th className="w-[110px]">Status</Th>
+              <Th className="w-[130px]">Created Date</Th>
+              <Th className="sticky right-0 z-30 w-[168px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Action</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.length ? (
+              transactions.map((transaction) => {
+                const member = members.find((item) => item.username === transaction.member);
+                const isPending = transaction.status === "pending";
+                const isProcessing = isProcessingId === transaction.id;
+
+                return (
+                  <tr key={transaction.id} className={`group align-middle transition hover:bg-slate-50 ${isPending ? "bg-amber-50/70" : "bg-white"}`}>
+                    <Td className="border-t border-slate-200">
+                      <span className="block max-w-[170px] break-words font-black leading-5 text-forest">{transaction.requestId ?? transaction.id}</span>
+                    </Td>
+                    <Td className="border-t border-slate-200">
+                      <p className="max-w-[160px] break-words font-black text-slate-900">{transaction.member}</p>
+                      <p className="max-w-[160px] break-words text-xs text-slate-500">{member?.phone ?? "No phone"} · {transaction.admin}</p>
+                    </Td>
+                    <Td className="border-t border-slate-200">
+                      <span className="whitespace-nowrap text-base font-black text-forest">{formatRupiah(transaction.amount)}</span>
+                    </Td>
+                    <Td className="border-t border-slate-200">
+                      <span className="block max-w-[130px] break-words">{transaction.senderName || "-"}</span>
+                    </Td>
+                    <Td className="border-t border-slate-200">
+                      {transaction.proofDataUrl ? (
+                        <button className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
+                          <Eye size={14} />
+                          View proof
+                        </button>
+                      ) : transaction.proofName ? (
+                        <span className="text-xs font-semibold text-slate-500">{transaction.proofName}</span>
+                      ) : (
+                        <span className="text-xs text-slate-400">No proof</span>
+                      )}
+                    </Td>
+                    <Td className="border-t border-slate-200">
+                      <StatusBadge status={transaction.status} />
+                    </Td>
+                    <Td className="border-t border-slate-200">
+                      <span className="block max-w-[110px] leading-5">{shortDate(transaction.createdAt)}</span>
+                    </Td>
+                    <Td className={`sticky right-0 border-t border-slate-200 shadow-[-10px_0_18px_rgba(15,23,42,0.08)] ${isPending ? "bg-amber-50" : "bg-white"} group-hover:bg-slate-50`}>
+                      <div className="grid min-w-[132px] gap-2">
+                        <button className="inline-flex items-center justify-center gap-1 rounded border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
+                          <ReceiptText size={14} />
+                          Details
+                        </button>
+                        {isPending && canApprove && (
+                          <>
+                            <button disabled={isProcessing} className="inline-flex items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:bg-slate-300" onClick={() => onApprove(transaction)}>
+                              <CheckCircle2 size={14} />
+                              Approve
+                            </button>
+                            <button disabled={isProcessing} className="inline-flex items-center justify-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-black text-white disabled:bg-slate-300" onClick={() => onReject(transaction)}>
+                              <XCircle size={14} />
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {isPending && !canApprove && <span className="rounded bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Super Admin only</span>}
+                      </div>
+                    </Td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} className="p-6 text-center text-sm text-slate-500">
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function StatusBadge({ status }: { status: Transaction["status"] }) {
+  const styles: Record<Transaction["status"], string> = {
+    pending: "bg-amber-100 text-amber-700",
+    approved: "bg-emerald-100 text-emerald-700",
+    rejected: "bg-rose-100 text-rose-700",
+  };
+  return <span className={`rounded px-2 py-1 text-xs font-black capitalize ${styles[status]}`}>{status}</span>;
+}
+
 function TransactionReceiptModal({ transaction, member, onClose }: { transaction: Transaction; member?: Member; onClose: () => void }) {
-  const statusLabel = transaction.status === "pending" ? "Menunggu" : transaction.status === "approved" ? "Selesai" : "Ditolak";
   const proofDownloadName = transaction.proofName || `${transaction.requestId ?? transaction.id}-proof.png`;
 
   return (
@@ -190,39 +257,35 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
               <ReceiptText size={22} />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-forest">Payment receipt</p>
+              <p className="text-xs font-black uppercase tracking-wide text-forest">{transaction.type === "topup" ? "Top Up request" : "Withdrawal request"}</p>
               <h2 className="text-xl font-black text-slate-900">{transaction.requestId ?? transaction.id}</h2>
             </div>
           </div>
-          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close receipt details">
+          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close request details">
             <X size={18} />
           </button>
         </div>
 
         <div className="grid gap-5 p-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded bg-slate-50 p-4">
-            <p className="text-sm font-black text-slate-800">Top-up request details</p>
+            <p className="text-sm font-black text-slate-800">Request details</p>
             <div className="mt-4 grid gap-3">
-              <ReceiptRow label="Status" value={statusLabel} />
-              <ReceiptRow label="Member" value={transaction.member} />
+              <ReceiptRow label="Status" value={transaction.status} />
+              <ReceiptRow label="Customer/User" value={transaction.member} />
               <ReceiptRow label="Phone" value={member?.phone ?? "-"} />
               <ReceiptRow label="Admin scope" value={transaction.admin} />
               <ReceiptRow label="Sender name" value={transaction.senderName || "-"} />
               <ReceiptRow label="Amount" value={formatRupiah(transaction.amount)} strong />
-              <ReceiptRow label="Submitted" value={shortDate(transaction.createdAt)} />
+              <ReceiptRow label="Created date" value={shortDate(transaction.createdAt)} />
               <ReceiptRow label="Proof file" value={transaction.proofName || "No proof filename"} />
             </div>
           </div>
 
           <div className="rounded border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-black text-slate-800">Payment proof image</p>
+              <p className="text-sm font-black text-slate-800">Payment proof image/link</p>
               {transaction.proofDataUrl && (
-                <a
-                  className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white"
-                  href={transaction.proofDataUrl}
-                  download={proofDownloadName}
-                >
+                <a className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white" href={transaction.proofDataUrl} download={proofDownloadName}>
                   <Download size={14} />
                   Save proof
                 </a>
@@ -237,7 +300,7 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
                 <div>
                   <ReceiptText className="mx-auto mb-3 text-slate-300" size={42} />
                   <p className="font-bold">No image proof stored for this request.</p>
-                  <p className="mt-1">Older top-up records may only have filename/type metadata.</p>
+                  <p className="mt-1">Older records may only have filename/type metadata.</p>
                 </div>
               </div>
             )}
@@ -252,7 +315,15 @@ function ReceiptRow({ label, value, strong = false }: { label: string; value: st
   return (
     <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-2 last:border-0 last:pb-0">
       <span className="text-xs font-black uppercase text-slate-500">{label}</span>
-      <span className={`text-right text-sm ${strong ? "text-lg font-black text-forest" : "font-bold text-slate-800"}`}>{value}</span>
+      <span className={`text-right text-sm capitalize ${strong ? "text-lg font-black text-forest" : "font-bold text-slate-800"}`}>{value}</span>
     </div>
   );
+}
+
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <th className={`px-3 py-3 font-black ${className}`}>{children}</th>;
+}
+
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-3 py-4 ${className}`}>{children}</td>;
 }

@@ -71,15 +71,8 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
   });
 
   const filteredTransactions = state.transactions.filter((transaction) => {
-    const ownerAdmin = transaction.admin || state.members.find((member) => member.username === transaction.member)?.referredBy;
-    const adminMatch =
-      activeAdmin?.role === "super_admin" && selectedAdmin === "All admins"
-        ? true
-        : ownerAdmin
-          ? scopedAdminNames.includes(ownerAdmin)
-          : false;
-    const textMatch = `${transaction.member} ${transaction.type} ${transaction.status}`.toLowerCase().includes(query.toLowerCase());
-    return adminMatch && textMatch;
+    const textMatch = `${transaction.requestId ?? ""} ${transaction.member} ${transaction.admin} ${transaction.senderName ?? ""} ${transaction.type} ${transaction.status}`.toLowerCase().includes(query.toLowerCase());
+    return textMatch;
   });
 
   const selectedAdminCode =
@@ -125,11 +118,11 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
             onSelectedAdminChange={setSelectedAdmin}
             onQueryChange={setQuery}
           />
-          {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} />}
+          {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} canManageBanks={activeAdmin.role === "super_admin"} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
           {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
-          {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={filteredMembers} />}
+          {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
           {activeTab === "Account" && <AccountPanel activeAdmin={activeAdmin} />}

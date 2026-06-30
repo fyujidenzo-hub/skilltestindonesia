@@ -4,6 +4,7 @@ import AdminPage from "./pages/AdminPage";
 import CustomerPage from "./pages/CustomerPage";
 import CustomerOrdersPage from "./pages/CustomerOrdersPage";
 import CustomerServicePage from "./pages/CustomerServicePage";
+import CustomerTransactionPage from "./pages/CustomerTransactionPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
@@ -36,6 +37,10 @@ function App() {
         <CustomerServicePage navigate={navigate} />
       ) : path.startsWith("/orders") ? (
         <CustomerOrdersPage navigate={navigate} />
+      ) : path.startsWith("/topup") ? (
+        <CustomerTransactionPage navigate={navigate} type="topup" />
+      ) : path.startsWith("/withdraw") ? (
+        <CustomerTransactionPage navigate={navigate} type="withdraw" />
       ) : path.startsWith("/login") ? (
         <LoginPage navigate={navigate} />
       ) : path.startsWith("/profile") ? (

@@ -1,21 +1,22 @@
-import { Search, Star } from "lucide-react";
+import { PackageOpen, Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { completeWorkflowOrder, updateOrderStatus } from "../services/ordersService";
+import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
 import type { Order } from "../types";
 import { formatRupiah, shortDate } from "../utils";
 
-type OrderTab = "Semua" | "Belum Selesai" | "Selesai";
+type OrderTab = "All" | "Pending" | "Completed";
 
 export default function CustomerOrdersPage({ navigate }: { navigate: Navigate }) {
   const { state, dispatch, ready } = useAppStore();
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<OrderTab>("Semua");
+  const [activeTab, setActiveTab] = useState<OrderTab>("All");
   const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
   const [reviewOrderId, setReviewOrderId] = useState("");
   const [rating, setRating] = useState(5);
@@ -30,11 +31,11 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
     if (!currentMember) return [];
     return state.orders
       .filter((order) => order.member === currentMember.username)
-      .filter((order) => `${order.referenceNumber ?? order.id} ${order.productName ?? ""} ${order.productCode ?? ""}`.toLowerCase().includes(query.toLowerCase()))
+      .filter((order) => `${getOrderCode(order)} ${order.productName ?? ""} ${order.productCode ?? ""}`.toLowerCase().includes(query.toLowerCase()))
       .filter((order) => {
         const completed = getOrderState(order) === "diserahkan";
-        if (activeTab === "Belum Selesai") return !completed;
-        if (activeTab === "Selesai") return completed;
+        if (activeTab === "Pending") return !completed;
+        if (activeTab === "Completed") return completed;
         return true;
       })
       .sort((a, b) => new Date(b.createdAt.replace(" ", "T")).getTime() - new Date(a.createdAt.replace(" ", "T")).getTime());
@@ -47,7 +48,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       .map((order) => ({
         id: order.id,
         title: getOrderState(order) === "waiting_assignment" ? "Waiting assignment" : "Order update",
-        text: `${order.referenceNumber ?? order.id} · ${order.productName || "Menunggu Pengiriman"}`,
+        text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
         tone: "info" as const,
       }));
   }, [orders]);
@@ -61,7 +62,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
     if (!confirmOrder || !currentMember) return;
     const shortage = Math.max(0, (confirmOrder.requiredBalance ?? confirmOrder.value ?? 0) - currentMember.balance);
     if (shortage > 0) {
-      setMessage(`Saldo anda kurang sebesar ${formatRupiah(shortage)}. Silakan isi ulang saldo anda untuk melanjutkan.`);
+      setMessage(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
       setConfirmOrder(null);
       return;
     }
@@ -79,7 +80,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       dispatch({ type: "completeOrderWithMember", payload: result });
       setReviewOrderId(result.order.id);
       setConfirmOrder(null);
-      setMessage("Pesanan berhasil diserahkan.");
+      setMessage("Order sent successfully. Your commission has been added to your balance.");
     } catch (error) {
       console.error("Failed to submit order:", error);
       setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
@@ -140,11 +141,11 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black">Tugas Pesanan</h1>
+            <h1 className="text-2xl font-black">Task Orders</h1>
             <p className="text-sm text-slate-500">Track assigned order tasks and submit completed work.</p>
           </div>
           <button className="rounded bg-forest px-4 py-2 text-sm font-black text-white" onClick={() => navigate("/")}>
-            Ambil Pesanan
+            Take Order
           </button>
         </div>
 
@@ -160,7 +161,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2 rounded bg-slate-100 p-1 text-sm font-black">
-            {(["Semua", "Belum Selesai", "Selesai"] as const).map((tab) => (
+            {(["All", "Pending", "Completed"] as const).map((tab) => (
               <button
                 key={tab}
                 className={`rounded px-3 py-2 ${activeTab === tab ? "bg-forest text-white shadow-sm" : "text-slate-500"}`}
@@ -173,7 +174,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
         </div>
 
         {message && (
-          <p className={`mt-4 rounded px-4 py-3 text-sm font-bold ${message.startsWith("Saldo") || message.startsWith("Unable") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+          <p className={`mt-4 rounded px-4 py-3 text-sm font-bold ${message.startsWith("Sorry") || message.startsWith("Unable") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
             {message}
           </p>
         )}
@@ -251,16 +252,20 @@ function OrderCard({
       : [];
   const primaryProduct = assignedProducts[0];
   const primaryImage = products.find((product) => product.id === primaryProduct?.productId || product.code === primaryProduct?.code)?.image;
+  const isWaitingAssignment = state === "waiting_assignment" || !primaryProduct;
+  const statusBadgeLabel = isCompleted ? "Delivered" : isWaitingAssignment ? "Not Assigned" : "Not Delivered";
+  const waitingText = isWaitingAssignment ? "Waiting for product assignment" : "Waiting for delivery";
+  const canSendOrder = Boolean(primaryProduct) && !isCompleted && state !== "belum_diserahkan";
 
   return (
     <article className="rounded bg-white p-4 shadow-panel">
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <p className="text-xs font-bold text-slate-500">Nomor Transaksi:</p>
-          <p className="font-black">{order.referenceNumber ?? order.id}</p>
+          <p className="text-xs font-bold text-slate-500">Transaction No.:</p>
+          <p className="font-black">{getOrderCode(order)}</p>
         </div>
         <span className={`rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "border border-amber-300 bg-amber-50 text-amber-700"}`}>
-          {isCompleted ? "Diserahkan" : "Belum Diserahkan"}
+          {statusBadgeLabel}
         </span>
       </div>
 
@@ -271,26 +276,26 @@ function OrderCard({
             <h2 className="font-black">{primaryProduct.name}</h2>
             <dl className="mt-3 grid grid-cols-3 gap-3 text-sm">
               <div>
-                <dt className="text-xs font-bold text-slate-500">Jumlah pesanan</dt>
+                <dt className="text-xs font-bold text-slate-500">Order Quantity</dt>
                 <dd className="font-black">{order.quantity ?? primaryProduct.quantity ?? 1}</dd>
               </div>
               <div>
-                <dt className="text-xs font-bold text-slate-500">Harga Pesanan</dt>
+                <dt className="text-xs font-bold text-slate-500">Order Price</dt>
                 <dd className="font-black">{formatRupiah(order.value ?? 0)}</dd>
               </div>
               <div>
-                <dt className="text-xs font-bold text-slate-500">Komisi</dt>
+                <dt className="text-xs font-bold text-slate-500">Commission</dt>
                 <dd className="font-black text-coral">{formatRupiah(order.commission ?? 0)}</dd>
               </div>
             </dl>
-            <p className="mt-3 text-xs font-semibold text-slate-500">{shortDate(order.createdAt)}</p>
-            {!isCompleted && (
+            <p className="mt-3 text-xs font-semibold text-slate-500">Created: {shortDate(order.createdAt)}</p>
+            {canSendOrder && (
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white" onClick={onOpenConfirm}>
-                  Kirimkan Pesanan
+                  Send Order
                 </button>
                 <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white/95">
-                  Detail Pesanan
+                  Order Details
                 </button>
               </div>
             )}
@@ -298,8 +303,10 @@ function OrderCard({
         </div>
       ) : (
         <div className="mt-5 rounded bg-slate-50 p-8 text-center">
-          <div className="mx-auto mb-3 h-16 w-16 rounded bg-slate-100" />
-          <p className="font-bold text-slate-500">Menunggu Pengiriman</p>
+          <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-full bg-white text-slate-300 shadow-sm">
+            <PackageOpen size={30} />
+          </div>
+          <p className="font-bold text-slate-500">{waitingText}</p>
         </div>
       )}
 
@@ -316,10 +323,10 @@ function OrderCard({
             className="mt-3 min-h-20 w-full rounded border border-slate-200 px-3 py-2 text-sm outline-none focus:border-forest"
             value={review}
             onChange={(event) => onReviewChange(event.target.value)}
-            placeholder="Tulis komentar atau ulasan Anda di sini..."
+            placeholder="Write your comment or review here..."
           />
           <button className="mt-3 w-full rounded bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:bg-slate-400" disabled={isSubmitting} onClick={onSubmitReview}>
-            Kirimkan Komentar & Rating
+            Send Comment & Rating
           </button>
         </div>
       )}
@@ -334,29 +341,29 @@ function ConfirmOrderModal({ order, products, isSubmitting, onCancel, onConfirm 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 px-4">
       <div className="w-full max-w-sm rounded bg-white p-5 shadow-panel">
-        <h2 className="text-center text-lg font-black">Konfirmasi Pengiriman Pesanan</h2>
+        <h2 className="text-center text-lg font-black">Confirm Order Delivery</h2>
         {primaryProduct && <img className="mx-auto mt-5 h-40 w-40 rounded object-cover" src={image || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=300&q=80"} alt={primaryProduct.name} />}
-        <p className="mt-4 text-center text-sm font-semibold text-slate-600">Apakah Anda yakin ingin mengirimkan pesanan berikut?</p>
+        <p className="mt-4 text-center text-sm font-semibold text-slate-600">Are you sure you want to send this order?</p>
         <div className="mt-4 divide-y divide-slate-200 rounded border border-slate-200 text-sm">
           <div className="flex justify-between px-4 py-3">
-            <span className="font-bold text-slate-500">ID Pesanan</span>
-            <span className="font-black">{order.referenceNumber ?? order.id}</span>
+            <span className="font-bold text-slate-500">Order ID</span>
+            <span className="font-black">{getOrderCode(order)}</span>
           </div>
           <div className="flex justify-between px-4 py-3">
             <span className="font-bold text-slate-500">Total</span>
             <span className="font-black">{formatRupiah(0)}</span>
           </div>
           <div className="flex justify-between px-4 py-3">
-            <span className="font-bold text-slate-500">Komisi</span>
+            <span className="font-bold text-slate-500">Commission</span>
             <span className="font-black">{formatRupiah(order.commission ?? 0)}</span>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button className="rounded bg-slate-200 px-4 py-3 font-black text-slate-700" onClick={onCancel}>
-            Batal
+            Cancel
           </button>
           <button className="rounded bg-forest px-4 py-3 font-black text-white disabled:bg-slate-400" disabled={isSubmitting} onClick={onConfirm}>
-            Ya, Kirim
+            Yes, Send
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Filter, PackagePlus, X } from 
 import { useMemo, useState } from "react";
 import { Panel } from "../common";
 import { assignOrderProduct } from "../../services/ordersService";
+import { getOrderCode } from "../../services/orderCode";
 import { getOrderState } from "../../services/orderStateService";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
@@ -121,7 +122,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
 
                   return (
                     <tr key={order.id} className="border-t border-slate-200 align-top">
-                      <Td>{order.referenceNumber ?? order.id}</Td>
+                      <Td>{getOrderCode(order)}</Td>
                       <Td>{order.member}</Td>
                       <Td>{member?.username ?? order.member}</Td>
                       <Td>{formatRupiah(member?.balance ?? 0)}</Td>
@@ -183,7 +184,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
                 <h3 className="text-lg font-black">Tambah Produk ke Pesanan</h3>
-                <p className="text-xs font-semibold text-slate-500">{targetOrder.referenceNumber}</p>
+                <p className="text-xs font-semibold text-slate-500">{getOrderCode(targetOrder)}</p>
               </div>
               <button className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={closeProductModal}>
                 <X size={18} />

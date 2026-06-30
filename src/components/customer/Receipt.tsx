@@ -1,5 +1,6 @@
 import { Download, Printer } from "lucide-react";
 import type { Order, Member } from "../../types";
+import { getOrderCode } from "../../services/orderCode";
 import { formatRupiah } from "../../utils";
 
 interface ReceiptProps {
@@ -16,7 +17,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `receipt-${order.referenceNumber}.html`;
+      link.download = `receipt-${getOrderCode(order)}.html`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -40,7 +41,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Receipt ${order.referenceNumber}</title>
+        <title>Receipt ${getOrderCode(order)}</title>
         <style>
           body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
@@ -71,7 +72,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
           <h3>Order Information</h3>
           <div class="row">
             <span class="label">Order Number:</span>
-            <span class="value">${order.referenceNumber || order.id}</span>
+            <span class="value">${getOrderCode(order)}</span>
           </div>
           <div class="row">
             <span class="label">Order Date:</span>
@@ -173,7 +174,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Order Number:</span>
-                  <span className="font-bold">{order.referenceNumber || order.id}</span>
+                  <span className="font-bold">{getOrderCode(order)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Order Date:</span>

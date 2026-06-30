@@ -1,6 +1,8 @@
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import type { AssignedOrderProduct, Member, Order, OrderStatus, Product } from "../types";
+import { formatRupiah } from "../utils";
+import { generateOrderCode } from "./orderCode";
 
 const COLLECTION = "orders";
 
@@ -33,7 +35,7 @@ export async function getOrdersByStatus(status: Order["status"]): Promise<Order[
 export async function createOrder(order: Omit<Order, "id"> & { id?: string }): Promise<Order> {
   if (!db) throw new Error("Firebase not initialized");
   const id = order.id || crypto.randomUUID();
-  const referenceNumber = order.referenceNumber || `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const referenceNumber = order.referenceNumber || await createUniqueOrderCode();
   const nextOrder: Order = {
     ...order,
     id,
@@ -53,6 +55,18 @@ export async function createOrder(order: Omit<Order, "id"> & { id?: string }): P
   };
   await setDoc(doc(db, COLLECTION, id), nextOrder);
   return nextOrder;
+}
+
+async function createUniqueOrderCode(): Promise<string> {
+  if (!db) return generateOrderCode();
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const referenceNumber = generateOrderCode();
+    const existing = await getDocs(query(collection(db, COLLECTION), where("referenceNumber", "==", referenceNumber), limit(1)));
+    if (existing.empty) return referenceNumber;
+  }
+
+  throw new Error("Unable to generate a unique order code. Please try again.");
 }
 
 export async function updateOrder(id: string, data: Partial<Order>): Promise<void> {
@@ -188,29 +202,55 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
   const completedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
-  const nextBalance = member.balance + order.commission;
-  const nextOrder: Order = { ...order, status: "diserahkan", completedAt };
-  const nextMember: Member = { ...member, balance: nextBalance, totalOrders: member.totalOrders + 1 };
+  let nextOrder: Order = { ...order, status: "diserahkan", completedAt };
+  let nextMember: Member = { ...member };
 
   await runTransaction(firestore, async (transaction) => {
     const orderRef = doc(firestore, COLLECTION, order.id);
     const memberRef = doc(firestore, "members", member.id);
-    const orderSnap = await transaction.get(orderRef);
+    const [orderSnap, memberSnap] = await Promise.all([transaction.get(orderRef), transaction.get(memberRef)]);
 
     if (!orderSnap.exists()) throw new Error("Order no longer exists.");
-    if (orderSnap.data().status === "diserahkan" || orderSnap.data().status === "completed") {
+    if (!memberSnap.exists()) throw new Error("Member no longer exists.");
+
+    const liveOrder = { id: orderSnap.id, ...orderSnap.data() } as Order;
+    const liveMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
+    if (liveOrder.status === "diserahkan" || liveOrder.status === "completed") {
       throw new Error("This task has already been completed.");
     }
+
+    const requiredBalance = Number(liveOrder.requiredBalance ?? liveOrder.value ?? 0);
+    const currentBalance = Number(liveMember.balance ?? 0);
+    const shortage = Math.max(0, requiredBalance - currentBalance);
+    if (shortage > 0) {
+      throw new Error(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
+    }
+
+    const nextBalance = currentBalance + Number(liveOrder.commission ?? 0);
+    nextOrder = {
+      ...liveOrder,
+      status: "diserahkan",
+      completedAt,
+      submittedAt: order.submittedAt ?? liveOrder.submittedAt ?? "",
+      shippedAt: order.shippedAt ?? liveOrder.shippedAt ?? "",
+      quantity: liveOrder.quantity ?? 0,
+      assignedProducts: liveOrder.assignedProducts ?? [],
+    };
+    nextMember = {
+      ...liveMember,
+      balance: nextBalance,
+      totalOrders: Number(liveMember.totalOrders ?? 0) + 1,
+    };
 
     transaction.update(orderRef, {
       status: "diserahkan",
       completedAt,
-      submittedAt: order.submittedAt ?? "",
-      shippedAt: order.shippedAt ?? "",
-      quantity: order.quantity ?? 0,
-      assignedProducts: order.assignedProducts ?? [],
+      submittedAt: nextOrder.submittedAt ?? "",
+      shippedAt: nextOrder.shippedAt ?? "",
+      quantity: nextOrder.quantity ?? 0,
+      assignedProducts: nextOrder.assignedProducts ?? [],
     });
-    transaction.update(memberRef, { balance: nextBalance, totalOrders: member.totalOrders + 1 });
+    transaction.update(memberRef, { balance: nextMember.balance, totalOrders: nextMember.totalOrders });
   });
 
   return { order: nextOrder, member: nextMember };

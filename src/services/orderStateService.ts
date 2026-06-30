@@ -43,8 +43,8 @@ export function getOrderStateLabel(state: OrderState): string {
     waiting_assignment: "Waiting for Assignment",
     product_assigned: "Product Assigned",
     waiting_shipment: "Waiting for Shipment",
-    belum_diserahkan: "Belum Diserahkan",
-    diserahkan: "Diserahkan",
+    belum_diserahkan: "Not delivered",
+    diserahkan: "Delivered",
   };
   return labels[state];
 }

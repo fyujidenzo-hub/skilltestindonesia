@@ -12,7 +12,7 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw }: Sto
     <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
       <StoreShortcut icon={<Tag />} label="Promo" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })} />
       <StoreShortcut icon={<PackageCheck />} label="Orders" onClick={() => document.getElementById("assignment")?.scrollIntoView({ behavior: "smooth" })} />
-      <StoreShortcut icon={<WalletCards />} label="Top-up" onClick={onTopUp} />
+      <StoreShortcut icon={<WalletCards />} label="Top Up" onClick={onTopUp} />
       <StoreShortcut icon={<Banknote />} label="Withdraw" onClick={onWithdraw} />
       <StoreShortcut icon={<ReceiptText />} label="Records" onClick={() => document.getElementById("records")?.scrollIntoView({ behavior: "smooth" })} />
       <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => navigate("/profile#settings")} />

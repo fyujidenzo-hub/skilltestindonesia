@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useState } f
 import { firebaseReady } from "../firebase";
 import { initialState } from "../data";
 import { loadStoredState, saveLocalState } from "../services/appStateRepository";
+import { generateOrderCode } from "../services/orderCode";
 import type { AppState, BankPlacement, Member, Order, Product, StaffAdmin, Transaction } from "../types";
 
 type RegisterMemberPayload = {
@@ -28,6 +29,7 @@ type Action =
   | { type: "completeOrderWithMember"; payload: { order: Order; member: Member } }
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
   | { type: "addBank"; payload: Omit<BankPlacement, "id"> & { id?: string } }
+  | { type: "updateBank"; payload: BankPlacement }
   | { type: "addAdmin"; payload: StaffAdmin }
   | { type: "updateAdmin"; payload: StaffAdmin }
   | { type: "updateAccount"; payload: AppState["account"] };
@@ -47,6 +49,15 @@ function nowStamp() {
 
 function nextId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 7)}`;
+}
+
+function createLocalOrderCode(orders: Order[]) {
+  const existingCodes = new Set(orders.map((order) => order.referenceNumber || order.id));
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const referenceNumber = generateOrderCode();
+    if (!existingCodes.has(referenceNumber)) return referenceNumber;
+  }
+  return generateOrderCode();
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -137,7 +148,7 @@ function reducer(state: AppState, action: Action): AppState {
 
     const order: Order = {
       id: nextId("ord"),
-      referenceNumber: `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+      referenceNumber: createLocalOrderCode(state.orders),
       memberId: member.id,
       member: member.username,
       admin: member.referredBy,
@@ -230,6 +241,7 @@ function reducer(state: AppState, action: Action): AppState {
 
   if (action.type === "addProduct") return { ...state, products: [{ ...action.payload, id: action.payload.id ?? nextId("prod") }, ...state.products] };
   if (action.type === "addBank") return { ...state, banks: [{ ...action.payload, id: action.payload.id ?? nextId("bank") }, ...state.banks] };
+  if (action.type === "updateBank") return { ...state, banks: state.banks.map((bank) => (bank.id === action.payload.id ? action.payload : bank)) };
   if (action.type === "addAdmin") return { ...state, admins: [action.payload, ...state.admins] };
   if (action.type === "updateAdmin") return { ...state, admins: state.admins.map((admin) => (admin.id === action.payload.id ? action.payload : admin)) };
   if (action.type === "updateAccount") return { ...state, account: action.payload };

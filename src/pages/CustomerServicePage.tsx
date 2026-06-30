@@ -31,9 +31,9 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
 
         <div className="rounded bg-white p-5 shadow-panel sm:p-7">
           <div className="rounded bg-forest p-5 text-white">
-            <h1 className="text-xl font-black sm:text-2xl">Pelayanan Pelanggan yang Berdedikasi</h1>
+            <h1 className="text-xl font-black sm:text-2xl">Dedicated Customer Service</h1>
             <p className="mt-4 text-sm leading-7 text-emerald-50">
-              Pemberitahuan kepada seluruh pengguna, Waktu penyelesaian tugas/pesanan adalah 2 jam. Selesaikan pesanan dengan batas waktu yang ditentukan. Jika melewati batas waktu yang ditentukan akun Anda akan mengalami pembekuan saldo. Isi ulang dan penarikan saldo di luar jam 09:00 WIB - 21:00 WIB harus mendapat izin dari Customer Service kami. Apabila terjadi masalah dalam transaksi Anda, segera hubungi Customer Service kami.
+              Notice to all users: the task/order completion time is 2 hours. Complete orders within the specified time limit. If you exceed the time limit, your account balance may be frozen. Top ups and withdrawals outside 09:00 WIB - 21:00 WIB require permission from our Customer Service team. If there is a problem with your transaction, please contact Customer Service immediately.
             </p>
           </div>
 

@@ -96,8 +96,8 @@ export default function WalletValidation({
 
         <div className="rounded bg-amber-50 border border-amber-200 p-4 mb-6">
           <p className="text-sm text-amber-900">
-            <span className="font-bold block mb-1">Saldo anda kurang sebesar {formatRupiah(shortage)}</span>
-            Silahkan isi ulang saldo anda untuk menyelesaikan tugas pesanan ini.
+            <span className="font-bold block mb-1">Sorry, your balance is insufficient by {formatRupiah(shortage)}.</span>
+            Please top up first.
           </p>
         </div>
 

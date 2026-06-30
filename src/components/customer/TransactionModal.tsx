@@ -34,6 +34,10 @@ export default function TransactionModal({ type, member, admin, banks, onClose }
       setMessage(`✗ Maximum top-up is Rp ${maxTopUp.toLocaleString("id-ID")}`);
       return;
     }
+    if (type === "topup" && !activeBanks.length) {
+      setMessage("✗ Bank details are not available yet. Please contact customer service.");
+      return;
+    }
     if (type === "topup" && !senderName.trim()) {
       setMessage("✗ Sender name is required");
       return;
@@ -93,13 +97,18 @@ export default function TransactionModal({ type, member, admin, banks, onClose }
             {activeBanks.length ? (
               activeBanks.map((bank) => (
                 <div key={bank.id} className="mt-2 rounded border border-slate-200 bg-white p-3 text-sm">
+                  <p className="text-xs font-bold uppercase text-slate-500">Bank name</p>
                   <p className="font-black">{bank.bank}</p>
+                  <p className="mt-2 text-xs font-bold uppercase text-slate-500">Account owner name</p>
                   <p>{bank.accountName}</p>
+                  <p className="mt-2 text-xs font-bold uppercase text-slate-500">Account number</p>
                   <p className="font-bold text-forest">{bank.accountNumber}</p>
                 </div>
               ))
             ) : (
-              <p className="mt-2 text-sm text-slate-500">No active bank placement yet. Contact support before topping up.</p>
+              <p className="mt-2 rounded bg-amber-50 p-3 text-sm font-bold text-amber-700">
+                Bank details are not available yet. Please contact customer service.
+              </p>
             )}
           </div>
         )}

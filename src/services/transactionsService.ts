@@ -55,21 +55,24 @@ export async function deleteTransaction(id: string): Promise<void> {
 export async function approveTransactionRequest(transactionItem: Transaction, member: Member, status: "approved" | "rejected"): Promise<Member> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
-  const signedAmount = transactionItem.type === "topup" ? transactionItem.amount : -transactionItem.amount;
-  const nextBalance = status === "approved" ? Math.max(0, member.balance + signedAmount) : member.balance;
-  const nextMember = { ...member, balance: nextBalance };
+  let nextBalance = member.balance;
 
   await runTransaction(firestore, async (transaction) => {
     const txRef = doc(firestore, COLLECTION, transactionItem.id);
     const memberRef = doc(firestore, "members", member.id);
-    const txSnap = await transaction.get(txRef);
+    const [txSnap, memberSnap] = await Promise.all([transaction.get(txRef), transaction.get(memberRef)]);
 
     if (!txSnap.exists()) throw new Error("Request no longer exists.");
     if (txSnap.data().status !== "pending") throw new Error("This request has already been reviewed.");
+    if (!memberSnap.exists()) throw new Error("Member no longer exists.");
+
+    const currentBalance = Number(memberSnap.data().balance ?? member.balance);
+    const signedAmount = transactionItem.type === "topup" ? transactionItem.amount : -transactionItem.amount;
+    nextBalance = status === "approved" ? Math.max(0, currentBalance + signedAmount) : currentBalance;
 
     transaction.update(txRef, { status });
     if (status === "approved") transaction.update(memberRef, { balance: nextBalance });
   });
 
-  return nextMember;
+  return { ...member, balance: nextBalance };
 }

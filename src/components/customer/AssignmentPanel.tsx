@@ -89,7 +89,7 @@ export default function AssignmentPanel({
             disabled={isLoading}
             className="w-full rounded bg-forest px-4 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400"
           >
-            {isLoading ? "Accepting..." : "Ambil Pesanan"}
+            {isLoading ? "Accepting..." : "Take Order"}
           </button>
         </div>
       </div>
@@ -103,12 +103,12 @@ export default function AssignmentPanel({
         <div className="flex items-start gap-4">
           <Clock className="text-amber-600 flex-shrink-0 mt-1" size={24} />
           <div className="flex-1">
-            <h3 className="font-bold mb-2">Menunggu Pengiriman</h3>
+            <h3 className="font-bold mb-2">Waiting for delivery</h3>
             <p className="text-sm text-slate-600 mb-4">
-              Tugas pesanan sudah diambil. Admin akan menambahkan produk pesanan.
+              Your order task has been taken. Admin will add the assigned product.
             </p>
             <div className="text-xs text-slate-500">
-              Status: <span className="font-semibold text-amber-700">Belum Diserahkan</span>
+              Status: <span className="font-semibold text-amber-700">Not delivered</span>
             </div>
           </div>
         </div>
@@ -163,7 +163,7 @@ export default function AssignmentPanel({
               disabled={isLoading}
               className="w-full rounded bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
             >
-              {isLoading ? "Submitting..." : state === "product_assigned" ? "Kirim Pesanan" : "Yes, Kirim"}
+              {isLoading ? "Submitting..." : state === "product_assigned" ? "Send Order" : "Yes, Send"}
             </button>
           )}
 

@@ -13,6 +13,7 @@ import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { completeWorkflowOrder, createOrder, updateOrderStatus } from "../services/ordersService";
+import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
 import type { Order, Product } from "../types";
@@ -58,7 +59,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       .map((order) => ({
         id: `order-${order.id}`,
         title: `Order ${order.status}`,
-        text: `${order.productName || "Pending assignment"} · ${order.referenceNumber ?? order.id}`,
+        text: `${order.productName || "Pending assignment"} · ${getOrderCode(order)}`,
         tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
       }));
 
@@ -69,8 +70,8 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         id: `transaction-${transaction.id}`,
         title:
           transaction.status === "pending"
-            ? `${transaction.type === "topup" ? "Top-up" : "Withdrawal"} pending`
-            : `${transaction.type === "topup" ? "Top-up" : "Withdrawal"} ${transaction.status}`,
+            ? `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} pending`
+            : `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} ${transaction.status}`,
         text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
         tone:
           transaction.status === "approved"
@@ -115,7 +116,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "addOrder", payload: order });
-      setTaskMessage(`Task accepted! Reference: ${order.referenceNumber}. Waiting for admin to assign products.`);
+      setTaskMessage("Successfully took order.");
     } catch (error) {
       console.error("Failed to accept task:", error);
       setTaskMessage("Unable to accept task. Please try again.");
@@ -143,7 +144,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         submittedAt: activeOrder.submittedAt ?? new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "updateOrder", payload: order });
-      setTaskMessage("Order submitted successfully. Status: Belum Diserahkan.");
+      setTaskMessage("Order submitted successfully. Status: Not delivered.");
     } catch (error) {
       console.error("Failed to submit order:", error);
       setTaskMessage("Unable to submit order. Please try again.");
@@ -376,7 +377,7 @@ function TaskStatusModal({
           </div>
 
           <div className="grid gap-4 rounded bg-slate-50 p-4 sm:grid-cols-2">
-            <StatusItem label="Transaction number" value={order?.referenceNumber ?? "No task accepted"} />
+            <StatusItem label="Transaction number" value={order ? getOrderCode(order) : "No task accepted"} />
             <StatusItem label="Date" value={order?.createdAt ? shortDate(order.createdAt) : "-"} />
             <StatusItem label="Assigned product" value={productName} />
             <StatusItem label="Quantity" value={String(order?.quantity ?? assignedProduct?.quantity ?? 0)} />
@@ -386,14 +387,14 @@ function TaskStatusModal({
 
           {shortage > 0 && (
             <div className="rounded border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-              Saldo anda kurang sebesar {formatRupiah(shortage)}. Silakan isi ulang saldo anda untuk melanjutkan.
+              Sorry, your balance is insufficient by {formatRupiah(shortage)}. Please top up first.
             </div>
           )}
 
           <div className="flex flex-col gap-2 sm:flex-row">
             {state === "no_task" ? (
               <button className="flex-1 rounded bg-forest px-4 py-3 font-black text-white" onClick={onTakeOrder}>
-                Ambil Pesanan
+                Take Order
               </button>
             ) : (
               <button className="flex-1 rounded bg-forest px-4 py-3 font-black text-white" onClick={onOpenOrders}>
