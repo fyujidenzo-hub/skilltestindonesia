@@ -198,6 +198,34 @@ service cloud.firestore {
       && request.resource.data.totalOrders >= resource.data.totalOrders;
     }
 
+    function isValidMemberUpdate() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'username',
+        'email',
+        'phone',
+        'invitationCode',
+        'referredBy',
+        'level',
+        'balance',
+        'totalOrders',
+        'lastLogin',
+        'accountPassword',
+        'withdrawalPassword'
+      ])
+      && request.resource.data.id == resource.data.id
+      && isString(request.resource.data.username)
+      && isString(request.resource.data.phone)
+      && isString(request.resource.data.invitationCode)
+      && isString(request.resource.data.referredBy)
+      && request.resource.data.level in ['Starter', 'Silver', 'Gold', 'VIP']
+      && isNumber(request.resource.data.balance)
+      && request.resource.data.balance >= 0
+      && isNumber(request.resource.data.totalOrders)
+      && request.resource.data.totalOrders >= 0
+      && isString(request.resource.data.lastLogin);
+    }
+
     function isValidStaffCreate() {
       return request.resource.data.keys().hasOnly([
         'id',
@@ -240,7 +268,7 @@ service cloud.firestore {
     match /members/{memberId} {
       allow read: if true;
       allow create: if request.resource.data.id == memberId && isValidMemberCreate();
-      allow update: if isValidMemberBalanceUpdate();
+      allow update: if isValidMemberBalanceUpdate() || isValidMemberUpdate();
       allow delete: if false;
     }
 

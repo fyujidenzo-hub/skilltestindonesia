@@ -48,6 +48,8 @@ export async function createOrder(order: Omit<Order, "id"> & { id?: string }): P
     requiredBalance: order.requiredBalance ?? 0,
     assignedAt: order.assignedAt ?? "",
     completedAt: order.completedAt ?? "",
+    submittedAt: order.submittedAt ?? "",
+    shippedAt: order.shippedAt ?? "",
   };
   await setDoc(doc(db, COLLECTION, id), nextOrder);
   return nextOrder;
@@ -135,6 +137,8 @@ export async function assignOrderProducts(order: Order, items: Array<{ product: 
       status: nextOrder.status,
       assignedAt: nextOrder.assignedAt,
       completedAt: nextOrder.completedAt ?? "",
+      submittedAt: nextOrder.submittedAt ?? "",
+      shippedAt: nextOrder.shippedAt ?? "",
     });
   });
 
@@ -145,6 +149,12 @@ export async function updateOrderStatus(order: Order, status: OrderStatus, extra
   if (!db) throw new Error("Firebase not initialized");
   const nextOrder: Order = { ...order, ...extra, status };
   await updateDoc(doc(db, COLLECTION, order.id), {
+    quantity: nextOrder.quantity ?? 0,
+    assignedProducts: nextOrder.assignedProducts ?? [],
+    submittedAt: nextOrder.submittedAt ?? "",
+    shippedAt: nextOrder.shippedAt ?? "",
+    assignedAt: nextOrder.assignedAt ?? "",
+    completedAt: nextOrder.completedAt ?? "",
     ...extra,
     status,
   });
@@ -192,7 +202,14 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
       throw new Error("This task has already been completed.");
     }
 
-    transaction.update(orderRef, { status: "diserahkan", completedAt });
+    transaction.update(orderRef, {
+      status: "diserahkan",
+      completedAt,
+      submittedAt: order.submittedAt ?? "",
+      shippedAt: order.shippedAt ?? "",
+      quantity: order.quantity ?? 0,
+      assignedProducts: order.assignedProducts ?? [],
+    });
     transaction.update(memberRef, { balance: nextBalance, totalOrders: member.totalOrders + 1 });
   });
 
