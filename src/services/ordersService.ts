@@ -198,6 +198,61 @@ export async function completeOrderTask(order: Order, member: Member): Promise<{
   return { order: nextOrder, member: { ...nextMember, totalOrders: member.totalOrders + 1 } };
 }
 
+export async function submitWorkflowOrder(order: Order, member: Member): Promise<{ order: Order; member: Member }> {
+  if (!db) throw new Error("Firebase not initialized");
+  const firestore = db;
+  const submittedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
+  let nextOrder: Order = { ...order, status: "belum_diserahkan", submittedAt };
+  let nextMember: Member = { ...member };
+
+  await runTransaction(firestore, async (transaction) => {
+    const orderRef = doc(firestore, COLLECTION, order.id);
+    const memberRef = doc(firestore, "members", member.id);
+    const [orderSnap, memberSnap] = await Promise.all([transaction.get(orderRef), transaction.get(memberRef)]);
+
+    if (!orderSnap.exists()) throw new Error("Order no longer exists.");
+    if (!memberSnap.exists()) throw new Error("Member no longer exists.");
+
+    const liveOrder = { id: orderSnap.id, ...orderSnap.data() } as Order;
+    const liveMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
+
+    if (liveOrder.status === "belum_diserahkan" || liveOrder.status === "diserahkan" || liveOrder.status === "completed") {
+      throw new Error("This task has already been submitted.");
+    }
+
+    const requiredBalance = Number(liveOrder.requiredBalance ?? liveOrder.value ?? 0);
+    const currentBalance = Number(liveMember.balance ?? 0);
+    const shortage = Math.max(0, requiredBalance - currentBalance);
+    if (shortage > 0) {
+      throw new Error(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
+    }
+
+    nextOrder = {
+      ...liveOrder,
+      status: "belum_diserahkan",
+      submittedAt: order.submittedAt ?? liveOrder.submittedAt ?? submittedAt,
+      shippedAt: order.shippedAt ?? liveOrder.shippedAt ?? "",
+      quantity: liveOrder.quantity ?? 0,
+      assignedProducts: liveOrder.assignedProducts ?? [],
+    };
+    nextMember = {
+      ...liveMember,
+      balance: currentBalance - requiredBalance,
+    };
+
+    transaction.update(orderRef, {
+      status: "belum_diserahkan",
+      submittedAt: nextOrder.submittedAt,
+      shippedAt: nextOrder.shippedAt ?? "",
+      quantity: nextOrder.quantity ?? 0,
+      assignedProducts: nextOrder.assignedProducts ?? [],
+    });
+    transaction.update(memberRef, { balance: nextMember.balance });
+  });
+
+  return { order: nextOrder, member: nextMember };
+}
+
 export async function completeWorkflowOrder(order: Order, member: Member): Promise<{ order: Order; member: Member }> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
@@ -221,12 +276,14 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
 
     const requiredBalance = Number(liveOrder.requiredBalance ?? liveOrder.value ?? 0);
     const currentBalance = Number(liveMember.balance ?? 0);
-    const shortage = Math.max(0, requiredBalance - currentBalance);
+    const balanceAlreadyDeducted = liveOrder.status === "belum_diserahkan";
+    const amountToDeduct = balanceAlreadyDeducted ? 0 : requiredBalance;
+    const shortage = Math.max(0, amountToDeduct - currentBalance);
     if (shortage > 0) {
       throw new Error(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
     }
 
-    const nextBalance = currentBalance + Number(liveOrder.commission ?? 0);
+    const nextBalance = currentBalance - amountToDeduct + Number(liveOrder.commission ?? 0);
     nextOrder = {
       ...liveOrder,
       status: "diserahkan",

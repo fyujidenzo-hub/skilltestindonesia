@@ -12,7 +12,7 @@ import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
-import { completeWorkflowOrder, createOrder, updateOrderStatus } from "../services/ordersService";
+import { completeWorkflowOrder, createOrder, submitWorkflowOrder, updateOrderStatus } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
@@ -140,14 +140,18 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
     setIsSubmittingOrder(true);
     try {
-      const order = await updateOrderStatus(activeOrder, "belum_diserahkan", {
-        submittedAt: activeOrder.submittedAt ?? new Date().toISOString().slice(0, 16).replace("T", " "),
-      });
-      dispatch({ type: "updateOrder", payload: order });
-      setTaskMessage("Order submitted successfully. Status: Not delivered.");
+      const result = await submitWorkflowOrder(
+        {
+          ...activeOrder,
+          submittedAt: activeOrder.submittedAt ?? new Date().toISOString().slice(0, 16).replace("T", " "),
+        },
+        currentMember,
+      );
+      dispatch({ type: "completeOrderWithMember", payload: result });
+      setTaskMessage("Order submitted successfully. Required balance was deducted. Status: Not delivered.");
     } catch (error) {
       console.error("Failed to submit order:", error);
-      setTaskMessage("Unable to submit order. Please try again.");
+      setTaskMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
     } finally {
       setIsSubmittingOrder(false);
     }

@@ -80,7 +80,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       dispatch({ type: "completeOrderWithMember", payload: result });
       setReviewOrderId(result.order.id);
       setConfirmOrder(null);
-      setMessage("Order sent successfully. Your commission has been added to your balance.");
+      setMessage("Order sent successfully. Required balance was deducted and your commission has been added.");
     } catch (error) {
       console.error("Failed to submit order:", error);
       setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
