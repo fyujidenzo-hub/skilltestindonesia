@@ -1,5 +1,5 @@
 import { CheckCircle2, ChevronLeft, ChevronRight, Filter, PackagePlus, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Panel } from "../common";
 import { assignOrderProduct } from "../../services/ordersService";
 import { getOrderCode } from "../../services/orderCode";
@@ -9,13 +9,15 @@ import type { Member, Order, Product } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
 import Filters from "./Filters";
 
-const pageSize = 5;
+const productPageSize = 5;
+const rowPageSize = 10;
 
 export default function OrderTable({ orders, members, products }: { orders: Order[]; members: Member[]; products: Product[] }) {
   const { dispatch } = useAppStore();
   const [targetOrder, setTargetOrder] = useState<Order | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productPage, setProductPage] = useState(0);
+  const [rowPage, setRowPage] = useState(0);
   const [activeQueue, setActiveQueue] = useState<"pending" | "completed">("pending");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -32,9 +34,17 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const pendingRows = orderedRows.filter((order) => getOrderState(order) !== "diserahkan");
   const completedRows = orderedRows.filter((order) => getOrderState(order) === "diserahkan");
   const visibleRows = activeQueue === "pending" ? pendingRows : completedRows;
+  const totalRowPages = Math.max(1, Math.ceil(visibleRows.length / rowPageSize));
+  const pagedRows = visibleRows.slice(rowPage * rowPageSize, rowPage * rowPageSize + rowPageSize);
+  const startRow = visibleRows.length ? rowPage * rowPageSize + 1 : 0;
+  const endRow = Math.min(visibleRows.length, (rowPage + 1) * rowPageSize);
 
-  const productPages = Math.max(1, Math.ceil(products.length / pageSize));
-  const pagedProducts = products.slice(productPage * pageSize, productPage * pageSize + pageSize);
+  const productPages = Math.max(1, Math.ceil(products.length / productPageSize));
+  const pagedProducts = products.slice(productPage * productPageSize, productPage * productPageSize + productPageSize);
+
+  useEffect(() => {
+    setRowPage(0);
+  }, [activeQueue, orders.length]);
 
   const openProductModal = (order: Order) => {
     setTargetOrder(order);
@@ -111,13 +121,21 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             onClick={() => setActiveQueue("completed")}
           />
         </div>
-        <div className="mt-4 overflow-x-auto rounded border border-slate-200">
-          <table className="min-w-[1180px] w-full border-collapse bg-white text-sm">
+        <div className="mt-4 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-black text-slate-900">{activeQueue === "pending" ? "Pending order queue" : "Completed order archive"}</p>
+              <p className="text-xs text-slate-500">Showing {startRow}-{endRow} of {visibleRows.length} records</p>
+            </div>
+            <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per page</span>
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+          <table className="w-full min-w-[1120px] border-separate border-spacing-0 bg-white text-left text-sm">
             <thead className="bg-slate-900 text-left text-xs uppercase text-white">
               <tr>
                 <Th>Order Code</Th>
-                <Th>User</Th>
-                <Th>Customer Name</Th>
+                <Th>Member</Th>
                 <Th>User Balance</Th>
                 <Th>Product</Th>
                 <Th>Quantity</Th>
@@ -130,8 +148,8 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
               </tr>
             </thead>
             <tbody>
-              {visibleRows.length ? (
-                visibleRows.map((order) => {
+              {pagedRows.length ? (
+                pagedRows.map((order) => {
                   const member = members.find((item) => item.id === order.memberId || item.username === order.member);
                   const assignedProducts = order.assignedProducts?.length
                     ? order.assignedProducts
@@ -144,10 +162,13 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                   const taskLabel = isCompleted ? "Completed" : hasProduct ? "Pending delivery" : "Pending assignment";
 
                   return (
-                    <tr key={order.id} className="border-t border-slate-200 align-top">
-                      <Td>{getOrderCode(order)}</Td>
-                      <Td>{order.member}</Td>
-                      <Td>{member?.username ?? order.member}</Td>
+                    <tr key={order.id} className="group align-top transition hover:bg-slate-50">
+                      <Td>
+                        <span className="block max-w-[150px] break-words font-black text-forest">{getOrderCode(order)}</span>
+                      </Td>
+                      <Td>
+                        <OrderMemberCell order={order} member={member} />
+                      </Td>
                       <Td>{formatRupiah(member?.balance ?? 0)}</Td>
                       <Td>
                         {hasProduct ? (
@@ -195,13 +216,74 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                 })
               ) : (
                 <tr>
-                  <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
+                  <td colSpan={11} className="p-6 text-center text-sm text-slate-500">
                     {activeQueue === "pending" ? "No pending order records in this admin scope yet." : "No completed order records in this admin scope yet."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
+
+          <div className="grid gap-3 p-3 xl:hidden">
+            {pagedRows.length ? (
+              pagedRows.map((order) => {
+                const member = members.find((item) => item.id === order.memberId || item.username === order.member);
+                const assignedProducts = order.assignedProducts?.length
+                  ? order.assignedProducts
+                  : order.productName
+                    ? [{ name: order.productName, code: order.productCode ?? "", quantity: order.quantity ?? 1 }]
+                    : [];
+                const orderState = getOrderState(order);
+                const isCompleted = orderState === "diserahkan";
+                const hasProduct = assignedProducts.length > 0;
+                const taskLabel = isCompleted ? "Completed" : hasProduct ? "Pending delivery" : "Pending assignment";
+
+                return (
+                  <article key={order.id} className="rounded border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="break-words text-sm font-black text-forest">{getOrderCode(order)}</p>
+                        <OrderMemberCell order={order} member={member} />
+                      </div>
+                      <span className={`shrink-0 rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        {isCompleted ? "Completed" : "Pending"}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <MobileOrderMetric label="User balance" value={formatRupiah(member?.balance ?? 0)} />
+                      <MobileOrderMetric label="Total price" value={formatRupiah(order.value ?? 0)} />
+                      <MobileOrderMetric label="Commission" value={formatRupiah(order.commission ?? 0)} />
+                      <MobileOrderMetric label="Quantity" value={String(order.quantity ?? 0)} />
+                      <MobileOrderMetric label="Task" value={taskLabel} wide />
+                      <MobileOrderMetric label="Date" value={shortDate(order.createdAt)} wide />
+                    </div>
+                    <div className="mt-4 rounded bg-slate-50 p-3">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">Product</p>
+                      {hasProduct ? (
+                        <div className="mt-1 grid gap-1">
+                          {assignedProducts.map((product) => (
+                            <p key={`${order.id}-${product.code}-${product.name}`} className="text-sm font-black text-slate-900">{product.name}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm font-semibold text-slate-400">Waiting product</p>
+                      )}
+                    </div>
+                    <div className="mt-4">
+                      <OrderAction hasProduct={hasProduct} isCompleted={isCompleted} onAdd={() => openProductModal(order)} />
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <p className="rounded bg-slate-50 p-6 text-center text-sm text-slate-500">
+                {activeQueue === "pending" ? "No pending order records in this admin scope yet." : "No completed order records in this admin scope yet."}
+              </p>
+            )}
+          </div>
+
+          <TablePagination page={rowPage} totalPages={totalRowPages} onPageChange={setRowPage} />
         </div>
       </Panel>
 
@@ -313,9 +395,65 @@ function OrderQueueButton({
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="border-r border-slate-700 px-3 py-3 font-black last:border-r-0">{children}</th>;
+  return <th className="border-r border-slate-700 px-4 py-3 font-black last:border-r-0">{children}</th>;
 }
 
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="border-r border-slate-100 px-3 py-4 last:border-r-0">{children}</td>;
+  return <td className="border-b border-slate-100 border-r border-slate-100 px-4 py-4 align-top last:border-r-0">{children}</td>;
+}
+
+function OrderMemberCell({ order, member }: { order: Order; member?: Member }) {
+  return (
+    <div className="min-w-0">
+      <p className="font-black text-slate-900">{member?.username ?? order.member}</p>
+      <p className="text-xs font-semibold text-slate-500">Username: {order.member}</p>
+      {member?.phone && <p className="text-xs text-coral">{member.phone}</p>}
+      {member?.referredBy && <p className="text-xs text-slate-400">{member.referredBy}</p>}
+    </div>
+  );
+}
+
+function OrderAction({ hasProduct, isCompleted, onAdd }: { hasProduct: boolean; isCompleted: boolean; onAdd: () => void }) {
+  if (!hasProduct && !isCompleted) {
+    return (
+      <button className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700" onClick={onAdd}>
+        <PackagePlus size={14} /> Add Product
+      </button>
+    );
+  }
+
+  if (hasProduct && !isCompleted) {
+    return (
+      <span className="inline-flex max-w-[180px] rounded bg-amber-100 px-3 py-2 text-xs font-black leading-4 text-amber-700">
+        Product selected, waiting for completion
+      </span>
+    );
+  }
+
+  return <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">Completed</span>;
+}
+
+function MobileOrderMetric({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={`rounded bg-slate-50 p-3 ${wide ? "sm:col-span-2" : ""}`}>
+      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-black text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function TablePagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (page: number) => void }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs font-semibold text-slate-500">Page {page + 1} of {totalPages}</p>
+      <div className="flex gap-2">
+        <button className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 disabled:text-slate-300 sm:flex-none" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
+          Previous
+        </button>
+        <button className="flex-1 rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-300 sm:flex-none" disabled={page >= totalPages - 1} onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}>
+          Next
+        </button>
+      </div>
+    </div>
+  );
 }

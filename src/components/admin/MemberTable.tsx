@@ -2,9 +2,11 @@ import { Panel } from "../common";
 import type { Member } from "../../types";
 import { formatRupiah } from "../../utils";
 import Filters from "./Filters";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { updateMember } from "../../services/membersService";
 import { useAppStore } from "../../store/AppStore";
+
+const pageSize = 10;
 
 export default function MemberTable({ members }: { members: Member[] }) {
   const { dispatch } = useAppStore();
@@ -13,6 +15,27 @@ export default function MemberTable({ members }: { members: Member[] }) {
   const [form, setForm] = useState({ username: "", phone: "", level: "Starter", amount: 0 });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(0);
+
+  const sortedMembers = useMemo(
+    () =>
+      [...members].sort((left, right) => {
+        const rightDate = new Date(right.lastLogin.replace(" ", "T")).getTime();
+        const leftDate = new Date(left.lastLogin.replace(" ", "T")).getTime();
+        return (Number.isNaN(rightDate) ? 0 : rightDate) - (Number.isNaN(leftDate) ? 0 : leftDate);
+      }),
+    [members],
+  );
+  const totalPages = Math.max(1, Math.ceil(sortedMembers.length / pageSize));
+  const visibleMembers = sortedMembers.slice(page * pageSize, page * pageSize + pageSize);
+  const totalBalance = sortedMembers.reduce((sum, member) => sum + member.balance, 0);
+  const totalOrders = sortedMembers.reduce((sum, member) => sum + member.totalOrders, 0);
+  const startRow = sortedMembers.length ? page * pageSize + 1 : 0;
+  const endRow = Math.min(sortedMembers.length, (page + 1) * pageSize);
+
+  useEffect(() => {
+    setPage(0);
+  }, [members.length]);
 
   const openModal = (member: Member, type: "edit" | "balance" | "rewards") => {
     setActiveMember(member);
@@ -56,48 +79,95 @@ export default function MemberTable({ members }: { members: Member[] }) {
   return (
     <Panel title="Member Management">
       <Filters />
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="border border-slate-200 p-3">Promotion code</th>
-              <th className="border border-slate-200 p-3">Username</th>
-              <th className="border border-slate-200 p-3">Balance</th>
-              <th className="border border-slate-200 p-3">Orders</th>
-              <th className="border border-slate-200 p-3">Last login</th>
-              <th className="border border-slate-200 p-3">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.id}>
-                <td className="border border-slate-200 p-3 font-semibold">{member.invitationCode}</td>
-                <td className="border border-slate-200 p-3">
-                  <p className="font-bold">{member.username}</p>
-                  <p className="text-coral">{member.phone}</p>
-                  <p className="text-xs text-slate-500">ID: {member.id} · {member.referredBy}</p>
-                  <span className="mt-2 inline-block rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-700">{member.level}</span>
-                </td>
-                <td className="border border-slate-200 p-3 font-bold text-coral">{formatRupiah(member.balance)}</td>
-                <td className="border border-slate-200 p-3">{member.totalOrders}</td>
-                <td className="border border-slate-200 p-3">{member.lastLogin}</td>
-                <td className="border border-slate-200 p-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded bg-sky-600 px-3 py-1.5 text-xs font-bold text-white" onClick={() => openModal(member, "edit")}>
-                      Edit
-                    </button>
-                    <button className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white" onClick={() => openModal(member, "balance")}>
-                      Add Balance
-                    </button>
-                    <button className="rounded bg-rose-600 px-3 py-1.5 text-xs font-bold text-white" onClick={() => openModal(member, "rewards")}>
-                      Rewards
-                    </button>
-                  </div>
-                </td>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <MemberSummary label="Total members" value={String(sortedMembers.length)} />
+        <MemberSummary label="Total balance" value={formatRupiah(totalBalance)} />
+        <MemberSummary label="Total orders" value={String(totalOrders)} />
+      </div>
+
+      <div className="mt-4 rounded border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <div>
+            <p className="text-sm font-black text-slate-900">Customer account records</p>
+            <p className="text-xs text-slate-500">
+              Showing {startRow}-{endRow} of {sortedMembers.length} members
+            </p>
+          </div>
+          <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per page</span>
+        </div>
+
+        <div className="hidden overflow-x-auto lg:block">
+          <table className="w-full min-w-[980px] border-separate border-spacing-0 text-left text-sm">
+            <thead className="bg-slate-900 text-xs uppercase text-white">
+              <tr>
+                <MemberTh>Promotion Code</MemberTh>
+                <MemberTh>Member</MemberTh>
+                <MemberTh>Balance</MemberTh>
+                <MemberTh>Orders</MemberTh>
+                <MemberTh>Last Login</MemberTh>
+                <MemberTh>Action</MemberTh>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleMembers.length ? (
+                visibleMembers.map((member) => (
+                  <tr key={member.id} className="group align-middle transition hover:bg-slate-50">
+                    <MemberTd>
+                      <span className="rounded bg-emerald-50 px-2.5 py-1 text-sm font-black text-forest">{member.invitationCode}</span>
+                    </MemberTd>
+                    <MemberTd>
+                      <MemberIdentity member={member} />
+                    </MemberTd>
+                    <MemberTd>
+                      <span className="whitespace-nowrap text-base font-black text-coral">{formatRupiah(member.balance)}</span>
+                    </MemberTd>
+                    <MemberTd>
+                      <span className="rounded bg-slate-100 px-2.5 py-1 text-sm font-black text-slate-700">{member.totalOrders}</span>
+                    </MemberTd>
+                    <MemberTd>
+                      <span className="text-sm font-semibold text-slate-700">{member.lastLogin}</span>
+                    </MemberTd>
+                    <MemberTd>
+                      <MemberActions member={member} onOpen={openModal} />
+                    </MemberTd>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-sm text-slate-500">
+                    No members found in this admin scope.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid gap-3 p-3 lg:hidden">
+          {visibleMembers.length ? (
+            visibleMembers.map((member) => (
+              <article key={member.id} className="rounded border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <MemberIdentity member={member} />
+                  <span className="shrink-0 rounded bg-emerald-50 px-2.5 py-1 text-xs font-black text-forest">{member.invitationCode}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <MobileMetric label="Balance" value={formatRupiah(member.balance)} tone="coral" />
+                  <MobileMetric label="Orders" value={String(member.totalOrders)} />
+                  <MobileMetric label="Last login" value={member.lastLogin} wide />
+                </div>
+                <div className="mt-4">
+                  <MemberActions member={member} onOpen={openModal} />
+                </div>
+              </article>
+            ))
+          ) : (
+            <p className="rounded bg-slate-50 p-6 text-center text-sm text-slate-500">No members found in this admin scope.</p>
+          )}
+        </div>
+
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
       {activeMember && modalType && (
@@ -150,4 +220,75 @@ export default function MemberTable({ members }: { members: Member[] }) {
       )}
     </Panel>
   );
+}
+
+function MemberSummary({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-slate-100 bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-2 text-xl font-black text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function MemberIdentity({ member }: { member: Member }) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-base font-black text-slate-900">{member.username}</p>
+      <p className="text-sm font-semibold text-coral">{member.phone}</p>
+      <p className="mt-0.5 text-xs text-slate-500">ID: {member.id} · {member.referredBy}</p>
+      <span className="mt-2 inline-block rounded bg-amber-100 px-2 py-1 text-xs font-black text-amber-700">{member.level}</span>
+    </div>
+  );
+}
+
+function MemberActions({ member, onOpen }: { member: Member; onOpen: (member: Member, type: "edit" | "balance" | "rewards") => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button className="rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700" onClick={() => onOpen(member, "edit")}>
+        Edit
+      </button>
+      <button className="rounded bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700" onClick={() => onOpen(member, "balance")}>
+        Add Balance
+      </button>
+      <button className="rounded bg-rose-600 px-3 py-2 text-xs font-black text-white hover:bg-rose-700" onClick={() => onOpen(member, "rewards")}>
+        Rewards
+      </button>
+    </div>
+  );
+}
+
+function MobileMetric({ label, value, tone = "slate", wide = false }: { label: string; value: string; tone?: "slate" | "coral"; wide?: boolean }) {
+  return (
+    <div className={`rounded bg-slate-50 p-3 ${wide ? "col-span-2" : ""}`}>
+      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`mt-1 text-sm font-black ${tone === "coral" ? "text-coral" : "text-slate-900"}`}>{value}</p>
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (page: number) => void }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs font-semibold text-slate-500">
+        Page {page + 1} of {totalPages}
+      </p>
+      <div className="flex gap-2">
+        <button className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 disabled:text-slate-300 sm:flex-none" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
+          Previous
+        </button>
+        <button className="flex-1 rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-300 sm:flex-none" disabled={page >= totalPages - 1} onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}>
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MemberTh({ children }: { children: React.ReactNode }) {
+  return <th className="border-r border-slate-700 px-4 py-3 font-black last:border-r-0">{children}</th>;
+}
+
+function MemberTd({ children }: { children: React.ReactNode }) {
+  return <td className="border-b border-slate-100 border-r border-slate-100 px-4 py-4 align-middle last:border-r-0">{children}</td>;
 }
