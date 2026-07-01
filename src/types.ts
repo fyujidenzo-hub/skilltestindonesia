@@ -76,6 +76,9 @@ export interface Transaction {
   status: TransactionStatus;
   createdAt: string;
   senderName?: string;
+  withdrawalBankName?: string;
+  withdrawalAccountName?: string;
+  withdrawalAccountNumber?: string;
   proofName?: string;
   proofType?: string;
   proofDataUrl?: string;

@@ -178,6 +178,9 @@ service cloud.firestore {
         'status',
         'createdAt',
         'senderName',
+        'withdrawalBankName',
+        'withdrawalAccountName',
+        'withdrawalAccountNumber',
         'proofName',
         'proofType',
         'proofDataUrl'
@@ -192,6 +195,9 @@ service cloud.firestore {
       && request.resource.data.status == 'pending'
       && isString(request.resource.data.createdAt)
       && isOptionalString(request.resource.data.senderName)
+      && isOptionalString(request.resource.data.withdrawalBankName)
+      && isOptionalString(request.resource.data.withdrawalAccountName)
+      && isOptionalString(request.resource.data.withdrawalAccountNumber)
       && isOptionalString(request.resource.data.proofName)
       && isOptionalString(request.resource.data.proofType)
       && isOptionalString(request.resource.data.proofDataUrl)
@@ -202,6 +208,14 @@ service cloud.firestore {
           && isString(request.resource.data.proofName)
           && isString(request.resource.data.proofType)
           && isString(request.resource.data.proofDataUrl)
+        )
+      )
+      && (
+        request.resource.data.type == 'topup'
+        || (
+          isString(request.resource.data.withdrawalBankName)
+          && isString(request.resource.data.withdrawalAccountName)
+          && isString(request.resource.data.withdrawalAccountNumber)
         )
       );
     }

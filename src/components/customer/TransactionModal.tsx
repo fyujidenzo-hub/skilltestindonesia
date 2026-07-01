@@ -19,6 +19,9 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const { dispatch } = useAppStore();
   const [amount, setAmount] = useState(type === "topup" ? 100000 : 50000);
   const [senderName, setSenderName] = useState("");
+  const [withdrawalBankName, setWithdrawalBankName] = useState("");
+  const [withdrawalAccountName, setWithdrawalAccountName] = useState("");
+  const [withdrawalAccountNumber, setWithdrawalAccountNumber] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +52,10 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
       setMessage("✗ Upload a valid image proof");
       return;
     }
+    if (type === "withdraw" && (!withdrawalBankName.trim() || !withdrawalAccountName.trim() || !withdrawalAccountNumber.trim())) {
+      setMessage("✗ Bank name, account holder, and account number are required");
+      return;
+    }
 
     if (!member) {
       setMessage("✗ Please login first");
@@ -68,6 +75,9 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
         status: "pending",
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
         senderName: type === "topup" ? senderName.trim() : undefined,
+        withdrawalBankName: type === "withdraw" ? withdrawalBankName.trim() : undefined,
+        withdrawalAccountName: type === "withdraw" ? withdrawalAccountName.trim() : undefined,
+        withdrawalAccountNumber: type === "withdraw" ? withdrawalAccountNumber.trim() : undefined,
         proofName: type === "topup" ? proofFile?.name : undefined,
         proofType: type === "topup" ? proofFile?.type : undefined,
         proofDataUrl,
@@ -162,6 +172,24 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
             </div>
           )}
 
+          {type === "withdraw" && (
+            <div className="grid gap-3">
+              <div className="rounded border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+                <p className="font-black">Withdrawal destination</p>
+                <p className="mt-1 leading-6">Enter the bank account where the approved withdrawal should be released.</p>
+              </div>
+              <Field label="Bank name">
+                <input className={inputClass} value={withdrawalBankName} onChange={(event) => setWithdrawalBankName(event.target.value)} disabled={loading} placeholder="Example: BCA, BRI, Mandiri" />
+              </Field>
+              <Field label="Account holder name">
+                <input className={inputClass} value={withdrawalAccountName} onChange={(event) => setWithdrawalAccountName(event.target.value)} disabled={loading} placeholder="Name on the bank account" />
+              </Field>
+              <Field label="Account number">
+                <input className={inputClass} value={withdrawalAccountNumber} onChange={(event) => setWithdrawalAccountNumber(event.target.value)} disabled={loading} inputMode="numeric" placeholder="Bank account number" />
+              </Field>
+            </div>
+          )}
+
           {message && (
             <p
               className={`rounded p-3 text-sm font-semibold ${
@@ -180,6 +208,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
             <SummaryItem label="Status" value="Pending review" />
             <SummaryItem label="Member" value={member} />
             <SummaryItem label="Admin scope" value={admin} />
+            {type === "withdraw" && withdrawalBankName && <SummaryItem label="Withdrawal bank" value={withdrawalBankName} />}
           </div>
         </aside>
       </div>

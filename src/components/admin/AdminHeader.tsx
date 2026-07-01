@@ -1,9 +1,10 @@
 import { Bell, CheckCircle2, Clock, LogOut, PackagePlus, UserPlus, WalletCards, X } from "lucide-react";
 import { useState } from "react";
 import type { Navigate } from "../../App";
-import { adminTabIcon } from "../../constants";
 import { roleLabel } from "../../services/adminSession";
 import type { StaffAdmin } from "../../types";
+
+const customerLogo = "/assets/customer-logo.jpeg";
 
 export interface AdminNotification {
   id: string;
@@ -30,7 +31,9 @@ export default function AdminHeader({
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded bg-slate-900 text-white">{adminTabIcon("Overview")}</div>
+          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-emerald-100">
+            <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
+          </div>
           <div>
             <h1 className="text-lg font-bold leading-tight">Admin Board</h1>
             <p className="text-xs text-slate-500">Registrations, deposits, releases, catalog, and staff activity</p>

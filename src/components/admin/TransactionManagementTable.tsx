@@ -181,7 +181,7 @@ function RequestTable({
               <Th className="w-[190px]">Request Code</Th>
               <Th>Customer/User</Th>
               <Th className="w-[130px]">Amount</Th>
-              <Th className="w-[150px]">Sender Name</Th>
+              <Th className="w-[170px]">Sender / Bank</Th>
               <Th>Payment Proof</Th>
               <Th className="w-[110px]">Status</Th>
               <Th className="w-[130px]">Created Date</Th>
@@ -208,7 +208,15 @@ function RequestTable({
                       <span className="whitespace-nowrap text-base font-black text-forest">{formatRupiah(transaction.amount)}</span>
                     </Td>
                     <Td className="border-t border-slate-200">
-                      <span className="block max-w-[130px] break-words">{transaction.senderName || "-"}</span>
+                      {transaction.type === "withdrawal" ? (
+                        <span className="block max-w-[150px] break-words">
+                          <span className="block font-bold text-slate-800">{transaction.withdrawalBankName || "-"}</span>
+                          <span className="block text-xs text-slate-500">{transaction.withdrawalAccountName || "-"}</span>
+                          <span className="block text-xs font-semibold text-forest">{transaction.withdrawalAccountNumber || "-"}</span>
+                        </span>
+                      ) : (
+                        <span className="block max-w-[130px] break-words">{transaction.senderName || "-"}</span>
+                      )}
                     </Td>
                     <Td className="border-t border-slate-200">
                       {transaction.proofDataUrl ? (
@@ -345,6 +353,13 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
               <ReceiptRow label="Phone" value={member?.phone ?? "-"} />
               <ReceiptRow label="Admin scope" value={transaction.admin} />
               <ReceiptRow label="Sender name" value={transaction.senderName || "-"} />
+              {transaction.type === "withdrawal" && (
+                <>
+                  <ReceiptRow label="Bank name" value={transaction.withdrawalBankName || "-"} />
+                  <ReceiptRow label="Account holder" value={transaction.withdrawalAccountName || "-"} />
+                  <ReceiptRow label="Account number" value={transaction.withdrawalAccountNumber || "-"} />
+                </>
+              )}
               <ReceiptRow label="Amount" value={formatRupiah(transaction.amount)} strong />
               <ReceiptRow label="Created date" value={shortDate(transaction.createdAt)} />
               <ReceiptRow label="Proof file" value={transaction.proofName || "No proof filename"} />

@@ -1,5 +1,7 @@
-import { Bell, CheckCircle2, Clock, LogOut, PackageCheck, Search, Settings, Store, UserRound, XCircle } from "lucide-react";
+import { Bell, CheckCircle2, Clock, LogOut, PackageCheck, Search, Settings, UserRound, XCircle } from "lucide-react";
 import type { Navigate } from "../../App";
+
+const customerLogo = "/assets/customer-logo.jpeg";
 
 export interface CustomerNotification {
   id: string;
@@ -21,8 +23,8 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
-        <button className="grid h-10 w-10 place-items-center rounded bg-forest text-white" onClick={() => navigate("/")}>
-          <Store size={21} />
+        <button className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-emerald-100" onClick={() => navigate("/")} aria-label="Go to customer store">
+          <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
         </button>
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
