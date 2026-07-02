@@ -19,14 +19,8 @@ export default function FinanceTable({
 }) {
   const { dispatch } = useAppStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"pending" | "past">("pending");
-  const pendingTransactions = transactions.filter((transaction) => transaction.status === "pending");
-  const pastTransactions = transactions.filter((transaction) => transaction.status !== "pending");
-  const visibleTransactions = activeView === "pending" ? pendingTransactions : pastTransactions;
-  const topUps = visibleTransactions.filter((transaction) => transaction.type === "topup");
-  const withdrawals = visibleTransactions.filter((transaction) => transaction.type === "withdrawal");
-  const pendingTopUps = pendingTransactions.filter((transaction) => transaction.type === "topup").length;
-  const pendingWithdrawals = pendingTransactions.filter((transaction) => transaction.type === "withdrawal").length;
+  const topUps = transactions.filter((transaction) => transaction.type === "topup");
+  const withdrawals = transactions.filter((transaction) => transaction.type === "withdrawal");
 
   const updateStatus = async (transactionItem: Transaction, status: "approved" | "rejected") => {
     if (!canApprove) return;
@@ -50,35 +44,19 @@ export default function FinanceTable({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
-      <Panel
-        title="Finance"
-        action={
-          <div className="flex flex-wrap gap-2 text-xs font-bold">
-            <span className="rounded bg-emerald-100 px-2 py-1 text-emerald-700">{pendingTopUps} top-ups pending</span>
-            <span className="rounded bg-rose-100 px-2 py-1 text-rose-700">{pendingWithdrawals} withdrawals pending</span>
-          </div>
-        }
-      >
-        <div className="mb-5 flex flex-wrap gap-2 rounded bg-slate-50 p-1">
-          <FinanceTabButton active={activeView === "pending"} onClick={() => setActiveView("pending")}>
-            Pending approvals
-          </FinanceTabButton>
-          <FinanceTabButton active={activeView === "past"} onClick={() => setActiveView("past")}>
-            Past transactions
-          </FinanceTabButton>
-        </div>
+      <Panel title="Finance">
         <div className="grid gap-5 lg:grid-cols-2">
           <ApprovalColumn
-            title={activeView === "pending" ? "Pending top-ups" : "Past top-ups"}
-            emptyText={activeView === "pending" ? "No pending top-up requests in this admin scope." : "No past top-up transactions in this admin scope."}
+            title="Top-up requests"
+            emptyText="No top-up requests in this admin scope."
             transactions={topUps}
             updatingId={updatingId}
             canApprove={canApprove}
             onUpdateStatus={updateStatus}
           />
           <ApprovalColumn
-            title={activeView === "pending" ? "Pending withdrawals" : "Past withdrawals"}
-            emptyText={activeView === "pending" ? "No pending withdrawal requests in this admin scope." : "No past withdrawal transactions in this admin scope."}
+            title="Withdrawal requests"
+            emptyText="No withdrawal requests in this admin scope."
             transactions={withdrawals}
             updatingId={updatingId}
             canApprove={canApprove}
@@ -94,20 +72,6 @@ export default function FinanceTable({
         </div>
       </Panel>
     </div>
-  );
-}
-
-function FinanceTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      className={`rounded px-4 py-2 text-sm font-bold transition ${
-        active ? "bg-white text-forest shadow-panel" : "text-slate-500 hover:bg-white hover:text-forest"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      {children}
-    </button>
   );
 }
 

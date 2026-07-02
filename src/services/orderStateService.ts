@@ -6,7 +6,8 @@ export type OrderState =
   | "product_assigned"
   | "waiting_shipment"
   | "belum_diserahkan"
-  | "diserahkan";
+  | "diserahkan"
+  | "rejected";
 
 /**
  * Map order status to current workflow state
@@ -24,6 +25,7 @@ export function getOrderState(order: Order | null): OrderState {
   if (status === "waiting_shipment") return "waiting_shipment";
   if (status === "belum_diserahkan") return "belum_diserahkan";
   if (status === "diserahkan") return "diserahkan";
+  if (status === "rejected") return "rejected";
   
   // Legacy states mapping
   if (status === "waiting") return "waiting_assignment";
@@ -45,6 +47,7 @@ export function getOrderStateLabel(state: OrderState): string {
     waiting_shipment: "Waiting for Shipment",
     belum_diserahkan: "Not delivered",
     diserahkan: "Delivered",
+    rejected: "Rejected",
   };
   return labels[state];
 }
@@ -55,7 +58,7 @@ export function getOrderStateLabel(state: OrderState): string {
 export function canAcceptTask(order: Order | null): boolean {
   if (!order) return true;
   const state = getOrderState(order);
-  return state === "no_task" || state === "diserahkan";
+  return state === "no_task" || state === "diserahkan" || state === "rejected";
 }
 
 /**

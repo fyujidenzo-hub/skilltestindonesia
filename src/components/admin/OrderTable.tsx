@@ -1,7 +1,7 @@
 import { CheckCircle2, ChevronLeft, ChevronRight, Filter, PackagePlus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Panel } from "../common";
-import { assignOrderProduct } from "../../services/ordersService";
+import { assignOrderProduct, assignOrderProducts, updateOrderStatus } from "../../services/ordersService";
 import { getOrderCode } from "../../services/orderCode";
 import { getOrderState } from "../../services/orderStateService";
 import { useAppStore } from "../../store/AppStore";
@@ -19,7 +19,6 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productPage, setProductPage] = useState(0);
   const [rowPage, setRowPage] = useState(0);
-  const [activeQueue, setActiveQueue] = useState<"pending" | "completed">("pending");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -32,9 +31,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
       }),
     [orders],
   );
-  const pendingRows = orderedRows.filter((order) => getOrderState(order) !== "diserahkan");
-  const completedRows = orderedRows.filter((order) => getOrderState(order) === "diserahkan");
-  const visibleRows = activeQueue === "pending" ? pendingRows : completedRows;
+  const visibleRows = orderedRows;
   const totalRowPages = Math.max(1, Math.ceil(visibleRows.length / rowPageSize));
   const pagedRows = visibleRows.slice(rowPage * rowPageSize, rowPage * rowPageSize + rowPageSize);
   const startRow = visibleRows.length ? rowPage * rowPageSize + 1 : 0;
@@ -45,7 +42,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
 
   useEffect(() => {
     setRowPage(0);
-  }, [activeQueue, orders.length]);
+  }, [orders.length]);
 
   const openProductModal = (order: Order) => {
     setTargetOrder(order);
@@ -75,13 +72,69 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
     setIsSaving(true);
     setMessage("");
     try {
-      const updatedOrder = await assignOrderProduct(targetOrder, selectedProduct);
+      const isChangingCustomerRequest =
+        getOrderState(targetOrder) === "waiting_assignment" &&
+        Boolean(targetOrder.productName || targetOrder.assignedProducts?.length);
+      const updatedOrder = await assignOrderProduct(targetOrder, selectedProduct, {
+        requiresCustomerApproval: isChangingCustomerRequest,
+      });
       dispatch({ type: "updateOrder", payload: updatedOrder });
-      setMessage("Product was added to the pending order.");
+      setMessage(isChangingCustomerRequest ? "Product was changed. Customer must accept or reject the new product." : "Product was added to the pending order.");
       closeProductModal();
       window.setTimeout(() => setMessage(""), 3500);
     } catch (error) {
       console.error("Failed to assign product:", error);
+      setMessage(error instanceof Error ? error.message : "Firebase save failed. Check Firestore order rules.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const approveRequestedProduct = async (order: Order) => {
+    const assignedProducts = order.assignedProducts?.length
+      ? order.assignedProducts
+      : order.productCode
+        ? [{ productId: order.productCode, code: order.productCode, name: order.productName ?? "Selected product", quantity: order.quantity ?? 1 }]
+        : [];
+
+    const selectedItems = assignedProducts.map((assignedProduct) => {
+      const product = products.find((item) => item.id === assignedProduct.productId || item.code === assignedProduct.code);
+      if (!product) throw new Error(`Product ${assignedProduct.code || assignedProduct.name} is no longer in the catalog.`);
+      return { product, quantity: assignedProduct.quantity ?? 1 };
+    });
+
+    if (!selectedItems.length) {
+      openProductModal(order);
+      return;
+    }
+
+    setIsSaving(true);
+    setMessage("");
+    try {
+      const updatedOrder = await assignOrderProducts(order, selectedItems);
+      dispatch({ type: "updateOrder", payload: updatedOrder });
+      setMessage("Product request approved. Customer can now send the order.");
+      window.setTimeout(() => setMessage(""), 3500);
+    } catch (error) {
+      console.error("Failed to approve product request:", error);
+      setMessage(error instanceof Error ? error.message : "Firebase save failed. Check Firestore order rules.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const rejectRequestedProduct = async (order: Order) => {
+    setIsSaving(true);
+    setMessage("");
+    try {
+      const updatedOrder = await updateOrderStatus(order, "rejected", {
+        completedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+      });
+      dispatch({ type: "updateOrder", payload: updatedOrder });
+      setMessage("Product request rejected.");
+      window.setTimeout(() => setMessage(""), 3500);
+    } catch (error) {
+      console.error("Failed to reject product request:", error);
       setMessage(error instanceof Error ? error.message : "Firebase save failed. Check Firestore order rules.");
     } finally {
       setIsSaving(false);
@@ -104,28 +157,10 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
           </p>
         )}
         <Filters />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <OrderQueueButton
-            label="Pending"
-            description="Needs assignment or delivery completion"
-            count={pendingRows.length}
-            active={activeQueue === "pending"}
-            tone="pending"
-            onClick={() => setActiveQueue("pending")}
-          />
-          <OrderQueueButton
-            label="Completed"
-            description="Delivered orders archive"
-            count={completedRows.length}
-            active={activeQueue === "completed"}
-            tone="completed"
-            onClick={() => setActiveQueue("completed")}
-          />
-        </div>
         <div className="mt-4 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <p className="text-sm font-black text-slate-900">{activeQueue === "pending" ? "Pending order queue" : "Completed order archive"}</p>
+              <p className="text-sm font-black text-slate-900">Order records</p>
               <p className="text-xs text-slate-500">Showing {startRow}-{endRow} of {visibleRows.length} records</p>
             </div>
             <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per page</span>
@@ -161,7 +196,9 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                       : [];
                   const orderState = getOrderState(order);
                   const isCompleted = orderState === "diserahkan";
+                  const isRejected = orderState === "rejected";
                   const hasProduct = assignedProducts.length > 0;
+                  const needsApproval = orderState === "waiting_assignment" && hasProduct;
                   const userBalance = member?.balance ?? 0;
                   const requiredBalance = order.requiredBalance ?? order.value ?? 0;
                   const shortage = Math.max(0, requiredBalance - userBalance);
@@ -182,6 +219,11 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                       <Td>
                         {hasProduct ? (
                           <div className="grid gap-1">
+                            {needsApproval && (
+                              <span className="mb-1 inline-flex w-fit rounded bg-amber-50 px-2 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
+                                User requested this product
+                              </span>
+                            )}
                             {assignedProducts.map((product) => (
                               <span key={`${order.id}-${product.code}-${product.name}`} className="max-w-[270px] whitespace-pre-line font-semibold leading-5 text-slate-800">
                                 {product.name}
@@ -204,8 +246,8 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                         )}
                       </Td>
                       <Td>
-                        <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                          {isCompleted ? "Completed" : "Pending"}
+                        <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : isRejected ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
+                          {isCompleted ? "Completed" : isRejected ? "Rejected" : "Pending"}
                         </span>
                       </Td>
                       <Td>
@@ -213,16 +255,44 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                       </Td>
                       <Td>{shortDate(order.createdAt)}</Td>
                       <Td>
-                        {!hasProduct && !isCompleted ? (
+                        {needsApproval ? (
+                          <div className="flex flex-col gap-2">
+                            <button
+                              className="inline-flex items-center justify-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white hover:bg-emerald-700 disabled:bg-slate-300"
+                              disabled={isSaving}
+                              onClick={() => approveRequestedProduct(order)}
+                            >
+                              <CheckCircle2 size={14} /> Accept
+                            </button>
+                            <button
+                              className="inline-flex items-center justify-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700 disabled:bg-slate-300"
+                              disabled={isSaving}
+                              onClick={() => openProductModal(order)}
+                            >
+                              <PackagePlus size={14} /> Change Product
+                            </button>
+                            <button
+                              className="inline-flex items-center justify-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-black text-white hover:bg-rose-700 disabled:bg-slate-300"
+                              disabled={isSaving}
+                              onClick={() => rejectRequestedProduct(order)}
+                            >
+                              <X size={14} /> Reject
+                            </button>
+                          </div>
+                        ) : !hasProduct && !isCompleted && !isRejected ? (
                           <button
                             className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
                             onClick={() => openProductModal(order)}
                           >
                             <PackagePlus size={14} /> Add Product
                           </button>
-                        ) : hasProduct && !isCompleted ? (
+                        ) : hasProduct && !isCompleted && !isRejected ? (
                           <span className="inline-flex max-w-[140px] rounded bg-amber-100 px-3 py-2 text-xs font-black leading-4 text-amber-700">
                             Product selected, waiting for completion
+                          </span>
+                        ) : isRejected ? (
+                          <span className="inline-flex rounded bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">
+                            Rejected
                           </span>
                         ) : (
                           <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">
@@ -236,7 +306,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
               ) : (
                 <tr>
                   <td colSpan={13} className="p-6 text-center text-sm text-slate-500">
-                    {activeQueue === "pending" ? "No pending order records in this admin scope yet." : "No completed order records in this admin scope yet."}
+                    No order records in this admin scope yet.
                   </td>
                 </tr>
               )}
@@ -253,7 +323,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
           <div className="w-full max-w-2xl rounded bg-white shadow-panel">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <h3 className="text-lg font-black">Add Product to Order</h3>
+                <h3 className="text-lg font-black">{targetOrder.productName || targetOrder.assignedProducts?.length ? "Change Product Request" : "Add Product to Order"}</h3>
                 <p className="text-xs font-semibold text-slate-500">{getOrderCode(targetOrder)}</p>
               </div>
               <button className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={closeProductModal}>
@@ -331,37 +401,6 @@ function getMemberTaskProgress(order: Order, orders: Order[]) {
     .sort((left, right) => new Date(left.createdAt.replace(" ", "T")).getTime() - new Date(right.createdAt.replace(" ", "T")).getTime());
   const index = memberOrders.findIndex((item) => item.id === order.id);
   return Math.min(taskTarget, Math.max(1, index + 1));
-}
-
-function OrderQueueButton({
-  label,
-  description,
-  count,
-  active,
-  tone,
-  onClick,
-}: {
-  label: string;
-  description: string;
-  count: number;
-  active: boolean;
-  tone: "pending" | "completed";
-  onClick: () => void;
-}) {
-  const styles = {
-    pending: active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-600 hover:bg-amber-50",
-    completed: active ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50",
-  }[tone];
-
-  return (
-    <button className={`flex items-center justify-between rounded border px-4 py-3 text-left transition ${styles}`} onClick={onClick}>
-      <span>
-        <span className="block text-sm font-black">{label}</span>
-        <span className="mt-1 block text-xs opacity-75">{description}</span>
-      </span>
-      <span className="rounded bg-white px-2.5 py-1 text-sm font-black shadow-sm">{count}</span>
-    </button>
-  );
 }
 
 function Th({ children }: { children: React.ReactNode }) {

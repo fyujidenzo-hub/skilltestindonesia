@@ -79,11 +79,11 @@ export async function deleteOrder(id: string): Promise<void> {
   await deleteDoc(doc(db, COLLECTION, id));
 }
 
-export async function assignOrderProduct(order: Order, product: Product): Promise<Order> {
-  return assignOrderProducts(order, [{ product, quantity: 1 }]);
+export async function assignOrderProduct(order: Order, product: Product, options: { requiresCustomerApproval?: boolean } = {}): Promise<Order> {
+  return assignOrderProducts(order, [{ product, quantity: 1 }], options);
 }
 
-export async function assignOrderProducts(order: Order, items: Array<{ product: Product; quantity: number }>): Promise<Order> {
+export async function assignOrderProducts(order: Order, items: Array<{ product: Product; quantity: number }>, options: { requiresCustomerApproval?: boolean } = {}): Promise<Order> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
   const normalizedItems = items
@@ -115,6 +115,8 @@ export async function assignOrderProducts(order: Order, items: Array<{ product: 
     requiredBalance,
     status: "product_assigned",
     assignedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+    requiresCustomerApproval: options.requiresCustomerApproval ?? false,
+    adminChangedAt: options.requiresCustomerApproval ? new Date().toISOString().slice(0, 16).replace("T", " ") : order.adminChangedAt ?? "",
   };
 
   await runTransaction(firestore, async (transaction) => {
@@ -150,6 +152,8 @@ export async function assignOrderProducts(order: Order, items: Array<{ product: 
       requiredBalance: nextOrder.requiredBalance,
       status: nextOrder.status,
       assignedAt: nextOrder.assignedAt,
+      requiresCustomerApproval: nextOrder.requiresCustomerApproval ?? false,
+      adminChangedAt: nextOrder.adminChangedAt ?? "",
       completedAt: nextOrder.completedAt ?? "",
       submittedAt: nextOrder.submittedAt ?? "",
       shippedAt: nextOrder.shippedAt ?? "",

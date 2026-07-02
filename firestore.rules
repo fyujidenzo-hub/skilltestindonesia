@@ -121,6 +121,8 @@ service cloud.firestore {
         'completedAt',
         'submittedAt',
         'shippedAt',
+        'requiresCustomerApproval',
+        'adminChangedAt',
         'rating',
         'review',
         'reviewedAt'
@@ -140,12 +142,20 @@ service cloud.firestore {
       && isNumber(request.resource.data.value)
       && isNumber(request.resource.data.commission)
       && isNumber(request.resource.data.requiredBalance)
-      && request.resource.data.status in ['no_task', 'waiting_assignment', 'product_assigned', 'waiting_shipment', 'belum_diserahkan', 'diserahkan', 'waiting', 'assigned', 'completed', 'frozen']
+      && request.resource.data.status in ['no_task', 'waiting_assignment', 'product_assigned', 'waiting_shipment', 'belum_diserahkan', 'diserahkan', 'waiting', 'assigned', 'completed', 'frozen', 'rejected']
       && isString(request.resource.data.createdAt)
       && isOptionalString(request.resource.data.assignedAt)
       && isOptionalString(request.resource.data.completedAt)
       && isOptionalString(request.resource.data.submittedAt)
       && isOptionalString(request.resource.data.shippedAt)
+      && (
+        !request.resource.data.keys().hasAny(['requiresCustomerApproval'])
+        || isBoolean(request.resource.data.requiresCustomerApproval)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['adminChangedAt'])
+        || isOptionalString(request.resource.data.adminChangedAt)
+      )
       && (
         !request.resource.data.keys().hasAny(['rating'])
         || isNumber(request.resource.data.rating)

@@ -33,7 +33,8 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       .filter((order) => order.member === currentMember.username)
       .filter((order) => `${getOrderCode(order)} ${order.productName ?? ""} ${order.productCode ?? ""}`.toLowerCase().includes(query.toLowerCase()))
       .filter((order) => {
-        const completed = getOrderState(order) === "diserahkan";
+        const orderState = getOrderState(order);
+        const completed = orderState === "diserahkan" || orderState === "rejected";
         if (activeTab === "Pending") return !completed;
         if (activeTab === "Completed") return completed;
         return true;
@@ -42,16 +43,22 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   }, [activeTab, currentMember, query, state.orders]);
 
   const notifications = useMemo<CustomerNotification[]>(() => {
-    return orders
-      .filter((order) => getOrderState(order) !== "diserahkan")
+    if (!currentMember) return [];
+
+    return state.orders
+      .filter((order) => order.member === currentMember.username && getOrderState(order) !== "diserahkan")
       .slice(0, 4)
-      .map((order) => ({
-        id: order.id,
-        title: getOrderState(order) === "waiting_assignment" ? "Waiting assignment" : "Order update",
-        text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
-        tone: "info" as const,
-      }));
-  }, [orders]);
+      .map((order) => {
+        const orderState = getOrderState(order);
+        return {
+          id: order.id,
+          title: orderState === "rejected" ? "Product request rejected" : orderState === "waiting_assignment" ? "Waiting assignment" : "Order update",
+          text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
+          tone: orderState === "rejected" ? ("danger" as const) : ("info" as const),
+          targetPath: "/orders",
+        };
+      });
+  }, [currentMember, state.orders]);
 
   const logout = () => {
     clearActiveCustomerId();
@@ -245,6 +252,7 @@ function OrderCard({
 }) {
   const state = getOrderState(order);
   const isCompleted = state === "diserahkan";
+  const isRejected = state === "rejected";
   const assignedProducts = order.assignedProducts?.length
     ? order.assignedProducts
     : order.productName
@@ -253,9 +261,9 @@ function OrderCard({
   const primaryProduct = assignedProducts[0];
   const primaryImage = products.find((product) => product.id === primaryProduct?.productId || product.code === primaryProduct?.code)?.image;
   const isWaitingAssignment = state === "waiting_assignment" || !primaryProduct;
-  const statusBadgeLabel = isCompleted ? "Delivered" : isWaitingAssignment ? "Not Assigned" : "Not Delivered";
+  const statusBadgeLabel = isCompleted ? "Delivered" : isRejected ? "Rejected" : isWaitingAssignment ? "Not Assigned" : "Not Delivered";
   const waitingText = isWaitingAssignment ? "Waiting for product assignment" : "Waiting for delivery";
-  const canSendOrder = Boolean(primaryProduct) && !isCompleted && state !== "belum_diserahkan";
+  const canSendOrder = Boolean(primaryProduct) && !isCompleted && !isRejected && state !== "belum_diserahkan";
 
   return (
     <article className="rounded bg-white p-4 shadow-panel">
@@ -264,7 +272,7 @@ function OrderCard({
           <p className="text-xs font-bold text-slate-500">Transaction No.:</p>
           <p className="font-black">{getOrderCode(order)}</p>
         </div>
-        <span className={`rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "border border-amber-300 bg-amber-50 text-amber-700"}`}>
+        <span className={`rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : isRejected ? "bg-rose-100 text-rose-700" : "border border-amber-300 bg-amber-50 text-amber-700"}`}>
           {statusBadgeLabel}
         </span>
       </div>

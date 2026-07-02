@@ -1,7 +1,7 @@
 export type UserLevel = "Starter" | "Silver" | "Gold" | "VIP";
 export type TransactionStatus = "pending" | "approved" | "rejected";
 export type AdminRole = "super_admin" | "admin" | "employee";
-export type OrderStatus = "no_task" | "waiting_assignment" | "product_assigned" | "waiting_shipment" | "belum_diserahkan" | "diserahkan" | "waiting" | "assigned" | "completed" | "frozen";
+export type OrderStatus = "no_task" | "waiting_assignment" | "product_assigned" | "waiting_shipment" | "belum_diserahkan" | "diserahkan" | "waiting" | "assigned" | "completed" | "frozen" | "rejected";
 
 export interface StaffAdmin {
   id: string;
@@ -104,6 +104,8 @@ export interface Order {
   completedAt?: string;
   submittedAt?: string;
   shippedAt?: string;
+  requiresCustomerApproval?: boolean;
+  adminChangedAt?: string;
   rating?: number;
   review?: string;
   reviewedAt?: string;

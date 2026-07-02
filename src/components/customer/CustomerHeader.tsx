@@ -8,6 +8,7 @@ export interface CustomerNotification {
   title: string;
   text: string;
   tone: "info" | "success" | "warning" | "danger";
+  targetPath?: string;
 }
 
 interface CustomerHeaderProps {
@@ -56,10 +57,10 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length ? (
                   notifications.map((notification) => (
-                    <button
+                      <button
                       key={notification.id}
                       className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50"
-                      onClick={() => navigate("/profile")}
+                      onClick={() => navigate(notification.targetPath ?? "/profile")}
                     >
                       <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${notificationToneClass(notification.tone)}`}>
                         {notificationIcon(notification.tone)}

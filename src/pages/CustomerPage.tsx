@@ -71,21 +71,33 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const activeOrder = currentMember
     ? state.orders.find((order) => 
         order.member === currentMember.username && 
-        !["completed", "diserahkan"].includes(order.status)
+        !["completed", "diserahkan", "rejected"].includes(order.status)
       ) ?? null
     : null;
 
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
 
+    const rejectedOrderNotifications = state.orders
+      .filter((order) => order.member === currentMember.username && getOrderState(order) === "rejected")
+      .slice(0, 3)
+      .map((order) => ({
+        id: `order-rejected-${order.id}`,
+        title: "Product request rejected",
+        text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+        tone: "danger" as const,
+        targetPath: "/orders",
+      }));
+
     const orderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan"].includes(order.status))
+      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan", "rejected"].includes(order.status))
       .slice(0, 3)
       .map((order) => ({
         id: `order-${order.id}`,
         title: `Order ${order.status}`,
         text: `${order.productName || "Pending assignment"} · ${getOrderCode(order)}`,
         tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
+        targetPath: "/orders",
       }));
 
     const transactionNotifications = state.transactions
@@ -106,7 +118,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
               : ("warning" as const),
       }));
 
-    return [...orderNotifications, ...transactionNotifications].slice(0, 6);
+    return [...rejectedOrderNotifications, ...orderNotifications, ...transactionNotifications].slice(0, 6);
   }, [currentMember, state.orders, state.transactions]);
 
   const filteredProducts = useMemo(
@@ -137,7 +149,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     }
   };
 
-  const handleAcceptTask = async () => {
+  const handleAcceptTask = async (product?: Product) => {
     if (!currentMember) {
       setLoginAlert("You have to log in first!");
       return;
@@ -153,14 +165,30 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         memberId: currentMember.id,
         member: currentMember.username,
         admin: currentMember.referredBy,
-        value: 0,
-        commission: 0,
-        requiredBalance: 0,
+        productCode: product?.code ?? "",
+        productName: product?.name ?? "",
+        quantity: product ? 1 : 0,
+        assignedProducts: product
+          ? [
+              {
+                productId: product.id,
+                code: product.code,
+                name: product.name,
+                price: product.price,
+                commission: product.commission,
+                quantity: 1,
+                total: product.price,
+              },
+            ]
+          : [],
+        value: product?.price ?? 0,
+        commission: product?.commission ?? 0,
+        requiredBalance: product?.price ?? 0,
         status: "waiting_assignment",
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "addOrder", payload: order });
-      setTaskMessage("Successfully took order.");
+      setTaskMessage(product ? "Product request sent. Waiting for admin approval." : "Successfully took order. Waiting for admin to assign a product.");
     } catch (error) {
       console.error("Failed to accept task:", error);
       setTaskMessage("Unable to accept task. Please try again.");
@@ -212,6 +240,41 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     } catch (error) {
       console.error("Failed to confirm shipment:", error);
       setTaskMessage(error instanceof Error ? error.message : "Unable to confirm shipment.");
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handleAcceptChangedProduct = async () => {
+    if (!activeOrder) return;
+    setIsSubmittingOrder(true);
+    try {
+      const order = await updateOrderStatus(activeOrder, "product_assigned", {
+        requiresCustomerApproval: false,
+      });
+      dispatch({ type: "updateOrder", payload: order });
+      setTaskMessage("Changed product accepted. You can now send the order.");
+    } catch (error) {
+      console.error("Failed to accept changed product:", error);
+      setTaskMessage(error instanceof Error ? error.message : "Unable to accept changed product.");
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handleRejectChangedProduct = async () => {
+    if (!activeOrder) return;
+    setIsSubmittingOrder(true);
+    try {
+      const order = await updateOrderStatus(activeOrder, "rejected", {
+        requiresCustomerApproval: false,
+        completedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+      });
+      dispatch({ type: "updateOrder", payload: order });
+      setTaskMessage("Changed product rejected. You can take another order.");
+    } catch (error) {
+      console.error("Failed to reject changed product:", error);
+      setTaskMessage(error instanceof Error ? error.message : "Unable to reject changed product.");
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -320,10 +383,12 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
               products={state.products}
               memberBalance={currentMember?.balance ?? 0}
               member={currentMember}
-              onAcceptTask={handleAcceptTask}
+              onAcceptTask={() => handleAcceptTask()}
               onStartShipment={handleStartShipment}
               onSubmitOrder={handleSubmitOrder}
               onConfirmDelivery={handleConfirmDelivery}
+              onAcceptChangedProduct={handleAcceptChangedProduct}
+              onRejectChangedProduct={handleRejectChangedProduct}
               onTopUp={() => requireLogin(() => setActiveModal("topup"))}
               isLoading={isAcceptingTask || isSubmittingOrder}
             />

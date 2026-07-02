@@ -5,6 +5,7 @@ import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { getOrderCode } from "../services/orderCode";
+import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
 import { formatRupiah } from "../utils";
 
@@ -43,14 +44,26 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
 
+    const rejectedOrderNotifications = state.orders
+      .filter((order) => order.member === currentMember.username && getOrderState(order) === "rejected")
+      .slice(0, 3)
+      .map((order) => ({
+        id: `order-rejected-${order.id}`,
+        title: "Product request rejected",
+        text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+        tone: "danger" as const,
+        targetPath: "/orders",
+      }));
+
     const orderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan"].includes(order.status))
+      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan", "rejected"].includes(order.status))
       .slice(0, 3)
       .map((order) => ({
         id: `order-${order.id}`,
         title: `Order ${order.status}`,
         text: `${order.productName || "Pending assignment"} · ${getOrderCode(order)}`,
         tone: "info" as const,
+        targetPath: "/orders",
       }));
 
     const transactionNotifications = state.transactions
@@ -71,7 +84,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
               : ("warning" as const),
       }));
 
-    return [...orderNotifications, ...transactionNotifications].slice(0, 6);
+    return [...rejectedOrderNotifications, ...orderNotifications, ...transactionNotifications].slice(0, 6);
   }, [currentMember, state.orders, state.transactions]);
 
   const logout = () => {

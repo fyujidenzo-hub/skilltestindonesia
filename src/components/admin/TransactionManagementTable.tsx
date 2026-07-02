@@ -6,8 +6,6 @@ import { useAppStore } from "../../store/AppStore";
 import { approveTransactionRequest } from "../../services/transactionsService";
 import type { Member, Transaction } from "../../types";
 
-type RequestStatusView = Transaction["status"];
-
 export default function TransactionManagementTable({
   transactions,
   members,
@@ -24,8 +22,6 @@ export default function TransactionManagementTable({
 
   const topUps = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "topup")), [transactions]);
   const withdrawals = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "withdrawal")), [transactions]);
-  const pendingTopUps = topUps.filter((transaction) => transaction.status === "pending").length;
-  const pendingWithdrawals = withdrawals.filter((transaction) => transaction.status === "pending").length;
 
   const handleStatusChange = async (transactionItem: Transaction, status: "approved" | "rejected") => {
     if (!canApprove) return;
@@ -56,15 +52,7 @@ export default function TransactionManagementTable({
   };
 
   return (
-    <Panel
-      title="Finance Request Management"
-      action={
-        <div className="flex flex-wrap gap-2 text-xs font-black">
-          <span className="rounded bg-emerald-100 px-2 py-1 text-emerald-700">{pendingTopUps} top-up pending</span>
-          <span className="rounded bg-rose-100 px-2 py-1 text-rose-700">{pendingWithdrawals} withdrawal pending</span>
-        </div>
-      }
-    >
+    <Panel title="Finance Request Management">
       {message && (
         <p className={`mb-4 rounded px-3 py-2 text-sm font-semibold ${message.includes("Unable") || message.includes("already") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
           {message}
@@ -132,11 +120,8 @@ function RequestTable({
   onApprove: (transaction: Transaction) => void;
   onReject: (transaction: Transaction) => void;
 }) {
-  const [statusView, setStatusView] = useState<RequestStatusView>("pending");
   const headerTone = tone === "topup" ? "from-emerald-950 to-slate-900" : "from-slate-950 to-slate-800";
-  const statusCounts = getStatusCounts(transactions);
-  const visibleTransactions = transactions.filter((transaction) => transaction.status === statusView);
-  const statusEmptyText = statusView === "pending" ? emptyText : `No ${statusView} ${tone === "topup" ? "top-up" : "withdrawal"} requests found.`;
+  const visibleTransactions = transactions;
   const colSpan = tone === "topup" ? 8 : 6;
 
   return (
@@ -149,30 +134,6 @@ function RequestTable({
         <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
           {transactions.length} records
         </span>
-      </div>
-
-      <div className="grid gap-2 border-b border-slate-100 bg-white p-3 sm:grid-cols-3">
-        <StatusQueueButton
-          label="Pending"
-          count={statusCounts.pending}
-          active={statusView === "pending"}
-          tone="pending"
-          onClick={() => setStatusView("pending")}
-        />
-        <StatusQueueButton
-          label="Approved"
-          count={statusCounts.approved}
-          active={statusView === "approved"}
-          tone="approved"
-          onClick={() => setStatusView("approved")}
-        />
-        <StatusQueueButton
-          label="Rejected"
-          count={statusCounts.rejected}
-          active={statusView === "rejected"}
-          tone="rejected"
-          onClick={() => setStatusView("rejected")}
-        />
       </div>
 
       <div className="max-h-[460px] overflow-auto">
@@ -274,7 +235,7 @@ function RequestTable({
             ) : (
               <tr>
                 <td colSpan={colSpan} className="p-6 text-center text-sm text-slate-500">
-                  {statusEmptyText}
+                  {emptyText}
                 </td>
               </tr>
             )}
@@ -331,46 +292,6 @@ function WithdrawalInfoCell({ transaction }: { transaction: Transaction }) {
       {"\n"}Account No: {transaction.withdrawalAccountNumber || "-"}
       {"\n"}Created: {shortDate(transaction.createdAt)}
     </span>
-  );
-}
-
-function getStatusCounts(transactions: Transaction[]) {
-  return transactions.reduce(
-    (totals, transaction) => {
-      totals[transaction.status] += 1;
-      return totals;
-    },
-    { pending: 0, approved: 0, rejected: 0 } satisfies Record<Transaction["status"], number>,
-  );
-}
-
-function StatusQueueButton({
-  label,
-  count,
-  active,
-  tone,
-  onClick,
-}: {
-  label: string;
-  count: number;
-  active: boolean;
-  tone: Transaction["status"];
-  onClick: () => void;
-}) {
-  const styles: Record<Transaction["status"], string> = {
-    pending: active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-600 hover:bg-amber-50",
-    approved: active ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50",
-    rejected: active ? "border-rose-300 bg-rose-50 text-rose-800" : "border-slate-200 bg-white text-slate-600 hover:bg-rose-50",
-  };
-
-  return (
-    <button className={`flex items-center justify-between rounded border px-3 py-3 text-left transition ${styles[tone]}`} onClick={onClick}>
-      <span>
-        <span className="block text-xs font-black uppercase tracking-wide">{label}</span>
-        <span className="mt-1 block text-xs opacity-75">{label === "Pending" ? "Needs review" : "Archived records"}</span>
-      </span>
-      <span className="rounded bg-white px-2 py-1 text-sm font-black shadow-sm">{count}</span>
-    </button>
   );
 }
 
