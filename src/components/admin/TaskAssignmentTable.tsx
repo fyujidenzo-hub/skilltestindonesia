@@ -159,7 +159,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                   <p className="text-sm text-slate-500">No products available</p>
                 ) : (
                   products.map((product) => (
-                    <div key={product.id} className="grid grid-cols-[auto_1fr_76px] items-center gap-2 text-sm">
+                    <div key={product.id} className="grid grid-cols-[auto_1fr] items-center gap-2 text-sm">
                       <input
                         type="checkbox"
                         checked={(selectedQuantities[product.id] ?? 0) > 0}
@@ -177,21 +177,6 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                         <p className="truncate font-semibold">{product.code} - {product.name}</p>
                         <p className="text-xs text-slate-500">{formatRupiah(product.price)} · Stock {product.quantity}</p>
                       </div>
-                      <input
-                        className="rounded border border-slate-200 px-2 py-1 text-sm"
-                        type="number"
-                        min={1}
-                        max={product.quantity}
-                        disabled={(selectedQuantities[product.id] ?? 0) <= 0}
-                        value={selectedQuantities[product.id] || ""}
-                        onChange={(event) =>
-                          setSelectedQuantities((current) => ({
-                            ...current,
-                            [product.id]: Math.max(1, Math.min(product.quantity, Number(event.target.value) || 1)),
-                          }))
-                        }
-                        placeholder="Qty"
-                      />
                     </div>
                   ))
                 )}
@@ -249,14 +234,13 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
       </div>
 
       <div className="max-h-[640px] overflow-auto rounded border border-slate-200 bg-white">
-        <table className="w-full min-w-[1760px] table-fixed border-separate border-spacing-0 text-left text-[13px]">
+        <table className="w-full min-w-[1660px] table-fixed border-separate border-spacing-0 text-left text-[13px]">
           <colgroup>
             <col className="w-[190px]" />
             <col className="w-[140px]" />
             <col className="w-[170px]" />
             <col className="w-[130px]" />
             <col className="w-[340px]" />
-            <col className="w-[92px]" />
             <col className="w-[130px]" />
             <col className="w-[130px]" />
             <col className="w-[140px]" />
@@ -272,7 +256,6 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               <TaskTh>Name</TaskTh>
               <TaskTh>User Balance</TaskTh>
               <TaskTh>Product</TaskTh>
-              <TaskTh>Quantity</TaskTh>
               <TaskTh>Total Price</TaskTh>
               <TaskTh>Commission</TaskTh>
               <TaskTh>Balance Shortage</TaskTh>
@@ -285,7 +268,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
           <tbody>
         {visibleOrders.length === 0 ? (
           <tr>
-            <td colSpan={13} className="p-6 text-center text-sm text-slate-500">
+            <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
               No task records found.
             </td>
           </tr>
@@ -297,7 +280,6 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               : order.productCode
                 ? [{ code: order.productCode, name: order.productName ?? "Assigned product", quantity: order.quantity ?? 1, price: order.value, total: order.value, commission: order.commission, productId: order.productCode }]
                 : [];
-            const totalQuantity = assignedProducts.reduce((sum, product) => sum + (product.quantity || 0), 0);
             const totalPrice = order.value || assignedProducts.reduce((sum, product) => sum + (product.total || product.price * product.quantity || 0), 0);
             const userBalance = member?.balance ?? 0;
             const shortage = Math.max(0, (order.requiredBalance ?? totalPrice) - userBalance);
@@ -321,13 +303,12 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                 <TaskTd>
                   {hasProduct ? (
                     <span className="block whitespace-pre-line break-words font-semibold leading-5 text-slate-800">
-                      {assignedProducts.map((product) => `${product.name}\n${product.code} x${product.quantity}`).join("\n")}
+                      {assignedProducts.map((product) => `${product.name}\n${product.code}`).join("\n")}
                     </span>
                   ) : (
                     <span className="text-slate-400">Pending assignment</span>
                   )}
                 </TaskTd>
-                <TaskTd>{totalQuantity}</TaskTd>
                 <TaskTd>{formatRupiah(totalPrice)}</TaskTd>
                 <TaskTd>{formatRupiah(order.commission || 0)}</TaskTd>
                 <TaskTd>

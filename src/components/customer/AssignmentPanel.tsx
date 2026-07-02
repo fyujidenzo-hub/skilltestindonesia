@@ -143,7 +143,7 @@ export default function AssignmentPanel({
 
             <div className="space-y-3">
               {assignedProducts.map((product) => (
-                <div key={`${product.code}-${product.quantity}`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                <div key={`${product.code}-${product.productId}`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-slate-500 uppercase">Product</p>
@@ -151,8 +151,8 @@ export default function AssignmentPanel({
                       <p className="text-sm text-slate-600">{product.code}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 uppercase">Qty / Total</p>
-                      <p className="font-bold">{product.quantity} × {formatRupiah(product.price)}</p>
+                      <p className="text-xs text-slate-500 uppercase">Order Price</p>
+                      <p className="font-bold">{formatRupiah(product.price * product.quantity)}</p>
                       <p className="text-sm text-emerald-700">
                         Commission: {formatRupiah(product.commission * product.quantity)}
                       </p>

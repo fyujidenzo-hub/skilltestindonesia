@@ -500,7 +500,6 @@ function TaskStatusModal({
             <StatusItem label="Transaction number" value={order ? getOrderCode(order) : "No task accepted"} />
             <StatusItem label="Date" value={order?.createdAt ? shortDate(order.createdAt) : "-"} />
             <StatusItem label="Assigned product" value={productName} />
-            <StatusItem label="Quantity" value={String(order?.quantity ?? assignedProduct?.quantity ?? 0)} />
             <StatusItem label="Required balance" value={formatRupiah(requiredBalance)} />
             <StatusItem label="Commission" value={formatRupiah(order?.commission ?? 0)} />
           </div>

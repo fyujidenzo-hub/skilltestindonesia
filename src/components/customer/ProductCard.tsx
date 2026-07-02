@@ -35,7 +35,9 @@ export default function ProductCard({ product, isFavorite, onToggleFavorite, onT
         <p className="text-sm text-emerald-700">Commission {formatRupiah(product.commission)}</p>
         <p className="text-xs font-semibold text-slate-500">Required balance {formatRupiah(product.requiredBalance ?? 0)}</p>
         <div className="mt-4 flex items-center justify-between">
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{product.quantity} available</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+            {product.quantity > 0 ? "Available" : "Unavailable"}
+          </span>
           <button className="rounded-xl bg-forest px-3 py-2 text-sm font-black text-white shadow-sm hover:bg-emerald-700 disabled:bg-slate-300" disabled={product.quantity <= 0} onClick={onTakeOrder}>
             Take Order
           </button>

@@ -167,7 +167,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
           </div>
 
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[1540px] border-separate border-spacing-0 bg-white text-left text-[13px]">
+          <table className="w-full min-w-[1450px] border-separate border-spacing-0 bg-white text-left text-[13px]">
             <thead className="bg-slate-900 text-left text-xs uppercase text-white">
               <tr>
                 <Th>Order Code</Th>
@@ -175,7 +175,6 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                 <Th>Name</Th>
                 <Th>User Balance</Th>
                 <Th>Product</Th>
-                <Th>Quantity</Th>
                 <Th>Total Price</Th>
                 <Th>Commission</Th>
                 <Th>Balance Shortage</Th>
@@ -235,7 +234,6 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                           <span className="text-slate-400">Waiting product</span>
                         )}
                       </Td>
-                      <Td>{order.quantity ?? 0}</Td>
                       <Td>{formatRupiah(order.value ?? 0)}</Td>
                       <Td>{formatRupiah(order.commission ?? 0)}</Td>
                       <Td>
@@ -305,7 +303,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                 })
               ) : (
                 <tr>
-                  <td colSpan={13} className="p-6 text-center text-sm text-slate-500">
+                  <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
                     No order records in this admin scope yet.
                   </td>
                 </tr>

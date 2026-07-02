@@ -117,7 +117,7 @@ export default function ProductForm() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         <div>
           <label className="text-xs font-bold text-slate-600">Price (IDR)</label>
           <input
@@ -132,17 +132,6 @@ export default function ProductForm() {
         <div>
           <label className="text-xs font-bold text-slate-600">Commission (20% auto)</label>
           <input className={inputClass} type="number" disabled value={form.commission} />
-        </div>
-
-        <div>
-          <label className="text-xs font-bold text-slate-600">Quantity</label>
-          <input
-            className={inputClass}
-            type="number"
-            placeholder="1"
-            value={form.quantity || ""}
-            onChange={(event) => setForm({ ...form, quantity: Number(event.target.value) || 1 })}
-          />
         </div>
       </div>
 

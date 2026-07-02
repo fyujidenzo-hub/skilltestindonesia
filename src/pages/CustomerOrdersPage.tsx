@@ -282,11 +282,7 @@ function OrderCard({
           <img className="h-24 w-24 rounded object-cover" src={primaryImage || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=240&q=80"} alt={primaryProduct.name} />
           <div>
             <h2 className="font-black">{primaryProduct.name}</h2>
-            <dl className="mt-3 grid grid-cols-3 gap-3 text-sm">
-              <div>
-                <dt className="text-xs font-bold text-slate-500">Order Quantity</dt>
-                <dd className="font-black">{order.quantity ?? primaryProduct.quantity ?? 1}</dd>
-              </div>
+            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-bold text-slate-500">Order Price</dt>
                 <dd className="font-black">{formatRupiah(order.value ?? 0)}</dd>
