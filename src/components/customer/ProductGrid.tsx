@@ -3,13 +3,13 @@ import ProductCard from "./ProductCard";
 
 interface ProductGridProps {
   products: Product[];
-  favorites: string[];
+  favorites?: string[];
   onClearSearch: () => void;
-  onToggleFavorite: (productId: string) => void;
-  onTakeOrder: (product: Product) => void;
+  onToggleFavorite?: (productId: string) => void;
+  onTakeOrder?: (product: Product) => void;
 }
 
-export default function ProductGrid({ products, favorites, onClearSearch, onToggleFavorite, onTakeOrder }: ProductGridProps) {
+export default function ProductGrid({ products, onClearSearch }: ProductGridProps) {
   return (
     <section id="products">
       <div className="mb-3 flex items-center justify-between">
@@ -24,9 +24,6 @@ export default function ProductGrid({ products, favorites, onClearSearch, onTogg
             <ProductCard
               key={product.id}
               product={product}
-              isFavorite={favorites.includes(product.id)}
-              onToggleFavorite={() => onToggleFavorite(product.id)}
-              onTakeOrder={() => onTakeOrder(product)}
             />
           ))
         ) : (

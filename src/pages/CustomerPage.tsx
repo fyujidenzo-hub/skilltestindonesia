@@ -7,7 +7,6 @@ import CustomerHeader, { type CustomerNotification } from "../components/custome
 import CustomerHero from "../components/customer/CustomerHero";
 import DepositDestination from "../components/customer/DepositDestination";
 import PremiumBanner from "../components/customer/PremiumBanner";
-import ProductGrid from "../components/customer/ProductGrid";
 import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
@@ -369,29 +368,22 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
           </p>
         )}
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
-          <ProductGrid
-            products={filteredProducts}
-            favorites={favorites}
-            onClearSearch={() => setQuery("")}
-            onToggleFavorite={toggleFavorite}
-            onTakeOrder={handleAcceptTask}
+        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <AssignmentPanel
+            order={activeOrder}
+            products={state.products}
+            memberBalance={currentMember?.balance ?? 0}
+            member={currentMember}
+            onAcceptTask={() => handleAcceptTask()}
+            onStartShipment={handleStartShipment}
+            onSubmitOrder={handleSubmitOrder}
+            onConfirmDelivery={handleConfirmDelivery}
+            onAcceptChangedProduct={handleAcceptChangedProduct}
+            onRejectChangedProduct={handleRejectChangedProduct}
+            onTopUp={() => requireLogin(() => setActiveModal("topup"))}
+            isLoading={isAcceptingTask || isSubmittingOrder}
           />
           <aside className="space-y-5">
-            <AssignmentPanel
-              order={activeOrder}
-              products={state.products}
-              memberBalance={currentMember?.balance ?? 0}
-              member={currentMember}
-              onAcceptTask={() => handleAcceptTask()}
-              onStartShipment={handleStartShipment}
-              onSubmitOrder={handleSubmitOrder}
-              onConfirmDelivery={handleConfirmDelivery}
-              onAcceptChangedProduct={handleAcceptChangedProduct}
-              onRejectChangedProduct={handleRejectChangedProduct}
-              onTopUp={() => requireLogin(() => setActiveModal("topup"))}
-              isLoading={isAcceptingTask || isSubmittingOrder}
-            />
             <DepositDestination banks={state.banks} />
             <RecentRecords transactions={currentMember ? state.transactions.filter((transaction) => transaction.member === currentMember.username) : []} />
           </aside>

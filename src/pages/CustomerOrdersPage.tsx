@@ -18,6 +18,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<OrderTab>("All");
   const [confirmOrder, setConfirmOrder] = useState<Order | null>(null);
+  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [reviewOrderId, setReviewOrderId] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
@@ -198,6 +199,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
                 review={review}
                 isSubmitting={isSubmitting}
                 onOpenConfirm={() => setConfirmOrder(order)}
+                onOpenDetails={() => setDetailOrder(order)}
                 onRatingChange={setRating}
                 onReviewChange={setReview}
                 onSubmitReview={submitReview}
@@ -223,6 +225,8 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
           onConfirm={submitOrder}
         />
       )}
+
+      {detailOrder && <OrderDetailsModal order={detailOrder} products={state.products} onClose={() => setDetailOrder(null)} />}
     </main>
   );
 }
@@ -235,6 +239,7 @@ function OrderCard({
   review,
   isSubmitting,
   onOpenConfirm,
+  onOpenDetails,
   onRatingChange,
   onReviewChange,
   onSubmitReview,
@@ -246,6 +251,7 @@ function OrderCard({
   review: string;
   isSubmitting: boolean;
   onOpenConfirm: () => void;
+  onOpenDetails: () => void;
   onRatingChange: (rating: number) => void;
   onReviewChange: (review: string) => void;
   onSubmitReview: () => void;
@@ -298,7 +304,7 @@ function OrderCard({
                 <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white" onClick={onOpenConfirm}>
                   Send Order
                 </button>
-                <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white/95">
+                <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white/95" onClick={onOpenDetails}>
                   Order Details
                 </button>
               </div>
@@ -335,6 +341,116 @@ function OrderCard({
         </div>
       )}
     </article>
+  );
+}
+
+function OrderDetailsModal({
+  order,
+  products,
+  onClose,
+}: {
+  order: Order;
+  products: { id: string; code: string; image: string }[];
+  onClose: () => void;
+}) {
+  const state = getOrderState(order);
+  const assignedProducts = order.assignedProducts?.length
+    ? order.assignedProducts
+    : order.productName
+      ? [{ productId: order.productCode ?? "", code: order.productCode ?? "", name: order.productName, quantity: order.quantity ?? 1, price: order.value, commission: order.commission, total: order.value }]
+      : [];
+  const primaryProduct = assignedProducts[0];
+  const image = products.find((product) => product.id === primaryProduct?.productId || product.code === primaryProduct?.code)?.image;
+  const statusLabel = state === "diserahkan" ? "Delivered" : state === "rejected" ? "Rejected" : primaryProduct ? "Not Delivered" : "Not Assigned";
+  const requiredBalance = order.requiredBalance ?? order.value ?? 0;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-[1.5rem] bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest">Order Details</p>
+            <h2 className="mt-1 break-words text-xl font-black text-slate-900">{getOrderCode(order)}</h2>
+          </div>
+          <button className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600 hover:bg-slate-200" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="max-h-[calc(92vh-74px)] overflow-y-auto p-5">
+          <div className="grid gap-5 md:grid-cols-[180px_1fr]">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              {primaryProduct ? (
+                <img
+                  className="h-40 w-full rounded-xl object-cover md:h-44"
+                  src={image || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=300&q=80"}
+                  alt={primaryProduct.name}
+                />
+              ) : (
+                <div className="grid h-40 place-items-center rounded-xl bg-white text-slate-300 md:h-44">
+                  <PackageOpen size={42} />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${state === "diserahkan" ? "bg-emerald-100 text-emerald-700" : state === "rejected" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
+                {statusLabel}
+              </span>
+              <h3 className="mt-3 text-2xl font-black leading-tight text-slate-900">
+                {primaryProduct?.name ?? "Waiting for product assignment"}
+              </h3>
+              <p className="mt-2 text-sm font-semibold text-slate-500">
+                Product code: <span className="text-slate-800">{primaryProduct?.code || order.productCode || "-"}</span>
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <DetailStat label="Order Price" value={formatRupiah(order.value ?? 0)} />
+                <DetailStat label="Commission" value={formatRupiah(order.commission ?? 0)} accent />
+                <DetailStat label="Required Balance" value={formatRupiah(requiredBalance)} />
+                <DetailStat label="Created" value={shortDate(order.createdAt)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-black text-slate-900">Transaction summary</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <DetailRow label="Transaction No." value={getOrderCode(order)} />
+              <DetailRow label="Current status" value={statusLabel} />
+              <DetailRow label="Assigned date" value={order.assignedAt ? shortDate(order.assignedAt) : "-"} />
+              <DetailRow label="Completed date" value={order.completedAt ? shortDate(order.completedAt) : "-"} />
+              <DetailRow label="Submitted date" value={order.submittedAt ? shortDate(order.submittedAt) : "-"} />
+              <DetailRow label="Rating" value={order.rating ? `${order.rating} / 5` : "-"} />
+            </div>
+            {order.review && (
+              <div className="mt-3 rounded-xl bg-white p-3">
+                <p className="text-xs font-black uppercase text-slate-500">Review</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">{order.review}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <p className="text-xs font-black uppercase text-slate-500">{label}</p>
+      <p className={`mt-1 break-words text-lg font-black ${accent ? "text-coral" : "text-slate-900"}`}>{value}</p>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-2 last:border-0">
+      <span className="text-xs font-black uppercase text-slate-500">{label}</span>
+      <span className="text-right text-sm font-bold text-slate-800">{value}</span>
+    </div>
   );
 }
 

@@ -142,9 +142,15 @@ export default function AssignmentPanel({
             </div>
 
             <div className="space-y-3">
-              {assignedProducts.map((product) => (
+              {assignedProducts.map((product) => {
+                const catalogProduct = products.find((item) => item.id === product.productId || item.code === product.code);
+
+                return (
                 <div key={`${product.code}-${product.productId}`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-4 sm:grid-cols-[88px_1fr_1fr]">
+                    {catalogProduct?.image && (
+                      <img className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-cover" src={catalogProduct.image} alt={product.name} />
+                    )}
                     <div>
                       <p className="text-xs text-slate-500 uppercase">Product</p>
                       <p className="font-bold">{product.name}</p>
@@ -159,7 +165,8 @@ export default function AssignmentPanel({
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mb-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
