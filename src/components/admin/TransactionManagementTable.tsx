@@ -5,6 +5,7 @@ import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
 import { approveTransactionRequest } from "../../services/transactionsService";
 import type { Member, Transaction } from "../../types";
+import AmountSortControls, { type AmountSort } from "./AmountSortControls";
 
 export default function TransactionManagementTable({
   transactions,
@@ -19,9 +20,11 @@ export default function TransactionManagementTable({
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
+  const [topUpSort, setTopUpSort] = useState<AmountSort>("none");
+  const [withdrawalSort, setWithdrawalSort] = useState<AmountSort>("none");
 
-  const topUps = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "topup")), [transactions]);
-  const withdrawals = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "withdrawal")), [transactions]);
+  const topUps = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "topup"), topUpSort), [topUpSort, transactions]);
+  const withdrawals = useMemo(() => sortTransactions(transactions.filter((transaction) => transaction.type === "withdrawal"), withdrawalSort), [transactions, withdrawalSort]);
 
   const handleStatusChange = async (transactionItem: Transaction, status: "approved" | "rejected") => {
     if (!canApprove) return;
@@ -68,6 +71,8 @@ export default function TransactionManagementTable({
           members={members}
           canApprove={canApprove}
           isProcessingId={isProcessingId}
+          amountSort={topUpSort}
+          onAmountSortChange={setTopUpSort}
           onViewDetails={setDetailTransaction}
           onApprove={(transaction) => handleStatusChange(transaction, "approved")}
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
@@ -80,6 +85,8 @@ export default function TransactionManagementTable({
           members={members}
           canApprove={canApprove}
           isProcessingId={isProcessingId}
+          amountSort={withdrawalSort}
+          onAmountSortChange={setWithdrawalSort}
           onViewDetails={setDetailTransaction}
           onApprove={(transaction) => handleStatusChange(transaction, "approved")}
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
@@ -93,8 +100,15 @@ export default function TransactionManagementTable({
   );
 }
 
-function sortTransactions(transactions: Transaction[]) {
-  return [...transactions].sort((left, right) => new Date(right.createdAt.replace(" ", "T")).getTime() - new Date(left.createdAt.replace(" ", "T")).getTime());
+function sortTransactions(transactions: Transaction[], amountSort: AmountSort) {
+  return [...transactions].sort((left, right) => {
+    if (amountSort !== "none") {
+      const difference = left.amount - right.amount;
+      return amountSort === "asc" ? difference : -difference;
+    }
+
+    return new Date(right.createdAt.replace(" ", "T")).getTime() - new Date(left.createdAt.replace(" ", "T")).getTime();
+  });
 }
 
 function RequestTable({
@@ -105,6 +119,8 @@ function RequestTable({
   members,
   canApprove,
   isProcessingId,
+  amountSort,
+  onAmountSortChange,
   onViewDetails,
   onApprove,
   onReject,
@@ -116,6 +132,8 @@ function RequestTable({
   members: Member[];
   canApprove: boolean;
   isProcessingId: string | null;
+  amountSort: AmountSort;
+  onAmountSortChange: (value: AmountSort) => void;
   onViewDetails: (transaction: Transaction) => void;
   onApprove: (transaction: Transaction) => void;
   onReject: (transaction: Transaction) => void;
@@ -131,9 +149,12 @@ function RequestTable({
           <h3 className="text-lg font-black text-slate-900">{title}</h3>
           <p className="text-sm text-slate-500">Review request details, proof, and approval status.</p>
         </div>
-        <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
-          {transactions.length} records
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <AmountSortControls value={amountSort} onChange={onAmountSortChange} label="amount" />
+          <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
+            {transactions.length} records
+          </span>
+        </div>
       </div>
 
       <div className="max-h-[460px] overflow-auto">

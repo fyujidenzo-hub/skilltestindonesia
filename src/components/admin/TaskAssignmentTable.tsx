@@ -1,5 +1,5 @@
 import { Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
@@ -7,6 +7,7 @@ import type { Member, Order, Product } from "../../types";
 import { assignOrderProducts } from "../../services/ordersService";
 import { getOrderCode } from "../../services/orderCode";
 import { getOrderState, getOrderStateLabel, type OrderState } from "../../services/orderStateService";
+import AmountSortControls, { type AmountSort } from "./AmountSortControls";
 
 interface TaskAssignmentTableProps {
   orders: Order[];
@@ -15,6 +16,7 @@ interface TaskAssignmentTableProps {
 }
 
 const taskTarget = 15;
+const rowPageSize = 10;
 
 export default function TaskAssignmentTable({ orders, members, products }: TaskAssignmentTableProps) {
   const { dispatch } = useAppStore();
@@ -24,6 +26,8 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
   const [isAssigning, setIsAssigning] = useState(false);
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
+  const [rowPage, setRowPage] = useState(0);
+  const [amountSort, setAmountSort] = useState<AmountSort>("none");
 
   const openAssignFormForOrder = (orderId?: string) => {
     setShowAssignForm(true);
@@ -38,8 +42,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
     return state === "waiting_assignment" && !hasSelectedProduct;
   });
   const visibleOrders = useMemo(() => {
-    return orders
-      .filter((order) => {
+    const filteredOrders = orders.filter((order) => {
         const search = query.trim().toLowerCase();
         if (!search) return true;
         const member = members.find((item) => item.username === order.member);
@@ -55,9 +58,29 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
           .join(" ")
           .toLowerCase()
           .includes(search);
-      })
-      .sort((left, right) => new Date(right.createdAt.replace(" ", "T")).getTime() - new Date(left.createdAt.replace(" ", "T")).getTime());
-  }, [members, orders, query]);
+      });
+
+    return filteredOrders.sort((left, right) => {
+      if (amountSort !== "none") {
+        const difference = getOrderAmount(left) - getOrderAmount(right);
+        return amountSort === "asc" ? difference : -difference;
+      }
+
+      return new Date(right.createdAt.replace(" ", "T")).getTime() - new Date(left.createdAt.replace(" ", "T")).getTime();
+    });
+  }, [amountSort, members, orders, query]);
+  const totalRowPages = Math.max(1, Math.ceil(visibleOrders.length / rowPageSize));
+  const pagedOrders = visibleOrders.slice(rowPage * rowPageSize, rowPage * rowPageSize + rowPageSize);
+  const startRow = visibleOrders.length ? rowPage * rowPageSize + 1 : 0;
+  const endRow = Math.min(visibleOrders.length, (rowPage + 1) * rowPageSize);
+
+  useEffect(() => {
+    setRowPage(0);
+  }, [amountSort, query, orders.length]);
+
+  useEffect(() => {
+    if (rowPage > totalRowPages - 1) setRowPage(totalRowPages - 1);
+  }, [rowPage, totalRowPages]);
 
   const handleAssignProducts = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +198,9 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                       />
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{product.code} - {product.name}</p>
-                        <p className="text-xs text-slate-500">{formatRupiah(product.price)} · Stock {product.quantity}</p>
+                        <p className="text-xs text-slate-500">
+                          {formatRupiah(product.price)} · {product.quantity > 0 ? "Available" : "Unavailable"}
+                        </p>
                       </div>
                     </div>
                   ))
@@ -220,16 +245,21 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
       <div className="mb-4 flex flex-col gap-3 rounded border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-black text-slate-900">Task records</p>
-          <p className="text-xs text-slate-500">Showing all pending, in-progress, completed, and rejected task records in one table.</p>
+          <p className="text-xs text-slate-500">
+            Showing {startRow}-{endRow} of {visibleOrders.length} task records.
+          </p>
         </div>
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input
-            className="h-10 w-full rounded border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-forest"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search task, member, product"
-          />
+        <div className="flex w-full flex-col gap-2 sm:max-w-2xl sm:flex-row sm:items-center sm:justify-end">
+          <AmountSortControls value={amountSort} onChange={setAmountSort} label="price" />
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              className="h-10 w-full rounded border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-forest"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search task, member, product"
+            />
+          </div>
         </div>
       </div>
 
@@ -266,14 +296,14 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
             </tr>
           </thead>
           <tbody>
-        {visibleOrders.length === 0 ? (
+        {pagedOrders.length === 0 ? (
           <tr>
             <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
               No task records found.
             </td>
           </tr>
         ) : (
-          visibleOrders.map((order) => {
+          pagedOrders.map((order) => {
             const member = members.find((m) => m.username === order.member);
             const assignedProducts = order.assignedProducts?.length
               ? order.assignedProducts
@@ -353,6 +383,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
           </tbody>
         </table>
       </div>
+      <TablePagination page={rowPage} totalPages={totalRowPages} onPageChange={setRowPage} />
     </Panel>
   );
 }
@@ -366,10 +397,47 @@ function getMemberTaskProgress(order: Order, orders: Order[]) {
   return Math.min(taskTarget, Math.max(1, index + 1));
 }
 
+function getOrderAmount(order: Order) {
+  if (typeof order.value === "number" && order.value > 0) return order.value;
+  return order.assignedProducts?.reduce((sum, product) => sum + getAssignedProductTotal(product), 0) ?? 0;
+}
+
+function getAssignedProductTotal(product: { total?: number; price?: number; quantity?: number }) {
+  if (typeof product.total === "number") return product.total;
+  if (typeof product.price === "number") return product.price * (product.quantity ?? 1);
+  return 0;
+}
+
 function TaskTh({ children }: { children: React.ReactNode }) {
   return <th className="whitespace-nowrap border-r border-slate-700 px-3 py-3 font-black last:border-r-0">{children}</th>;
 }
 
 function TaskTd({ children }: { children: React.ReactNode }) {
   return <td className="border-b border-slate-200 border-r border-slate-100 px-3 py-3 align-top last:border-r-0">{children}</td>;
+}
+
+function TablePagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (page: number) => void }) {
+  return (
+    <div className="flex flex-col gap-3 border-x border-b border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs font-semibold text-slate-500">
+        Page {page + 1} of {totalPages}
+      </p>
+      <div className="flex gap-2">
+        <button
+          className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 disabled:text-slate-300 sm:flex-none"
+          disabled={page === 0}
+          onClick={() => onPageChange(Math.max(0, page - 1))}
+        >
+          Previous
+        </button>
+        <button
+          className="flex-1 rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-300 sm:flex-none"
+          disabled={page >= totalPages - 1}
+          onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
 }

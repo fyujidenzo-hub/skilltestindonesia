@@ -7,6 +7,7 @@ import { getOrderState } from "../../services/orderStateService";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
+import AmountSortControls, { type AmountSort } from "./AmountSortControls";
 import Filters from "./Filters";
 
 const productPageSize = 5;
@@ -21,16 +22,21 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const [rowPage, setRowPage] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [amountSort, setAmountSort] = useState<AmountSort>("none");
+  const [showFilters, setShowFilters] = useState(true);
 
-  const orderedRows = useMemo(
-    () =>
-      [...orders].sort((a, b) => {
-        const left = new Date(a.createdAt.replace(" ", "T")).getTime();
-        const right = new Date(b.createdAt.replace(" ", "T")).getTime();
-        return right - left;
-      }),
-    [orders],
-  );
+  const orderedRows = useMemo(() => {
+    return [...orders].sort((a, b) => {
+      if (amountSort !== "none") {
+        const difference = getOrderAmount(a) - getOrderAmount(b);
+        return amountSort === "asc" ? difference : -difference;
+      }
+
+      const left = new Date(a.createdAt.replace(" ", "T")).getTime();
+      const right = new Date(b.createdAt.replace(" ", "T")).getTime();
+      return right - left;
+    });
+  }, [amountSort, orders]);
   const visibleRows = orderedRows;
   const totalRowPages = Math.max(1, Math.ceil(visibleRows.length / rowPageSize));
   const pagedRows = visibleRows.slice(rowPage * rowPageSize, rowPage * rowPageSize + rowPageSize);
@@ -42,7 +48,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
 
   useEffect(() => {
     setRowPage(0);
-  }, [orders.length]);
+  }, [amountSort, orders.length]);
 
   const openProductModal = (order: Order) => {
     setTargetOrder(order);
@@ -146,7 +152,12 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
       <Panel
         title="Order Intake Records"
         action={
-          <button className="inline-flex items-center gap-2 rounded border border-slate-200 px-3 py-2 text-sm font-semibold">
+          <button
+            className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-semibold transition ${
+              showFilters ? "border-forest bg-mint text-forest" : "border-slate-200 bg-white text-slate-700 hover:border-forest/40 hover:text-forest"
+            }`}
+            onClick={() => setShowFilters((current) => !current)}
+          >
             <Filter size={16} /> Filters
           </button>
         }
@@ -156,7 +167,11 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             {message}
           </p>
         )}
-        <Filters />
+        {showFilters && (
+          <Filters>
+            <AmountSortControls value={amountSort} onChange={setAmountSort} label="price" />
+          </Filters>
+        )}
         <div className="mt-4 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
             <div>
@@ -342,7 +357,9 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                       <img className="h-16 w-16 rounded object-cover" src={product.image} alt={product.name} />
                       <span className="min-w-0">
                         <span className="block truncate font-black text-slate-800">{product.name}</span>
-                        <span className="block text-xs font-semibold text-slate-500">{product.code} · Stock {product.quantity}</span>
+                        <span className="block text-xs font-semibold text-slate-500">
+                          {product.code} · {product.quantity > 0 ? "Available" : "Unavailable"}
+                        </span>
                       </span>
                       <span className="text-right text-sm font-black text-forest">{formatRupiah(product.price)}</span>
                     </button>
@@ -399,6 +416,11 @@ function getMemberTaskProgress(order: Order, orders: Order[]) {
     .sort((left, right) => new Date(left.createdAt.replace(" ", "T")).getTime() - new Date(right.createdAt.replace(" ", "T")).getTime());
   const index = memberOrders.findIndex((item) => item.id === order.id);
   return Math.min(taskTarget, Math.max(1, index + 1));
+}
+
+function getOrderAmount(order: Order) {
+  if (typeof order.value === "number" && order.value > 0) return order.value;
+  return order.assignedProducts?.reduce((sum, product) => sum + getAssignedProductTotal(product), 0) ?? 0;
 }
 
 function Th({ children }: { children: React.ReactNode }) {
