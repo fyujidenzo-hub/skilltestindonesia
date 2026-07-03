@@ -1,7 +1,6 @@
 import { AlertCircle, CheckCircle2, Clock, PackageCheck, Truck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
-import AssignmentPanel from "../components/customer/AssignmentPanel";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import CustomerHero from "../components/customer/CustomerHero";
@@ -346,49 +345,32 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         />
       )}
 
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <StoreShortcutGrid
-          navigate={navigate}
-          isLoggedIn={Boolean(currentMember)}
-          onTopUp={() => requireLogin(() => setActiveModal("topup"))}
-          onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
-        />
-        <PremiumBanner
-          onViewDetails={() => {
-            if (!currentMember) {
-              setLoginAlert("You have to log in first!");
-              return;
-            }
-            setShowTaskStatus(true);
-          }}
-        />
-        {taskMessage && (
-          <p className="mt-5 rounded bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
-            {taskMessage}
-          </p>
-        )}
+  <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+  <StoreShortcutGrid
+    navigate={navigate}
+    isLoggedIn={Boolean(currentMember)}
+    onTopUp={() => requireLogin(() => setActiveModal("topup"))}
+    onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
+  />
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <AssignmentPanel
-            order={activeOrder}
-            products={state.products}
-            memberBalance={currentMember?.balance ?? 0}
-            member={currentMember}
-            onAcceptTask={() => handleAcceptTask()}
-            onStartShipment={handleStartShipment}
-            onSubmitOrder={handleSubmitOrder}
-            onConfirmDelivery={handleConfirmDelivery}
-            onAcceptChangedProduct={handleAcceptChangedProduct}
-            onRejectChangedProduct={handleRejectChangedProduct}
-            onTopUp={() => requireLogin(() => setActiveModal("topup"))}
-            isLoading={isAcceptingTask || isSubmittingOrder}
-          />
-          <aside className="space-y-5">
-            <DepositDestination banks={state.banks} />
-            <RecentRecords transactions={currentMember ? state.transactions.filter((transaction) => transaction.member === currentMember.username) : []} />
-          </aside>
-        </div>
-      </section>
+  {taskMessage && (
+    <p className="mt-5 rounded bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+      {taskMessage}
+    </p>
+  )}
+
+  <div className="mt-6 mx-auto w-full max-w-4xl">
+    <RecentRecords
+      transactions={
+        currentMember
+          ? state.transactions.filter(
+              (transaction) => transaction.member === currentMember.username
+            )
+          : []
+      }
+    />
+  </div>
+</section>
 
       <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} active="home" />
       {activeModal && currentMember && (

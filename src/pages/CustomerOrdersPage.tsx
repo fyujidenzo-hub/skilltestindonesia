@@ -1,10 +1,11 @@
 import { PackageOpen, Search, Star } from "lucide-react";
+import AssignmentPanel from "../components/customer/AssignmentPanel";
 import { useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
-import { completeWorkflowOrder, updateOrderStatus } from "../services/ordersService";
+import { completeWorkflowOrder, submitWorkflowOrder, updateOrderStatus } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
@@ -28,6 +29,20 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   const activeCustomerId = getActiveCustomerId();
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
 
+  const activeOrder = useMemo(() => {
+    if (!currentMember) return null;
+
+    return (
+      state.orders.find(
+        (order) =>
+          order.member === currentMember.username &&
+          !["completed", "diserahkan", "rejected"].includes(order.status)
+      ) ?? null
+    );
+  }, [currentMember, state.orders]);
+
+  const shouldShowAssignmentPanel = Boolean(activeOrder) && activeTab !== "Completed";
+
   const orders = useMemo(() => {
     if (!currentMember) return [];
     return state.orders
@@ -42,6 +57,11 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       })
       .sort((a, b) => new Date(b.createdAt.replace(" ", "T")).getTime() - new Date(a.createdAt.replace(" ", "T")).getTime());
   }, [activeTab, currentMember, query, state.orders]);
+
+  const displayOrders =
+    shouldShowAssignmentPanel && activeOrder
+      ? orders.filter((order) => order.id !== activeOrder.id)
+      : orders;
 
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
@@ -65,7 +85,108 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
     clearActiveCustomerId();
     navigate("/login");
   };
+const handleStartShipment = async () => {
+  if (!activeOrder) return;
+  if (activeOrder.status === "waiting_shipment") return;
 
+  setIsSubmitting(true);
+  try {
+    const order = await updateOrderStatus(activeOrder, "waiting_shipment", {
+      submittedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+    });
+
+    dispatch({ type: "updateOrder", payload: order });
+  } catch (error) {
+    console.error("Failed to prepare shipment:", error);
+    setMessage("Unable to prepare shipment. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const handleSubmitAssignmentOrder = async () => {
+  if (!activeOrder || !currentMember) return;
+
+  setIsSubmitting(true);
+  setMessage("");
+
+  try {
+    const result = await submitWorkflowOrder(
+      {
+        ...activeOrder,
+        submittedAt:
+          activeOrder.submittedAt ??
+          new Date().toISOString().slice(0, 16).replace("T", " "),
+      },
+      currentMember
+    );
+
+    dispatch({ type: "completeOrderWithMember", payload: result });
+    setMessage("Order submitted successfully. Required balance was deducted. Status: Not delivered.");
+  } catch (error) {
+    console.error("Failed to submit order:", error);
+    setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const handleConfirmDelivery = async () => {
+  if (!activeOrder || !currentMember) return;
+
+  setIsSubmitting(true);
+  setMessage("");
+
+  try {
+    const result = await completeWorkflowOrder(activeOrder, currentMember);
+    dispatch({ type: "completeOrderWithMember", payload: result });
+    setMessage(`Order completed. Commission ${result.order.commission.toLocaleString("id-ID")} IDR added to your balance.`);
+  } catch (error) {
+    console.error("Failed to confirm delivery:", error);
+    setMessage(error instanceof Error ? error.message : "Unable to confirm delivery.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const handleAcceptChangedProduct = async () => {
+  if (!activeOrder) return;
+
+  setIsSubmitting(true);
+  try {
+    const order = await updateOrderStatus(activeOrder, "product_assigned", {
+      requiresCustomerApproval: false,
+    });
+
+    dispatch({ type: "updateOrder", payload: order });
+    setMessage("Changed product accepted. You can now send the order.");
+  } catch (error) {
+    console.error("Failed to accept changed product:", error);
+    setMessage(error instanceof Error ? error.message : "Unable to accept changed product.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const handleRejectChangedProduct = async () => {
+  if (!activeOrder) return;
+
+  setIsSubmitting(true);
+  try {
+    const order = await updateOrderStatus(activeOrder, "rejected", {
+      requiresCustomerApproval: false,
+      completedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+    });
+
+    dispatch({ type: "updateOrder", payload: order });
+    setMessage("Changed product rejected. You can take another order.");
+  } catch (error) {
+    console.error("Failed to reject changed product:", error);
+    setMessage(error instanceof Error ? error.message : "Unable to reject changed product.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   const submitOrder = async () => {
     if (!confirmOrder || !currentMember) return;
     const shortage = Math.max(0, (confirmOrder.requiredBalance ?? confirmOrder.value ?? 0) - currentMember.balance);
@@ -187,9 +308,33 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
           </p>
         )}
 
+        {shouldShowAssignmentPanel && activeOrder && (
+          <div className="mt-5">
+            <AssignmentPanel
+              order={activeOrder}
+              products={state.products}
+              memberBalance={currentMember.balance}
+              member={currentMember}
+              onAcceptTask={() => {
+                setMessage("You already have an active task. Complete it before taking another task.");
+              }}
+              onStartShipment={handleStartShipment}
+              onSubmitOrder={handleSubmitAssignmentOrder}
+              onConfirmDelivery={handleConfirmDelivery}
+              onAcceptChangedProduct={handleAcceptChangedProduct}
+              onRejectChangedProduct={handleRejectChangedProduct}
+              onTopUp={() => {
+                setMessage("Please top up your balance from the home page.");
+                navigate("/");
+              }}
+              isLoading={isSubmitting}
+            />
+          </div>
+        )}
+
         <div className="mt-5 grid gap-4">
-          {orders.length ? (
-            orders.map((order) => (
+          {displayOrders.length ? (
+            displayOrders.map((order) => (
               <OrderCard
                 key={order.id}
                 order={order}
@@ -205,12 +350,14 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
                 onSubmitReview={submitReview}
               />
             ))
-          ) : (
+          ) : !shouldShowAssignmentPanel ? (
             <div className="rounded bg-white p-10 text-center shadow-panel">
               <p className="font-black text-slate-700">No orders found</p>
-              <p className="mt-1 text-sm text-slate-500">Accepted tasks will appear here after they are created.</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Accepted tasks will appear here after they are created.
+              </p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -381,6 +528,7 @@ function OrderDetailsModal({
           <div className="grid gap-5 md:grid-cols-[180px_1fr]">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
               {primaryProduct ? (
+                
                 <img
                   className="h-40 w-full rounded-xl object-cover md:h-44"
                   src={image || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=300&q=80"}
