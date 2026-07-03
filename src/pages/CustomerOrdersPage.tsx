@@ -152,9 +152,9 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
             <h1 className="text-2xl font-black">Task Orders</h1>
             <p className="text-sm text-slate-500">Track assigned order tasks and submit completed work.</p>
           </div>
-          <button className="rounded bg-forest px-4 py-2 text-sm font-black text-white" onClick={() => navigate("/")}>
+          {/* <button className="rounded bg-forest px-4 py-2 text-sm font-black text-white" onClick={() => navigate("/")}>
             Take Order
-          </button>
+          </button> */}
         </div>
 
         <div className="rounded bg-white p-4 shadow-panel">

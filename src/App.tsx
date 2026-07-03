@@ -9,12 +9,14 @@ import CustomerTransactionPage from "./pages/CustomerTransactionPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
+import { getActiveCustomerId } from "./services/customerSession";
 import { AppStoreProvider } from "./store/AppStore";
 
 export type Navigate = (path: string) => void;
 
 function App() {
   const [path, setPath] = useState(() => window.location.pathname);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(getActiveCustomerId()));
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
@@ -32,6 +34,21 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Check login status on navigation
+  useEffect(() => {
+    setIsLoggedIn(Boolean(getActiveCustomerId()));
+  }, [path]);
+
+  // Redirect to login if accessing protected routes without login
+  useEffect(() => {
+    if (!path.startsWith("/admin") && !path.startsWith("/login") && !path.startsWith("/register")) {
+      if (!isLoggedIn) {
+        window.history.replaceState(null, "", "/login");
+        setPath("/login");
+      }
+    }
+  }, [path, isLoggedIn]);
+
   return (
     <AppStoreProvider>
       {path.startsWith("/admin") ? (
@@ -39,21 +56,22 @@ function App() {
       ) : path.startsWith("/register") ? (
         <RegisterPage navigate={navigate} />
       ) : path.startsWith("/service") ? (
-        <CustomerServicePage navigate={navigate} />
+        isLoggedIn ? <CustomerServicePage navigate={navigate} /> : <LoginPage navigate={navigate} />
       ) : path.startsWith("/orders") ? (
-        <CustomerOrdersPage navigate={navigate} />
+        isLoggedIn ? <CustomerOrdersPage navigate={navigate} /> : <LoginPage navigate={navigate} />
       ) : path.startsWith("/take-order") ? (
-        <CustomerDashboardPage navigate={navigate} />
+        isLoggedIn ? <CustomerDashboardPage navigate={navigate} /> : <LoginPage navigate={navigate} />
       ) : path.startsWith("/topup") ? (
-        <CustomerTransactionPage navigate={navigate} type="topup" />
+        isLoggedIn ? <CustomerTransactionPage navigate={navigate} type="topup" /> : <LoginPage navigate={navigate} />
       ) : path.startsWith("/withdraw") ? (
-        <CustomerTransactionPage navigate={navigate} type="withdraw" />
+        isLoggedIn ? <CustomerTransactionPage navigate={navigate} type="withdraw" /> : <LoginPage navigate={navigate} />
       ) : path.startsWith("/login") ? (
         <LoginPage navigate={navigate} />
       ) : path.startsWith("/profile") ? (
-        <ProfilePage navigate={navigate} />
+        isLoggedIn ? <ProfilePage navigate={navigate} /> : <LoginPage navigate={navigate} />
       ) : (
-        <CustomerPage navigate={navigate} />
+        // Default route - show CustomerPage if logged in, LoginPage if not
+        isLoggedIn ? <CustomerPage navigate={navigate} /> : <LoginPage navigate={navigate} />
       )}
     </AppStoreProvider>
   );
