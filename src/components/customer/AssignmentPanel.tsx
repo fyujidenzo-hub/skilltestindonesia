@@ -93,7 +93,7 @@ export default function AssignmentPanel({
           <button
             onClick={onAcceptTask}
             disabled={isLoading}
-            className="w-full rounded-2xl bg-forest px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:bg-slate-400"
+            className="hidden w-full rounded-2xl bg-forest px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:bg-slate-400"
           >
             {isLoading ? "Accepting..." : "Take Order"}
           </button>

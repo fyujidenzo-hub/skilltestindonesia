@@ -1,1 +1,0 @@
-import{d as n,g as i,a as s,s as o}from"./index-Dq0-ICYA.js";const a="settings",e="account";async function c(){if(!n)return null;const t=await i(s(n,a,e));return t.exists()?t.data():null}async function u(t){if(!n)throw new Error("Firebase not initialized");await o(s(n,a,e),t,{merge:!0})}export{c as getSettings,u as updateSettings};

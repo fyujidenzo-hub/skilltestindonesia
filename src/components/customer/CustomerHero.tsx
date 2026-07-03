@@ -31,14 +31,6 @@ export default function CustomerHero({ balance, username, phone, onTopUp, onWith
                 <p className="mt-2 break-words text-xl font-bold text-white/95 sm:text-2xl">
                   {phone || "Please log in to view your user number"}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-3 hidden">
-                  <button
-                    className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-forest shadow-sm hover:-translate-y-0.5 hover:bg-mint hover:shadow-panel"
-                    onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}
-                  >
-                    Start ordering
-                  </button>
-                </div>
               </div>
               <BalanceCard balance={balance} onTopUp={onTopUp} onWithdraw={onWithdraw} />
             </div>

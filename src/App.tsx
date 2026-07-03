@@ -43,7 +43,7 @@ function App() {
       ) : path.startsWith("/orders") ? (
         <CustomerOrdersPage navigate={navigate} />
       ) : path.startsWith("/take-order") ? (
-        <CustomerPage navigate={navigate} />
+        <CustomerDashboardPage navigate={navigate} />
       ) : path.startsWith("/topup") ? (
         <CustomerTransactionPage navigate={navigate} type="topup" />
       ) : path.startsWith("/withdraw") ? (
@@ -53,7 +53,7 @@ function App() {
       ) : path.startsWith("/profile") ? (
         <ProfilePage navigate={navigate} />
       ) : (
-        <CustomerDashboardPage navigate={navigate} />
+        <CustomerPage navigate={navigate} />
       )}
     </AppStoreProvider>
   );

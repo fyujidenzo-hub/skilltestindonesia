@@ -1,9 +1,10 @@
-import { Banknote, CheckCircle2, ClipboardList, Coins, LogIn, ShoppingBag, Star, WalletCards } from "lucide-react";
+import { AlertCircle, Banknote, CheckCircle2, ClipboardList, Coins, LogIn, ShoppingBag, Star, WalletCards, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
+import { createOrder } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
@@ -14,9 +15,11 @@ const customerLogo = "/assets/customer-logo.jpeg";
 const dailyOrderTarget = 15;
 
 export default function CustomerDashboardPage({ navigate }: { navigate: Navigate }) {
-  const { state, ready } = useAppStore();
+  const { state, ready, dispatch } = useAppStore();
   const [query, setQuery] = useState("");
   const [activeCustomerId, setActiveCustomerIdState] = useState(() => getActiveCustomerId());
+  const [isAcceptingTask, setIsAcceptingTask] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
   const memberOrders = useMemo(() => {
@@ -87,6 +90,40 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
     return [...rejectedOrderNotifications, ...orderNotifications, ...transactionNotifications].slice(0, 6);
   }, [currentMember, state.orders, state.transactions]);
 
+  const handleAcceptTask = async () => {
+    if (!currentMember) return;
+
+    const activeOrder = memberOrders.find((order) => !["completed", "diserahkan", "rejected"].includes(order.status));
+    if (activeOrder) {
+      setAlertMessage("You already accepted a task. Please complete it before taking another one.");
+      return;
+    }
+
+    setIsAcceptingTask(true);
+    try {
+      const order = await createOrder({
+        memberId: currentMember.id,
+        member: currentMember.username,
+        admin: currentMember.referredBy,
+        productCode: "",
+        productName: "",
+        quantity: 0,
+        assignedProducts: [],
+        value: 0,
+        commission: 0,
+        requiredBalance: 0,
+        status: "waiting_assignment",
+        createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+      });
+      dispatch({ type: "addOrder", payload: order });
+      navigate("/take-order");
+    } catch (error) {
+      console.error("Failed to accept task:", error);
+    } finally {
+      setIsAcceptingTask(false);
+    }
+  };
+
   const logout = () => {
     clearActiveCustomerId();
     setActiveCustomerIdState(null);
@@ -111,6 +148,24 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
         onLogout={logout}
         navigate={navigate}
       />
+
+      {alertMessage && (
+        <div className="fixed inset-x-0 top-20 z-50 mx-auto w-[calc(100%-2rem)] max-w-md">
+          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-amber-100">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-amber-50 text-amber-600">
+                <AlertCircle size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-black text-slate-900">{alertMessage}</p>
+              </div>
+              <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={() => setAlertMessage("")} aria-label="Close alert">
+                <X size={17} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
         <div className="overflow-hidden rounded-[2rem] bg-white shadow-[0_22px_70px_rgba(15,23,42,0.12)] ring-1 ring-emerald-100/70">
@@ -161,10 +216,17 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
             />
             <button
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-4 text-base font-black text-white shadow-[0_16px_34px_rgba(22,141,98,0.22)] hover:-translate-y-0.5 hover:bg-emerald-700"
-              onClick={() => navigate(currentMember ? "/take-order" : "/login")}
+              onClick={() => {
+                if (currentMember) {
+                  handleAcceptTask();
+                } else {
+                  navigate("/login");
+                }
+              }}
+              disabled={isAcceptingTask}
             >
               {currentMember ? <Banknote size={20} /> : <LogIn size={20} />}
-              {currentMember ? "Take Order" : "Login to Take Order"}
+              {isAcceptingTask ? "Accepting..." : currentMember ? "Take Order" : "Login to Take Order"}
             </button>
           </section>
 
@@ -180,7 +242,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
         </div>
       </section>
 
-      <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} active="home" />
+      <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} active="claim" />
     </main>
   );
 }

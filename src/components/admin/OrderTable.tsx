@@ -14,6 +14,8 @@ const productPageSize = 5;
 const rowPageSize = 10;
 const taskTarget = 15;
 
+type ProductSort = "none" | "price-high" | "price-low";
+
 export default function OrderTable({ orders, members, products }: { orders: Order[]; members: Member[]; products: Product[] }) {
   const { dispatch } = useAppStore();
   const [targetOrder, setTargetOrder] = useState<Order | null>(null);
@@ -24,6 +26,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const [message, setMessage] = useState("");
   const [amountSort, setAmountSort] = useState<AmountSort>("none");
   const [showFilters, setShowFilters] = useState(true);
+  const [productSort, setProductSort] = useState<ProductSort>("none");
 
   const orderedRows = useMemo(() => {
     return [...orders].sort((a, b) => {
@@ -43,8 +46,18 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const startRow = visibleRows.length ? rowPage * rowPageSize + 1 : 0;
   const endRow = Math.min(visibleRows.length, (rowPage + 1) * rowPageSize);
 
-  const productPages = Math.max(1, Math.ceil(products.length / productPageSize));
-  const pagedProducts = products.slice(productPage * productPageSize, productPage * productPageSize + productPageSize);
+  const sortedProducts = useMemo(() => {
+    const sorted = [...products];
+    if (productSort === "price-high") {
+      return sorted.sort((a, b) => b.price - a.price);
+    } else if (productSort === "price-low") {
+      return sorted.sort((a, b) => a.price - b.price);
+    }
+    return sorted;
+  }, [products, productSort]);
+
+  const productPages = Math.max(1, Math.ceil(sortedProducts.length / productPageSize));
+  const pagedProducts = sortedProducts.slice(productPage * productPageSize, productPage * productPageSize + productPageSize);
 
   useEffect(() => {
     setRowPage(0);
@@ -65,7 +78,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
 
   const saveProductAssignment = async () => {
     if (!targetOrder) return;
-    const selectedProduct = products.find((product) => product.id === selectedProductId);
+    const selectedProduct = sortedProducts.find((product) => product.id === selectedProductId);
     if (!selectedProduct) {
       setMessage("Please select a product first.");
       return;
@@ -344,8 +357,24 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
               </button>
             </div>
 
+            <div className="border-b border-slate-100 px-5 py-3">
+              <label className="text-xs font-bold text-slate-600">Sort by price</label>
+              <select
+                value={productSort}
+                onChange={(e) => {
+                  setProductSort(e.target.value as ProductSort);
+                  setProductPage(0);
+                }}
+                className="mt-2 w-full rounded border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900"
+              >
+                <option value="none">Default order</option>
+                <option value="price-high">Highest price to lowest</option>
+                <option value="price-low">Lowest price to highest</option>
+              </select>
+            </div>
+
             <div className="max-h-[65vh] overflow-y-auto p-5">
-              {products.length ? (
+              {sortedProducts.length ? (
                 <div className="grid gap-3">
                   {pagedProducts.map((product) => (
                     <button

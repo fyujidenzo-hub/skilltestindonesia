@@ -1,4 +1,4 @@
-import { ArrowRight, Banknote, Gift, PackageCheck, ReceiptText, ShieldCheck, Tag, User, WalletCards, X } from "lucide-react";
+import { ArrowRight, Banknote, PackageCheck, ReceiptText, ShieldCheck, User, WalletCards, X } from "lucide-react";
 import { useState } from "react";
 import type { Navigate } from "../../App";
 
@@ -9,15 +9,14 @@ interface StoreShortcutGridProps {
   isLoggedIn?: boolean;
 }
 
-type ShortcutModal = "promo" | "records" | "security" | "account" | null;
+type ShortcutModal = "records" | "security" | "account" | null;
 
 export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLoggedIn = false }: StoreShortcutGridProps) {
   const [modal, setModal] = useState<ShortcutModal>(null);
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
-        <StoreShortcut icon={<Tag />} label="Promo" onClick={() => setModal("promo")} />
+      <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
         <StoreShortcut icon={<PackageCheck />} label="Orders" onClick={() => navigate("/orders")} />
         <StoreShortcut icon={<WalletCards />} label="Top Up" onClick={onTopUp} />
         <StoreShortcut icon={<Banknote />} label="Withdraw" onClick={onWithdraw} />
@@ -25,20 +24,6 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
         <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => setModal("security")} />
         <StoreShortcut icon={<User />} label="Account" onClick={() => setModal("account")} />
       </div>
-
-      {modal === "promo" && (
-        <ShortcutInfoModal
-          icon={<Gift size={24} />}
-          title="Promo Center"
-          description="Browse available product tasks and higher-value order opportunities. Promo items are shown in the recommended product section."
-          primaryLabel="View products"
-          onPrimary={() => {
-            setModal(null);
-            document.getElementById("products")?.scrollIntoView({ behavior: "smooth" });
-          }}
-          onClose={() => setModal(null)}
-        />
-      )}
 
       {modal === "records" && (
         <ShortcutInfoModal

@@ -24,7 +24,7 @@ export default function LoginPage({ navigate }: { navigate: Navigate }) {
   return (
     <main className="grid min-h-screen place-items-center bg-mint px-4 py-8 text-ink">
       <section className="w-full max-w-md rounded bg-white p-6 shadow-panel">
-        <button className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-forest" onClick={() => navigate("/")}>
+        <button className="mb-6 hidden inline-flex items-center gap-2 text-sm font-bold text-forest" onClick={() => navigate("/")}>
           <Store size={18} />
           Back to store
         </button>
