@@ -93,6 +93,12 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
   const handleAcceptTask = async () => {
     if (!currentMember) return;
 
+    // Check if account has zero balance (new account without sign-up bonus)
+    if (currentMember.balance === 0) {
+      setAlertMessage("You need an admin sign-up bonus to accept tasks. Contact your referrer.");
+      return;
+    }
+
     const activeOrder = memberOrders.find((order) => !["completed", "diserahkan", "rejected"].includes(order.status));
     if (activeOrder) {
       setAlertMessage("You already accepted a task. Please complete it before taking another one.");
@@ -215,7 +221,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
               value={formatRupiah(currentMember?.balance ?? 0)}
             />
             <button
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-4 text-base font-black text-white shadow-[0_16px_34px_rgba(22,141,98,0.22)] hover:-translate-y-0.5 hover:bg-emerald-700"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-4 text-base font-black text-white shadow-[0_16px_34px_rgba(22,141,98,0.22)] hover:-translate-y-0.5 hover:bg-emerald-700 disabled:bg-slate-400 disabled:hover:bg-slate-400"
               onClick={() => {
                 if (currentMember) {
                   handleAcceptTask();
@@ -223,10 +229,10 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
                   navigate("/login");
                 }
               }}
-              disabled={isAcceptingTask}
+              disabled={isAcceptingTask || (currentMember?.balance === 0)}
             >
               {currentMember ? <Banknote size={20} /> : <LogIn size={20} />}
-              {isAcceptingTask ? "Accepting..." : currentMember ? "Take Order" : "Login to Take Order"}
+              {isAcceptingTask ? "Accepting..." : currentMember?.balance === 0 ? "Need Sign-up Bonus or Top Up" : currentMember ? "Take Order" : "Login to Take Order"}
             </button>
           </section>
 

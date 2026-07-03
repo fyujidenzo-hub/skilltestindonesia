@@ -1,12 +1,12 @@
-import { CheckCircle2, Clock, Package, FileText } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Package } from "lucide-react";
 import { useState } from "react";
 import Receipt from "./Receipt";
 import type { Member, Order, Product } from "../../types";
 import { formatRupiah } from "../../utils";
-import { 
-  getOrderState, 
-  getOrderStateLabel, 
-  hasProductsAssigned 
+import {
+  getOrderState,
+  getOrderStateLabel,
+  hasProductsAssigned,
 } from "../../services/orderStateService";
 import WalletValidationModal from "./WalletValidationModal";
 
@@ -41,9 +41,12 @@ export default function AssignmentPanel({
 }: AssignmentPanelProps) {
   const [showWalletValidation, setShowWalletValidation] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+
   const state = getOrderState(order);
   const hasProducts = hasProductsAssigned(order);
+
   const assignedProduct = order && products.find((p) => p.code === order.productCode);
+
   const assignedProducts = order?.assignedProducts?.length
     ? order.assignedProducts
     : assignedProduct
@@ -60,7 +63,42 @@ export default function AssignmentPanel({
         ]
       : [];
 
+const assignedOrderAmount = assignedProducts.length
+  ? assignedProducts.reduce((sum, product) => {
+      const quantity = Number(product.quantity ?? 1);
+      const price = Number(product.price ?? 0);
+      const total = Number(product.total ?? price * quantity);
+
+      return sum + total;
+    }, 0)
+  : Number(order?.value || order?.requiredBalance || 0);
+
+const assignedCommission = assignedProducts.length
+  ? assignedProducts.reduce((sum, product) => {
+      const quantity = Number(product.quantity ?? 1);
+      const commission = Number(product.commission ?? 0);
+
+      return sum + commission * quantity;
+    }, 0)
+  : Number(order?.commission || Math.round(assignedOrderAmount * 0.2));
+  const currentBalance = Number(memberBalance || 0);
+
+  // SAFETY:
+  // User balance must be equal to or higher than the order amount before sending.
+  // The order amount is NOT deducted. It is only an eligibility requirement.
+  const hasEnoughBalanceForOrder = currentBalance >= assignedOrderAmount;
+  const isZeroBalance = currentBalance <= 0;
+  const balanceShortage = Math.max(assignedOrderAmount - currentBalance, 0);
+  const cannotSendOrder = isLoading || !hasEnoughBalanceForOrder || isZeroBalance;
+
   const handleSubmitClick = async () => {
+    // SAFETY:
+    // Block submission even if the disabled button is bypassed.
+    if (!hasEnoughBalanceForOrder || isZeroBalance) {
+      setShowWalletValidation(true);
+      return;
+    }
+
     try {
       await onStartShipment?.();
       setShowWalletValidation(true);
@@ -70,30 +108,68 @@ export default function AssignmentPanel({
   };
 
   const handleWalletConfirm = () => {
+    // SAFETY:
+    // If balance is still not enough, do not submit the order.
+    // Send the user to top-up instead.
+    if (!hasEnoughBalanceForOrder || isZeroBalance) {
+      setShowWalletValidation(false);
+      onTopUp?.();
+      return;
+    }
+
     setShowWalletValidation(false);
-    // SAFETY: sending an order does not require deducting product price from the wallet.
+
+    // SAFETY:
+    // Sending an order does not deduct the product/order amount.
     // Balance changes only when the order is finalized and commission is credited once.
     onSubmitOrder();
   };
 
   // STATE 1: No Task
   if (state === "no_task") {
+    const cannotAcceptTask = isLoading || isZeroBalance;
+
     return (
       <div className="rounded-3xl border border-white bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
         <div className="text-center">
           <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-slate-50 text-slate-300 ring-1 ring-slate-100">
             <Package size={34} />
           </div>
-          <h3 className="text-lg font-bold mb-2">No Task Assigned</h3>
-          <p className="text-sm text-slate-500 mb-6">
+
+          <h3 className="mb-2 text-lg font-bold">No Task Assigned</h3>
+
+          <p className="mb-6 text-sm text-slate-500">
             Take a general task, or select a product card to request a specific order.
           </p>
+
+          {isZeroBalance && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left">
+              <div className="flex gap-2">
+                <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-700" />
+                <p className="text-sm font-semibold text-amber-900">
+                  New users with zero balance cannot accept order tasks yet. Please wait for the admin sign-up bonus or top up your account first.
+                </p>
+              </div>
+
+              {onTopUp && (
+                <button
+                  type="button"
+                  onClick={onTopUp}
+                  className="mt-3 w-full rounded-xl bg-sky-600 px-4 py-2 text-sm font-black text-white hover:bg-sky-700"
+                >
+                  Top Up Now
+                </button>
+              )}
+            </div>
+          )}
+
           <button
+            type="button"
             onClick={onAcceptTask}
-            disabled={isLoading}
-            className="hidden w-full rounded-2xl bg-forest px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:bg-slate-400"
+            disabled={cannotAcceptTask}
+            className="hidden w-full rounded-2xl bg-forest px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:cursor-not-allowed disabled:bg-slate-400 disabled:opacity-70"
           >
-            {isLoading ? "Accepting..." : "Take Order"}
+            {isLoading ? "Accepting..." : isZeroBalance ? "Top Up Required" : "Take Order"}
           </button>
         </div>
       </div>
@@ -110,15 +186,23 @@ export default function AssignmentPanel({
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600">
             <Clock size={24} />
           </span>
+
           <div className="flex-1">
-            <h3 className="font-bold mb-2">{requestedProductName ? "Waiting for approval" : "Waiting for delivery"}</h3>
-            <p className="text-sm text-slate-600 mb-4">
+            <h3 className="mb-2 font-bold">
+              {requestedProductName ? "Waiting for approval" : "Waiting for delivery"}
+            </h3>
+
+            <p className="mb-4 text-sm text-slate-600">
               {requestedProductName
                 ? `Your request for ${requestedProductName} has been sent. Admin will approve it before you can send the order.`
                 : "Your order task has been taken. Admin will add the assigned product."}
             </p>
+
             <div className="text-xs text-slate-500">
-              Status: <span className="font-semibold text-amber-700">{requestedProductName ? "Pending approval" : "Not delivered"}</span>
+              Status:{" "}
+              <span className="font-semibold text-amber-700">
+                {requestedProductName ? "Pending approval" : "Not delivered"}
+              </span>
             </div>
           </div>
         </div>
@@ -132,8 +216,9 @@ export default function AssignmentPanel({
       <>
         <div className="rounded-3xl border border-white bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">Assigned Products</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">Assigned Products</h3>
+
               <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-700">
                 {getOrderStateLabel(state)}
               </span>
@@ -141,47 +226,94 @@ export default function AssignmentPanel({
 
             <div className="space-y-3">
               {assignedProducts.map((product) => {
-                const catalogProduct = products.find((item) => item.id === product.productId || item.code === product.code);
+                const catalogProduct = products.find(
+                  (item) => item.id === product.productId || item.code === product.code,
+                );
 
                 return (
-                <div key={`${product.code}-${product.productId}`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                  <div className="grid gap-4 sm:grid-cols-[88px_1fr_1fr]">
-                    {catalogProduct?.image && (
-                      <img className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-cover" src={catalogProduct.image} alt={product.name} />
-                    )}
-                    <div>
-                      <p className="text-xs text-slate-500 uppercase">Product</p>
-                      <p className="font-bold">{product.name}</p>
-                      <p className="text-sm text-slate-600">{product.code}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 uppercase">Order Price</p>
-                      <p className="font-bold">{formatRupiah(product.price * product.quantity)}</p>
-                      <p className="text-sm text-emerald-700">
-                        Commission: {formatRupiah(product.commission * product.quantity)}
-                      </p>
+                  <div
+                    key={`${product.code}-${product.productId}`}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                  >
+                    <div className="grid gap-4 sm:grid-cols-[88px_1fr_1fr]">
+                      {catalogProduct?.image && (
+                        <img
+                          className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-cover"
+                          src={catalogProduct.image}
+                          alt={product.name}
+                        />
+                      )}
+
+                      <div>
+                        <p className="text-xs uppercase text-slate-500">Product</p>
+                        <p className="font-bold">{product.name}</p>
+                        <p className="text-sm text-slate-600">{product.code}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase text-slate-500">Order Price</p>
+                        <p className="font-bold">
+                          {formatRupiah(product.price * product.quantity)}
+                        </p>
+                        <p className="text-sm text-emerald-700">
+                          Commission: {formatRupiah(product.commission * product.quantity)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>
+
+            {(state === "product_assigned" || state === "waiting_shipment") && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex justify-between gap-4">
+                  <span className="text-sm text-slate-600">Your Balance:</span>
+                  <span className="font-black text-slate-900">
+                    {formatRupiah(currentBalance)}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex justify-between gap-4">
+                  <span className="text-sm text-slate-600">Order Amount:</span>
+                  <span className="font-black text-slate-900">
+                    {formatRupiah(assignedOrderAmount)}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex justify-between gap-4">
+                  <span className="text-sm text-slate-600">Commission to Earn:</span>
+                  <span className="font-black text-emerald-700">
+                    + {formatRupiah(assignedCommission)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {(state === "product_assigned" || state === "waiting_shipment") && (
-            order?.requiresCustomerApproval ? (
+          {(state === "product_assigned" || state === "waiting_shipment") &&
+            (order?.requiresCustomerApproval ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm font-black text-amber-800">Admin changed the product</p>
-                <p className="mt-1 text-xs text-amber-700">Review the assigned product above. Accept it to continue, or reject it to cancel this task.</p>
+                <p className="text-sm font-black text-amber-800">
+                  Admin changed the product
+                </p>
+
+                <p className="mt-1 text-xs text-amber-700">
+                  Review the assigned product above. Accept it to continue, or reject it to cancel this task.
+                </p>
+
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <button
+                    type="button"
                     onClick={onAcceptChangedProduct}
                     disabled={isLoading}
                     className="rounded-xl bg-forest px-4 py-3 text-sm font-black text-white disabled:bg-slate-400"
                   >
                     Accept Product
                   </button>
+
                   <button
+                    type="button"
                     onClick={onRejectChangedProduct}
                     disabled={isLoading}
                     className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white disabled:bg-slate-400"
@@ -191,37 +323,84 @@ export default function AssignmentPanel({
                 </div>
               </div>
             ) : (
-              <button
-                onClick={handleSubmitClick}
-                disabled={isLoading}
-                className="w-full rounded-2xl bg-emerald-600 px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:bg-slate-400"
-              >
-                {isLoading ? "Submitting..." : state === "product_assigned" ? "Send Order" : "Yes, Send"}
-              </button>
-            )
-          )}
+              <>
+                {!hasEnoughBalanceForOrder && (
+                  <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex gap-2">
+                      <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-700" />
+                      <div>
+                        <p className="text-sm font-black text-amber-900">
+                          Top up required before sending this order.
+                        </p>
+                        <p className="mt-1 text-xs text-amber-800">
+                          Your balance must be equal to or higher than the order amount.
+                          Shortage: {formatRupiah(balanceShortage)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {onTopUp && (
+                      <button
+                        type="button"
+                        onClick={onTopUp}
+                        className="mt-3 w-full rounded-xl bg-sky-600 px-4 py-2 text-sm font-black text-white hover:bg-sky-700"
+                      >
+                        Top Up Now
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSubmitClick}
+                  disabled={cannotSendOrder}
+                  className={`w-full rounded-2xl px-4 py-3 font-black text-white shadow-sm transition ${
+                    cannotSendOrder
+                      ? "cursor-not-allowed bg-slate-400 opacity-70"
+                      : "bg-emerald-600 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel"
+                  }`}
+                >
+                  {isLoading
+                    ? "Submitting..."
+                    : isZeroBalance
+                      ? "Top Up Required"
+                      : !hasEnoughBalanceForOrder
+                        ? "Insufficient Balance"
+                        : state === "product_assigned"
+                          ? "Send Order"
+                          : "Yes, Send"}
+                </button>
+              </>
+            ))}
 
           {(state === "belum_diserahkan" || state === "diserahkan") && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
               <div className="flex items-start gap-2">
-                <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-emerald-600" />
+
                 <div>
-                  <p className="font-bold text-sm mb-1">
+                  <p className="mb-1 text-sm font-bold">
                     {state === "diserahkan" ? "Order Completed" : "Awaiting Delivery"}
                   </p>
+
                   <p className="text-xs text-slate-600">
                     {state === "diserahkan"
                       ? "Your order has been successfully completed and delivered."
                       : "Your order has been submitted and is waiting for delivery confirmation."}
                   </p>
+
                   <button
+                    type="button"
                     onClick={() => setShowReceipt(true)}
-                    className="text-xs font-bold text-emerald-700 hover:underline mt-2"
+                    className="mt-2 text-xs font-bold text-emerald-700 hover:underline"
                   >
                     Download Receipt →
                   </button>
+
                   {state === "belum_diserahkan" && (
                     <button
+                      type="button"
                       onClick={onConfirmDelivery}
                       disabled={isLoading}
                       className="mt-3 w-full rounded-xl bg-forest px-3 py-2 text-xs font-bold text-white disabled:bg-slate-400"
@@ -237,9 +416,9 @@ export default function AssignmentPanel({
 
         {showWalletValidation && (
           <WalletValidationModal
-            member={{ balance: memberBalance } as any}
-            requiredBalance={order?.value || order?.requiredBalance || 0}
-            commission={order?.commission || 0}
+            member={{ balance: memberBalance } as Member}
+            requiredBalance={assignedOrderAmount}
+            commission={assignedCommission}
             onConfirm={handleWalletConfirm}
             onCancel={() => setShowWalletValidation(false)}
             isLoading={isLoading}
@@ -247,11 +426,7 @@ export default function AssignmentPanel({
         )}
 
         {showReceipt && order && member && (
-          <Receipt
-            order={order}
-            member={member}
-            onClose={() => setShowReceipt(false)}
-          />
+          <Receipt order={order} member={member} onClose={() => setShowReceipt(false)} />
         )}
       </>
     );

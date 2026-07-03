@@ -149,7 +149,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <button className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black text-forest transition hover:bg-mint" onClick={() => navigate("/")}>
             <ArrowLeft size={18} />
-            Back to store
+            Home
           </button>
           <button className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel" onClick={logout}>
             <LogOut size={16} />
