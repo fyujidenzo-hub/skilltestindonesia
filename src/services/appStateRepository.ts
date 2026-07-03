@@ -89,15 +89,22 @@ export async function loadStoredState(): Promise<AppState> {
     console.error("Unable to load Firestore state:", error);
   }
 
-  const stored = window.localStorage.getItem(storageKey);
-  if (stored) {
-    const localState = JSON.parse(stored) as AppState;
-    if (hasUsefulData(localState)) {
-      return {
-        ...mergeWithRequiredDefaults(localState),
-        products: [],
-      };
+  // MOBILE/IN-APP BROWSER SAFETY:
+  // Some iPhone in-app browsers can block localStorage and crash the React app.
+  // Keep this fallback guarded so the page does not turn into a white screen.
+  try {
+    const stored = window.localStorage?.getItem(storageKey);
+    if (stored) {
+      const localState = JSON.parse(stored) as AppState;
+      if (hasUsefulData(localState)) {
+        return {
+          ...mergeWithRequiredDefaults(localState),
+          products: [],
+        };
+      }
     }
+  } catch (error) {
+    console.warn("Unable to load local state:", error);
   }
 
   return {
@@ -112,5 +119,11 @@ export async function loadStoredState(): Promise<AppState> {
 }
 
 export function saveLocalState(state: AppState) {
-  window.localStorage.setItem(storageKey, JSON.stringify(state));
+  // MOBILE/IN-APP BROWSER SAFETY:
+  // localStorage can throw on iPhone private/in-app browsers. Do not crash the app.
+  try {
+    window.localStorage?.setItem(storageKey, JSON.stringify(state));
+  } catch (error) {
+    console.warn("Unable to save local state:", error);
+  }
 }

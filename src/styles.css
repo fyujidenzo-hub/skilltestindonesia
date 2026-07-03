@@ -78,3 +78,26 @@ select:focus {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+
+/* MOBILE SAFETY: prevents iPhone/in-app browser white gutters and horizontal overflow. */
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
