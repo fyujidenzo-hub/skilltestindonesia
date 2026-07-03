@@ -20,7 +20,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
         <p className="mt-3 text-lg font-black">{formatRupiah(product.price)}</p>
         <p className="text-sm text-emerald-700">Commission {formatRupiah(product.commission)}</p>
-        <p className="text-xs font-semibold text-slate-500">Required balance {formatRupiah(product.requiredBalance ?? 0)}</p>
+        <p className="text-xs font-semibold text-slate-500">Order amount asdasdasdasd{formatRupiah(product.requiredBalance ?? product.price ?? 0)}</p>
         <div className="mt-4 flex items-center justify-between">
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
             {product.quantity > 0 ? "Available" : "Unavailable"}

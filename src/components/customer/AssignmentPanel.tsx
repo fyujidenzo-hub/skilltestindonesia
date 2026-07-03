@@ -71,11 +71,9 @@ export default function AssignmentPanel({
 
   const handleWalletConfirm = () => {
     setShowWalletValidation(false);
-    if (memberBalance >= (order?.requiredBalance || 0)) {
-      onSubmitOrder();
-    } else {
-      onTopUp?.();
-    }
+    // SAFETY: sending an order does not require deducting product price from the wallet.
+    // Balance changes only when the order is finalized and commission is credited once.
+    onSubmitOrder();
   };
 
   // STATE 1: No Task
@@ -168,12 +166,6 @@ export default function AssignmentPanel({
                 );
               })}
             </div>
-
-            <div className="mb-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-              <p className="text-xs text-slate-500 uppercase mb-2">Required Balance</p>
-              <p className="font-bold text-lg">{formatRupiah(order?.requiredBalance || 0)}</p>
-              <p className="text-xs text-slate-500 mt-2">Your balance: {formatRupiah(memberBalance)}</p>
-            </div>
           </div>
 
           {(state === "product_assigned" || state === "waiting_shipment") && (
@@ -246,7 +238,8 @@ export default function AssignmentPanel({
         {showWalletValidation && (
           <WalletValidationModal
             member={{ balance: memberBalance } as any}
-            requiredBalance={order?.requiredBalance || 0}
+            requiredBalance={order?.value || order?.requiredBalance || 0}
+            commission={order?.commission || 0}
             onConfirm={handleWalletConfirm}
             onCancel={() => setShowWalletValidation(false)}
             isLoading={isLoading}

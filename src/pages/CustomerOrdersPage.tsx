@@ -548,7 +548,7 @@ function OrderDetailsModal({
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <DetailStat label="Order Price" value={formatRupiah(order.value ?? 0)} />
                 <DetailStat label="Commission" value={formatRupiah(order.commission ?? 0)} accent />
-                <DetailStat label="Required Balance" value={formatRupiah(requiredBalance)} />
+                <DetailStat label="Order Amount" value={formatRupiah(requiredBalance)} />
                 <DetailStat label="Created" value={shortDate(order.createdAt)} />
               </div>
             </div>
