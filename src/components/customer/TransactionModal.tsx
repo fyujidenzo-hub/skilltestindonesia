@@ -1,7 +1,7 @@
 import { CheckCircle2, Clock3, CreditCard, Upload, Wallet, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass } from "../common";
-import { createTransaction } from "../../services/transactionsService";
+import { createTransaction, MIN_WITHDRAWAL_AMOUNT, validateWithdrawalRequest } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
 import type { BankPlacement } from "../../types";
 import { formatRupiah } from "../../utils";
@@ -16,8 +16,8 @@ interface TransactionModalProps {
 }
 
 export default function TransactionModal({ type, member, admin, banks, onClose, variant = "modal" }: TransactionModalProps) {
-  const { dispatch } = useAppStore();
-  const [amount, setAmount] = useState(type === "topup" ? 100000 : 50000);
+  const { state, dispatch } = useAppStore();
+  const [amount, setAmount] = useState(type === "topup" ? 100000 : MIN_WITHDRAWAL_AMOUNT);
   const [senderName, setSenderName] = useState("");
   const [withdrawalBankName, setWithdrawalBankName] = useState("");
   const [withdrawalAccountName, setWithdrawalAccountName] = useState("");
@@ -28,12 +28,23 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const activeBanks = banks.filter((bank) => bank.active);
   const minTopUp = activeBanks[0]?.minDeposit ?? 100000;
   const maxTopUp = 100000000;
+  const currentMember = state.members.find((item) => item.username === member);
+  const withdrawalBlockMessage =
+    type === "withdraw" && currentMember ? validateWithdrawalRequest(currentMember, state.orders, amount) : "";
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (amount < (type === "topup" ? minTopUp : 10000)) {
-      setMessage(`✗ Minimum amount is Rp ${(type === "topup" ? minTopUp : 10000).toLocaleString("id-ID")}`);
+    if (type === "withdraw" && currentMember) {
+      const validationMessage = validateWithdrawalRequest(currentMember, state.orders, amount);
+      if (validationMessage) {
+        setMessage(`✗ ${validationMessage}`);
+        return;
+      }
+    }
+
+    if (amount < (type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT)) {
+      setMessage(type === "withdraw" ? "✗ Minimum Withdrawal Amount is Rp100,000." : `✗ Minimum amount is Rp ${minTopUp.toLocaleString("id-ID")}`);
       return;
     }
     if (type === "topup" && amount > maxTopUp) {
@@ -144,7 +155,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
             <input
               className={inputClass}
               type="number"
-              min={10000}
+              min={type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT}
               step={1000}
               value={amount}
               onChange={(event) => setAmount(Number(event.target.value))}
@@ -153,9 +164,15 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
           </Field>
 
           <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Minimum: {formatRupiah(type === "topup" ? minTopUp : 10000)}
+            Minimum: {formatRupiah(type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT)}
             {type === "topup" ? ` | Maximum: ${formatRupiah(maxTopUp)}` : ""} | Amount: <span className="font-bold text-slate-700">{formatRupiah(amount)}</span>
           </div>
+
+          {type === "withdraw" && withdrawalBlockMessage && (
+            <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-700">
+              {withdrawalBlockMessage}
+            </div>
+          )}
 
           {type === "topup" && (
             <div className="grid gap-3">
@@ -217,7 +234,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
         <button className="rounded border border-slate-200 px-3 py-3 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50" type="button" onClick={onClose} disabled={loading}>
           Cancel
         </button>
-        <button className="rounded bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading}>
+        <button className="rounded bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || Boolean(withdrawalBlockMessage)}>
           {loading ? "Submitting..." : "Submit Request"}
         </button>
       </div>

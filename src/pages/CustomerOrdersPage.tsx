@@ -122,7 +122,7 @@ const handleSubmitAssignmentOrder = async () => {
     );
 
     dispatch({ type: "completeOrderWithMember", payload: result });
-    setMessage("Order submitted successfully. Required balance was deducted. Status: Not delivered.");
+    setMessage("Order submitted successfully. Your balance was not deducted. Commission will be added after completion.");
   } catch (error) {
     console.error("Failed to submit order:", error);
     setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
@@ -189,13 +189,6 @@ const handleRejectChangedProduct = async () => {
 };
   const submitOrder = async () => {
     if (!confirmOrder || !currentMember) return;
-    const shortage = Math.max(0, (confirmOrder.requiredBalance ?? confirmOrder.value ?? 0) - currentMember.balance);
-    if (shortage > 0) {
-      setMessage(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
-      setConfirmOrder(null);
-      return;
-    }
-
     setIsSubmitting(true);
     setMessage("");
     try {
@@ -209,7 +202,7 @@ const handleRejectChangedProduct = async () => {
       dispatch({ type: "completeOrderWithMember", payload: result });
       setReviewOrderId(result.order.id);
       setConfirmOrder(null);
-      setMessage("Order sent successfully. Required balance was deducted and your commission has been added.");
+      setMessage("Order sent successfully. Commission has been added to your balance.");
     } catch (error) {
       console.error("Failed to submit order:", error);
       setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");

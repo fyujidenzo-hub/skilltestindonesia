@@ -1,10 +1,17 @@
-import { AlertCircle } from "lucide-react";
 import type { Member } from "../../types";
 import { formatRupiah } from "../../utils";
 
 interface WalletValidationProps {
   member: Member | null;
+
+  // Existing prop name kept so other files do not break.
+  // This is now treated as the order amount/reference amount, NOT a required balance deduction.
   requiredBalance: number;
+
+  // Optional. If parent passes the real commission, use it.
+  // If not passed, fallback is 20% of order amount.
+  commission?: number;
+
   onConfirm: () => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -13,106 +20,82 @@ interface WalletValidationProps {
 export default function WalletValidation({
   member,
   requiredBalance,
+  commission,
   onConfirm,
   onCancel,
   isLoading = false,
 }: WalletValidationProps) {
   if (!member) return null;
 
-  const currentBalance = member.balance;
-  const isInsufficent = currentBalance < requiredBalance;
-  const shortage = requiredBalance - currentBalance;
+  const currentBalance = Number(member.balance ?? 0);
+  const orderAmount = Number(requiredBalance ?? 0);
 
-  if (!isInsufficent) {
-    // Balance is sufficient, show confirmation
-    return (
-      <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
-        <div className="w-full max-w-sm rounded bg-white p-6 shadow-panel">
-          <h3 className="text-xl font-bold mb-4">Confirm Order Submission</h3>
-          
-          <div className="rounded bg-slate-50 p-4 mb-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-slate-600">Required Balance:</span>
-              <span className="font-bold text-slate-900">{formatRupiah(requiredBalance)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-slate-600">Your Balance:</span>
-              <span className="font-bold text-emerald-700">{formatRupiah(currentBalance)}</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-slate-200">
-              <span className="text-sm font-bold text-slate-600">Remaining:</span>
-              <span className="font-bold text-slate-900">{formatRupiah(currentBalance - requiredBalance)}</span>
-            </div>
-          </div>
+  // SAFETY: Product/order amount should NOT be deducted from user balance.
+  // User earns commission only. If existing commission is provided, use it.
+  // Otherwise use default 20% commission.
+  const commissionAmount =
+    typeof commission === "number" && commission > 0
+      ? commission
+      : Math.round(orderAmount * 0.2);
 
-          <p className="text-sm text-slate-600 mb-6">
-            Your balance is sufficient to complete this order.
-          </p>
+  const balanceAfterCompletion = currentBalance + commissionAmount;
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={onCancel}
-              disabled={isLoading}
-              className="rounded border border-slate-200 px-4 py-2 font-bold hover:bg-slate-50 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={isLoading}
-              className="rounded bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
-            >
-              {isLoading ? "Submitting..." : "Confirm"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Balance is insufficient
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
       <div className="w-full max-w-sm rounded bg-white p-6 shadow-panel">
-        <div className="flex items-start gap-3 mb-4">
-          <AlertCircle className="text-rose-600 flex-shrink-0 mt-1" size={24} />
-          <h3 className="text-xl font-bold">Insufficient Balance</h3>
-        </div>
+        <h3 className="mb-4 text-xl font-bold">Confirm Order Submission</h3>
 
-        <div className="rounded bg-rose-50 p-4 mb-4 space-y-2">
+        <div className="mb-4 space-y-2 rounded bg-slate-50 p-4">
           <div className="flex justify-between">
-            <span className="text-sm text-slate-600">Required Balance:</span>
-            <span className="font-bold text-slate-900">{formatRupiah(requiredBalance)}</span>
+            <span className="text-sm text-slate-600">Order Amount:</span>
+            <span className="font-bold text-slate-900">
+              {formatRupiah(orderAmount)}
+            </span>
           </div>
+
           <div className="flex justify-between">
             <span className="text-sm text-slate-600">Your Balance:</span>
-            <span className="font-bold text-rose-700">{formatRupiah(currentBalance)}</span>
+            <span className="font-bold text-slate-900">
+              {formatRupiah(currentBalance)}
+            </span>
           </div>
-          <div className="flex justify-between pt-2 border-t border-rose-200">
-            <span className="text-sm font-bold text-slate-600">Shortage:</span>
-            <span className="font-bold text-rose-700">{formatRupiah(shortage)}</span>
+
+          <div className="flex justify-between">
+            <span className="text-sm text-slate-600">Commission Earned:</span>
+            <span className="font-bold text-emerald-700">
+              + {formatRupiah(commissionAmount)}
+            </span>
+          </div>
+
+          <div className="flex justify-between border-t border-slate-200 pt-2">
+            <span className="text-sm font-bold text-slate-600">
+              Balance After Completion:
+            </span>
+            <span className="font-bold text-emerald-700">
+              {formatRupiah(balanceAfterCompletion)}
+            </span>
           </div>
         </div>
 
-        <div className="rounded bg-amber-50 border border-amber-200 p-4 mb-6">
-          <p className="text-sm text-amber-900">
-            <span className="font-bold block mb-1">Sorry, your balance is insufficient by {formatRupiah(shortage)}.</span>
-            Please top up first.
-          </p>
-        </div>
+        <p className="mb-6 text-sm text-slate-600">
+          The product amount is only used as the order reference. Your balance will not be deducted. Only the commission will be added after the order is completed.
+        </p>
 
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={onCancel}
-            className="rounded border border-slate-200 px-4 py-2 font-bold hover:bg-slate-50"
+            disabled={isLoading}
+            className="rounded border border-slate-200 px-4 py-2 font-bold hover:bg-slate-50 disabled:opacity-50"
           >
             Cancel
           </button>
+
           <button
             onClick={onConfirm}
-            className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-700"
+            disabled={isLoading}
+            className="rounded bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
           >
-            Top Up Now
+            {isLoading ? "Submitting..." : "Confirm"}
           </button>
         </div>
       </div>

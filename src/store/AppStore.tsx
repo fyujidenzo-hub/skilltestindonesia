@@ -51,6 +51,17 @@ function nextId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 7)}`;
 }
 
+// SAFETY: product/order value is only a reference amount. Balance credit is commission only.
+function getCommissionToCredit(order: Order) {
+  const existingCommission = Number(order.commission ?? 0);
+  if (existingCommission > 0) return existingCommission;
+  return Math.round(Number(order.value ?? 0) * 0.2);
+}
+
+function hasCommissionAlreadyBeenCredited(order: Order) {
+  return Boolean(order.commissionCreditedAt);
+}
+
 function createLocalOrderCode(orders: Order[]) {
   const existingCodes = new Set(orders.map((order) => order.referenceNumber || order.id));
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -107,11 +118,15 @@ function reducer(state: AppState, action: Action): AppState {
     const transaction = state.transactions.find((item) => item.id === action.payload.id);
     if (!transaction || transaction.status !== "pending") return state;
 
-    const signedAmount = transaction.type === "topup" ? transaction.amount : -transaction.amount;
     const shouldApplyFinanceTotals = action.payload.status === "approved";
+    const creditedAt = shouldApplyFinanceTotals ? nowStamp() : transaction.creditedAt ?? "";
+
+    // SAFETY: approval is the only time top-up/withdrawal changes balance, and only once from pending state.
     return {
       ...state,
-      transactions: state.transactions.map((item) => (item.id === action.payload.id ? { ...item, status: action.payload.status } : item)),
+      transactions: state.transactions.map((item) =>
+        item.id === action.payload.id ? { ...item, status: action.payload.status, creditedAt } : item,
+      ),
       admins: shouldApplyFinanceTotals
         ? state.admins.map((admin) => {
             if (admin.name !== transaction.admin) return admin;
@@ -130,9 +145,12 @@ function reducer(state: AppState, action: Action): AppState {
         : state.admins,
       members:
         action.payload.status === "approved"
-          ? state.members.map((member) =>
-              member.username === transaction.member ? { ...member, balance: Math.max(0, member.balance + signedAmount) } : member,
-            )
+          ? state.members.map((member) => {
+              if (member.username !== transaction.member) return member;
+              const signedAmount = transaction.type === "topup" ? transaction.amount : -transaction.amount;
+              if (transaction.type === "withdrawal" && transaction.amount > member.balance) return member;
+              return { ...member, balance: Math.max(0, member.balance + signedAmount) };
+            })
           : state.members,
     };
   }
@@ -185,13 +203,19 @@ function reducer(state: AppState, action: Action): AppState {
 
   if (action.type === "completeOrder") {
     const order = state.orders.find((item) => item.id === action.payload.orderId);
-    if (!order || order.status !== "assigned") return state;
+    if (!order || !["assigned", "product_assigned", "belum_diserahkan"].includes(order.status)) return state;
+
+    const completedAt = nowStamp();
+    const commission = hasCommissionAlreadyBeenCredited(order) ? 0 : getCommissionToCredit(order);
+    const commissionCreditedAt = hasCommissionAlreadyBeenCredited(order) ? order.commissionCreditedAt ?? "" : completedAt;
 
     return {
       ...state,
-      orders: state.orders.map((item) => (item.id === order.id ? { ...item, status: "completed" } : item)),
+      orders: state.orders.map((item) =>
+        item.id === order.id ? { ...item, status: "completed", completedAt, commissionCreditedAt } : item,
+      ),
       members: state.members.map((member) =>
-        member.username === order.member ? { ...member, balance: member.balance + order.commission } : member,
+        member.username === order.member ? { ...member, balance: member.balance + commission, totalOrders: member.totalOrders + 1 } : member,
       ),
     };
   }

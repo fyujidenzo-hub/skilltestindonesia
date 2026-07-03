@@ -83,6 +83,8 @@ export interface Transaction {
   proofName?: string;
   proofType?: string;
   proofDataUrl?: string;
+  // SAFETY: set when an approved top-up/withdrawal has already affected balance.
+  creditedAt?: string;
 }
 
 export interface Order {
@@ -109,6 +111,8 @@ export interface Order {
   rating?: number;
   review?: string;
   reviewedAt?: string;
+  // SAFETY: set when this task commission has already been added to member balance.
+  commissionCreditedAt?: string;
 }
 
 export interface AppState {

@@ -218,7 +218,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         currentMember,
       );
       dispatch({ type: "completeOrderWithMember", payload: result });
-      setTaskMessage("Order submitted successfully. Required balance was deducted. Status: Not delivered.");
+      setTaskMessage("Order submitted successfully. Your balance was not deducted. Commission will be added after completion.");
     } catch (error) {
       console.error("Failed to submit order:", error);
       setTaskMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");

@@ -1,10 +1,24 @@
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import type { AssignedOrderProduct, Member, Order, OrderStatus, Product } from "../types";
-import { formatRupiah } from "../utils";
 import { generateOrderCode } from "./orderCode";
 
 const COLLECTION = "orders";
+
+function nowStamp() {
+  return new Date().toISOString().slice(0, 16).replace("T", " ");
+}
+
+// SAFETY: product price is only a reference amount. The only task balance credit is commission.
+function getCommissionToCredit(order: Order) {
+  const existingCommission = Number(order.commission ?? 0);
+  if (existingCommission > 0) return existingCommission;
+  return Math.round(Number(order.value ?? 0) * 0.2);
+}
+
+function hasCommissionAlreadyBeenCredited(order: Order) {
+  return Boolean(order.commissionCreditedAt);
+}
 
 export async function getOrders(): Promise<Order[]> {
   if (!db) return [];
@@ -52,6 +66,7 @@ export async function createOrder(order: Omit<Order, "id"> & { id?: string }): P
     completedAt: order.completedAt ?? "",
     submittedAt: order.submittedAt ?? "",
     shippedAt: order.shippedAt ?? "",
+    commissionCreditedAt: order.commissionCreditedAt ?? "",
   };
   await setDoc(doc(db, COLLECTION, id), nextOrder);
   return nextOrder;
@@ -182,30 +197,46 @@ export async function updateOrderStatus(order: Order, status: OrderStatus, extra
 export async function completeOrderTask(order: Order, member: Member): Promise<{ order: Order; member: Member }> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
-  const completedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
-  const nextBalance = member.balance + order.commission;
-  const nextOrder: Order = { ...order, status: "completed", completedAt };
-  const nextMember: Member = { ...member, balance: nextBalance };
+  const completedAt = nowStamp();
+  let nextOrder: Order = { ...order, status: "completed", completedAt };
+  let nextMember: Member = { ...member };
 
   await runTransaction(firestore, async (transaction) => {
     const orderRef = doc(firestore, COLLECTION, order.id);
     const memberRef = doc(firestore, "members", member.id);
-    const orderSnap = await transaction.get(orderRef);
+    const [orderSnap, memberSnap] = await Promise.all([transaction.get(orderRef), transaction.get(memberRef)]);
 
     if (!orderSnap.exists()) throw new Error("Order no longer exists.");
-    if (orderSnap.data().status !== "assigned") throw new Error("This task has already been submitted.");
+    if (!memberSnap.exists()) throw new Error("Member no longer exists.");
 
-    transaction.update(orderRef, { status: "completed", completedAt });
-    transaction.update(memberRef, { balance: nextBalance, totalOrders: member.totalOrders + 1 });
+    const liveOrder = { id: orderSnap.id, ...orderSnap.data() } as Order;
+    const liveMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
+
+    if (liveOrder.status === "completed" || liveOrder.status === "diserahkan") {
+      throw new Error("This task has already been completed.");
+    }
+
+    const commission = hasCommissionAlreadyBeenCredited(liveOrder) ? 0 : getCommissionToCredit(liveOrder);
+    const commissionCreditedAt = hasCommissionAlreadyBeenCredited(liveOrder) ? liveOrder.commissionCreditedAt ?? "" : completedAt;
+
+    nextOrder = { ...liveOrder, status: "completed", completedAt, commission: Number(liveOrder.commission ?? commission), commissionCreditedAt };
+    nextMember = {
+      ...liveMember,
+      balance: Number(liveMember.balance ?? 0) + commission,
+      totalOrders: Number(liveMember.totalOrders ?? 0) + 1,
+    };
+
+    transaction.update(orderRef, { status: "completed", completedAt, commission: nextOrder.commission, commissionCreditedAt });
+    transaction.update(memberRef, { balance: nextMember.balance, totalOrders: nextMember.totalOrders });
   });
 
-  return { order: nextOrder, member: { ...nextMember, totalOrders: member.totalOrders + 1 } };
+  return { order: nextOrder, member: nextMember };
 }
 
 export async function submitWorkflowOrder(order: Order, member: Member): Promise<{ order: Order; member: Member }> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
-  const submittedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const submittedAt = nowStamp();
   let nextOrder: Order = { ...order, status: "belum_diserahkan", submittedAt };
   let nextMember: Member = { ...member };
 
@@ -224,13 +255,8 @@ export async function submitWorkflowOrder(order: Order, member: Member): Promise
       throw new Error("This task has already been submitted.");
     }
 
-    const requiredBalance = Number(liveOrder.requiredBalance ?? liveOrder.value ?? 0);
-    const currentBalance = Number(liveMember.balance ?? 0);
-    const shortage = Math.max(0, requiredBalance - currentBalance);
-    if (shortage > 0) {
-      throw new Error(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
-    }
-
+    // SAFETY: submitting/sending an order must NOT deduct the product price from balance.
+    // Product value/requiredBalance is kept only as the task reference amount.
     nextOrder = {
       ...liveOrder,
       status: "belum_diserahkan",
@@ -239,10 +265,7 @@ export async function submitWorkflowOrder(order: Order, member: Member): Promise
       quantity: liveOrder.quantity ?? 0,
       assignedProducts: liveOrder.assignedProducts ?? [],
     };
-    nextMember = {
-      ...liveMember,
-      balance: currentBalance - requiredBalance,
-    };
+    nextMember = { ...liveMember };
 
     transaction.update(orderRef, {
       status: "belum_diserahkan",
@@ -251,7 +274,6 @@ export async function submitWorkflowOrder(order: Order, member: Member): Promise
       quantity: nextOrder.quantity ?? 0,
       assignedProducts: nextOrder.assignedProducts ?? [],
     });
-    transaction.update(memberRef, { balance: nextMember.balance });
   });
 
   return { order: nextOrder, member: nextMember };
@@ -260,7 +282,7 @@ export async function submitWorkflowOrder(order: Order, member: Member): Promise
 export async function completeWorkflowOrder(order: Order, member: Member): Promise<{ order: Order; member: Member }> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
-  const completedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const completedAt = nowStamp();
   let nextOrder: Order = { ...order, status: "diserahkan", completedAt };
   let nextMember: Member = { ...member };
 
@@ -278,16 +300,11 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
       throw new Error("This task has already been completed.");
     }
 
-    const requiredBalance = Number(liveOrder.requiredBalance ?? liveOrder.value ?? 0);
-    const currentBalance = Number(liveMember.balance ?? 0);
-    const balanceAlreadyDeducted = liveOrder.status === "belum_diserahkan";
-    const amountToDeduct = balanceAlreadyDeducted ? 0 : requiredBalance;
-    const shortage = Math.max(0, amountToDeduct - currentBalance);
-    if (shortage > 0) {
-      throw new Error(`Sorry, your balance is insufficient by ${formatRupiah(shortage)}. Please top up first.`);
-    }
+    // SAFETY: completion credits commission only, once. It never deducts product price.
+    const commission = hasCommissionAlreadyBeenCredited(liveOrder) ? 0 : getCommissionToCredit(liveOrder);
+    const commissionCreditedAt = hasCommissionAlreadyBeenCredited(liveOrder) ? liveOrder.commissionCreditedAt ?? "" : completedAt;
+    const nextBalance = Number(liveMember.balance ?? 0) + commission;
 
-    const nextBalance = currentBalance - amountToDeduct + Number(liveOrder.commission ?? 0);
     nextOrder = {
       ...liveOrder,
       status: "diserahkan",
@@ -296,6 +313,8 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
       shippedAt: order.shippedAt ?? liveOrder.shippedAt ?? "",
       quantity: liveOrder.quantity ?? 0,
       assignedProducts: liveOrder.assignedProducts ?? [],
+      commission: Number(liveOrder.commission ?? commission),
+      commissionCreditedAt,
     };
     nextMember = {
       ...liveMember,
@@ -310,6 +329,8 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
       shippedAt: nextOrder.shippedAt ?? "",
       quantity: nextOrder.quantity ?? 0,
       assignedProducts: nextOrder.assignedProducts ?? [],
+      commission: nextOrder.commission,
+      commissionCreditedAt,
     });
     transaction.update(memberRef, { balance: nextMember.balance, totalOrders: nextMember.totalOrders });
   });
