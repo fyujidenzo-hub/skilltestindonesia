@@ -149,14 +149,13 @@ export async function assignOrderProducts(order: Order, items: Array<{ product: 
       }
     });
 
-    productRefs.forEach((productRef, index) => {
-      const productSnap = productSnaps[index];
-      const requestedQuantity = normalizedItems[index].quantity;
-      const fallbackQuantity = normalizedItems[index].product.quantity;
-      const availableQuantity = productSnap.exists() ? Number(productSnap.data().quantity ?? fallbackQuantity) : fallbackQuantity;
-      transaction.update(productRef, { quantity: availableQuantity - requestedQuantity, requiredBalance: normalizedItems[index].product.requiredBalance ?? 0 });
-    });
-
+// Do NOT deduct product stock/quantity when assigning an order.
+// Quantity is only used as a display/reference value for the assigned order.
+productRefs.forEach((productRef, index) => {
+  transaction.update(productRef, {
+    requiredBalance: normalizedItems[index].product.requiredBalance ?? 0,
+  });
+});
     transaction.update(orderRef, {
       productCode: nextOrder.productCode,
       productName: nextOrder.productName,

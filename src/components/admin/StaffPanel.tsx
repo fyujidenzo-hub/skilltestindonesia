@@ -1,7 +1,7 @@
-import { BadgeDollarSign, Copy, Plus, RefreshCw, ShieldCheck, UserRound, Users } from "lucide-react";
+import { AlertTriangle, BadgeDollarSign, Copy, Plus, RefreshCw, ShieldCheck, Trash2, UserRound, Users, X } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass, Panel, Select } from "../common";
-import { createAdmin } from "../../services/adminsService";
+import { createAdmin, deleteAdmin } from "../../services/adminsService";
 import { roleLabel } from "../../services/adminSession";
 import { useAppStore } from "../../store/AppStore";
 import type { AdminRole, StaffAdmin } from "../../types";
@@ -15,6 +15,8 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
   const { dispatch } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingStaffId, setDeletingStaffId] = useState("");
+  const [staffToDelete, setStaffToDelete] = useState<StaffAdmin | null>(null);
   const [message, setMessage] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -76,6 +78,31 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
     }
   };
 
+  const handleConfirmDeleteStaff = async () => {
+    if (!staffToDelete) return;
+
+    if (staffToDelete.role === "super_admin") {
+      setMessage("Super Admin accounts are protected and cannot be deleted.");
+      setStaffToDelete(null);
+      return;
+    }
+
+    setDeletingStaffId(staffToDelete.id);
+    setMessage("Deleting staff account...");
+
+    try {
+      await deleteAdmin(staffToDelete.id);
+      dispatch({ type: "deleteAdmin", payload: { id: staffToDelete.id } });
+      setMessage("Staff account deleted successfully.");
+      setStaffToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete staff account:", error);
+      setMessage("Unable to delete staff account. Check Firestore admin rules.");
+    } finally {
+      setDeletingStaffId("");
+    }
+  };
+
   return (
     <Panel
       title="Admin & Employee Accounts"
@@ -92,6 +119,12 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
         <StaffSummary icon={<UserRound />} label="Employees" value={String(employees)} tone="blue" />
         <StaffSummary icon={<BadgeDollarSign />} label="Registrations" value={String(totalRegistrations)} tone="amber" />
       </div>
+
+      {message && (
+        <p className={`mb-5 rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") || message.includes("exists") || message.includes("Unable") || message.includes("protected") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+          {message}
+        </p>
+      )}
 
       {showForm && (
         <form className="mb-5 grid gap-4 rounded bg-slate-50 p-4" onSubmit={saveStaff}>
@@ -132,12 +165,6 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
             <input className={inputClass} type="number" min={0} value={form.registrationBonus || ""} onChange={(event) => setForm({ ...form, registrationBonus: Number(event.target.value) || 0 })} placeholder="0" />
           </Field>
 
-          {message && (
-            <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") || message.includes("exists") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
-              {message}
-            </p>
-          )}
-
           <button disabled={saving} className="rounded bg-forest px-4 py-3 font-bold text-white disabled:bg-slate-400">
             {saving ? "Saving..." : "Save staff account"}
           </button>
@@ -155,59 +182,145 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
           </span>
         </div>
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[920px] border-separate border-spacing-0 text-left text-sm">
-          <thead className="text-xs uppercase text-slate-500">
-            <tr>
-              <StaffTh>Account</StaffTh>
-              <StaffTh>Role</StaffTh>
-              <StaffTh>Username</StaffTh>
-              <StaffTh>Admin code</StaffTh>
-              <StaffTh>Invitation code</StaffTh>
-              <StaffTh>Registration bonus</StaffTh>
-              <StaffTh>Registrations</StaffTh>
-              <StaffTh>Today deposit</StaffTh>
-            </tr>
-          </thead>
-          <tbody>
-            {admins.map((admin) => (
-              <tr key={admin.id} className="group">
-                <StaffTd>
-                  <div className="flex items-center gap-3">
-                    <div className={`grid h-11 w-11 shrink-0 place-items-center rounded text-sm font-black ${roleTone(admin.role).avatar}`}>
-                      {initials(admin.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-black text-slate-900">{admin.name}</p>
-                      <p className="text-xs font-semibold text-slate-500">ID {admin.id}</p>
-                    </div>
-                  </div>
-                </StaffTd>
-                <StaffTd>
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${roleTone(admin.role).badge}`}>
-                    {roleLabel(admin.role)}
-                  </span>
-                </StaffTd>
-                <StaffTd>
-                  <span className="font-bold text-slate-700">{admin.username ?? "-"}</span>
-                </StaffTd>
-                <StaffTd>
-                  <CodePill value={admin.adminCode ?? admin.code} />
-                </StaffTd>
-                <StaffTd>
-                  <CodePill value={admin.invitationCode ?? admin.code} accent />
-                </StaffTd>
-                <StaffTd className="font-black text-slate-800">{formatRupiah(admin.registrationBonus ?? 0)}</StaffTd>
-                <StaffTd>
-                  <span className="rounded bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700">{admin.registrations}</span>
-                </StaffTd>
-                <StaffTd className="font-black text-emerald-700">{formatRupiah(admin.todayDeposits)}</StaffTd>
+          <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-left text-sm">
+            <thead className="text-xs uppercase text-slate-500">
+              <tr>
+                <StaffTh>Account</StaffTh>
+                <StaffTh>Role</StaffTh>
+                <StaffTh>Username</StaffTh>
+                <StaffTh>Admin code</StaffTh>
+                <StaffTh>Invitation code</StaffTh>
+                <StaffTh>Registration bonus</StaffTh>
+                <StaffTh>Registrations</StaffTh>
+                <StaffTh>Today deposit</StaffTh>
+                <StaffTh>Actions</StaffTh>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {admins.map((admin) => {
+                const protectedAccount = admin.role === "super_admin";
+                const deleting = deletingStaffId === admin.id;
+
+                return (
+                  <tr key={admin.id} className="group">
+                    <StaffTd>
+                      <div className="flex items-center gap-3">
+                        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded text-sm font-black ${roleTone(admin.role).avatar}`}>
+                          {initials(admin.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-slate-900">{admin.name}</p>
+                          <p className="text-xs font-semibold text-slate-500">ID {admin.id}</p>
+                        </div>
+                      </div>
+                    </StaffTd>
+                    <StaffTd>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${roleTone(admin.role).badge}`}>
+                        {roleLabel(admin.role)}
+                      </span>
+                    </StaffTd>
+                    <StaffTd>
+                      <span className="font-bold text-slate-700">{admin.username ?? "-"}</span>
+                    </StaffTd>
+                    <StaffTd>
+                      <CodePill value={admin.adminCode ?? admin.code} />
+                    </StaffTd>
+                    <StaffTd>
+                      <CodePill value={admin.invitationCode ?? admin.code} accent />
+                    </StaffTd>
+                    <StaffTd className="font-black text-slate-800">{formatRupiah(admin.registrationBonus ?? 0)}</StaffTd>
+                    <StaffTd>
+                      <span className="rounded bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700">{admin.registrations}</span>
+                    </StaffTd>
+                    <StaffTd className="font-black text-emerald-700">{formatRupiah(admin.todayDeposits)}</StaffTd>
+                    <StaffTd>
+                      {protectedAccount ? (
+                        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">Protected</span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-xs font-black text-white transition hover:bg-rose-700 disabled:bg-slate-400"
+                          onClick={() => setStaffToDelete(admin)}
+                        >
+                          <Trash2 size={14} />
+                          {deleting ? "Deleting..." : "Delete"}
+                        </button>
+                      )}
+                    </StaffTd>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {staffToDelete && (
+        <DeleteStaffModal
+          staff={staffToDelete}
+          isDeleting={deletingStaffId === staffToDelete.id}
+          onCancel={() => setStaffToDelete(null)}
+          onConfirm={handleConfirmDeleteStaff}
+        />
+      )}
     </Panel>
+  );
+}
+
+function DeleteStaffModal({ staff, isDeleting, onCancel, onConfirm }: { staff: StaffAdmin; isDeleting: boolean; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center sm:px-4">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white shadow-panel sm:rounded-3xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+          <div className="flex items-start gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-rose-600">Delete staff account</p>
+              <h3 className="mt-1 text-xl font-black leading-tight text-slate-900">Remove {staff.name}?</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-500">This account will no longer be able to log in to the admin system.</p>
+            </div>
+          </div>
+
+          <button type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" onClick={onCancel} disabled={isDeleting} aria-label="Close delete confirmation">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-3 p-5 text-sm">
+          <DeleteDetail label="Name" value={staff.name} />
+          <DeleteDetail label="Role" value={roleLabel(staff.role)} />
+          <DeleteDetail label="Username" value={staff.username || "-"} />
+          <DeleteDetail label="Admin code" value={staff.adminCode ?? staff.code} />
+          <DeleteDetail label="Invitation code" value={staff.invitationCode ?? staff.code} />
+
+          <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-bold leading-6 text-rose-700">
+            This action cannot be undone. Existing members and transactions remain in the system, but this staff login will be deleted.
+          </div>
+        </div>
+
+        <div className="grid gap-3 border-t border-slate-100 p-5 sm:grid-cols-2">
+          <button type="button" className="rounded-2xl border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50 disabled:opacity-60" onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </button>
+          <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 font-black text-white hover:bg-rose-700 disabled:bg-slate-400" onClick={onConfirm} disabled={isDeleting}>
+            <Trash2 size={17} />
+            {isDeleting ? "Deleting..." : "Delete account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+      <p className="text-xs font-black uppercase text-slate-500">{label}</p>
+      <p className="mt-1 break-words font-black text-slate-900">{value}</p>
+    </div>
   );
 }
 

@@ -4,15 +4,22 @@ import { formatRupiah } from "../../utils";
 import Filters from "./Filters";
 import { useEffect, useMemo, useState } from "react";
 import { updateMember } from "../../services/membersService";
+import { createRewardTransaction } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
 
 const pageSize = 10;
 const taskTarget = 15;
 
-export default function MemberTable({ members }: { members: Member[] }) {
+    export default function MemberTable({
+      members,
+      canManageMemberFinance = false,
+    }: {
+      members: Member[];
+      canManageMemberFinance?: boolean;
+    }) {
   const { dispatch } = useAppStore();
   const [activeMember, setActiveMember] = useState<Member | null>(null);
-  const [modalType, setModalType] = useState<"edit" | "balance" | "rewards" | null>(null);
+  const [modalType, setModalType] = useState<"edit" | "balance" | null>(null);
   const [form, setForm] = useState({ username: "", phone: "", level: "Starter", amount: 0 });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,12 +45,14 @@ export default function MemberTable({ members }: { members: Member[] }) {
     setPage(0);
   }, [members.length]);
 
-  const openModal = (member: Member, type: "edit" | "balance" | "rewards") => {
-    setActiveMember(member);
-    setModalType(type);
-    setForm({ username: member.username, phone: member.phone, level: member.level, amount: 0 });
-    setMessage("");
-  };
+const openModal = (member: Member, type: "edit" | "balance") => {
+  if (type === "balance" && !canManageMemberFinance) return;
+
+  setActiveMember(member);
+  setModalType(type);
+  setForm({ username: member.username, phone: member.phone, level: member.level, amount: 0 });
+  setMessage("");
+};
 
   const closeModal = () => {
     setActiveMember(null);
@@ -60,6 +69,7 @@ export default function MemberTable({ members }: { members: Member[] }) {
 
     try {
       const amount = Math.max(0, Number(form.amount) || 0);
+      const isDirectBalanceCredit = modalType === "balance" || modalType === "rewards";
       const nextMember: Member =
         modalType === "edit"
           ? { ...activeMember, username: form.username.trim(), phone: form.phone.trim(), level: form.level as Member["level"] }
@@ -67,7 +77,24 @@ export default function MemberTable({ members }: { members: Member[] }) {
 
       await updateMember(activeMember.id, nextMember);
       dispatch({ type: "updateMember", payload: nextMember });
-      setMessage(modalType === "edit" ? "Member updated." : "Balance updated.");
+
+      if (isDirectBalanceCredit && amount > 0) {
+        const rewardTransaction = await createRewardTransaction({
+          member: activeMember.username,
+          admin: "Super Admin",
+          amount,
+        });
+
+        dispatch({ type: "addTransaction", payload: rewardTransaction });
+      }
+
+      setMessage(
+        modalType === "edit"
+          ? "Member updated."
+          : modalType === "rewards"
+            ? "Reward balance added and recorded."
+            : "Balance reward added and recorded."
+      );
       setTimeout(closeModal, 600);
     } catch (error) {
       console.error("Failed to update member:", error);
@@ -143,7 +170,11 @@ export default function MemberTable({ members }: { members: Member[] }) {
                       <span className="text-sm font-semibold text-slate-700">{member.lastLogin}</span>
                     </MemberTd>
                     <MemberTd>
-                      <MemberActions member={member} onOpen={openModal} />
+                      <MemberActions
+                        member={member}
+                        onOpen={openModal}
+                        canManageMemberFinance={canManageMemberFinance}
+                      />
                     </MemberTd>
                   </tr>
                 ))
@@ -165,7 +196,7 @@ export default function MemberTable({ members }: { members: Member[] }) {
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
           <form className="w-full max-w-sm rounded bg-white p-6 shadow-panel" onSubmit={saveMemberChange}>
             <h3 className="text-xl font-black">
-              {modalType === "edit" ? "Edit Member" : modalType === "balance" ? "Add Balance" : "Rewards"}
+              {modalType === "edit" ? "Edit Member" : "Add Balance"}
             </h3>
             <p className="mt-1 text-sm text-slate-500">{activeMember.username}</p>
 
@@ -191,7 +222,7 @@ export default function MemberTable({ members }: { members: Member[] }) {
               </div>
             ) : (
               <label className="mt-5 block text-xs font-bold text-slate-600">
-                {modalType === "balance" ? "Balance amount" : "Reward amount"}
+Balance amount
                 <input className="mt-1 w-full rounded border border-slate-200 px-3 py-2" type="number" min={0} value={form.amount || ""} onChange={(event) => setForm({ ...form, amount: Number(event.target.value) || 0 })} placeholder="Rp 0" required />
               </label>
             )}
@@ -222,18 +253,32 @@ function MemberSummary({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MemberActions({ member, onOpen }: { member: Member; onOpen: (member: Member, type: "edit" | "balance" | "rewards") => void }) {
+function MemberActions({
+  member,
+  onOpen,
+  canManageMemberFinance,
+}: {
+  member: Member;
+  onOpen: (member: Member, type: "edit" | "balance") => void;
+  canManageMemberFinance: boolean;
+}) {
   return (
     <div className="flex flex-wrap gap-2">
-      <button className="rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700" onClick={() => onOpen(member, "edit")}>
+      <button
+        className="rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
+        onClick={() => onOpen(member, "edit")}
+      >
         Edit
       </button>
-      <button className="rounded bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700" onClick={() => onOpen(member, "balance")}>
-        Add Balance
-      </button>
-      <button className="rounded bg-rose-600 px-3 py-2 text-xs font-black text-white hover:bg-rose-700" onClick={() => onOpen(member, "rewards")}>
-        Rewards
-      </button>
+
+      {canManageMemberFinance && (
+        <button
+          className="rounded bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700"
+          onClick={() => onOpen(member, "balance")}
+        >
+          Add Balance
+        </button>
+      )}
     </div>
   );
 }

@@ -151,7 +151,12 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
             onQueryChange={setQuery}
           />
           {activeTab === "Overview" && <OverviewPanel state={overviewState} totals={totals} canManageBanks={activeAdmin.role === "super_admin"} />}
-          {activeTab === "Members" && <MemberTable members={filteredMembers} />}
+            {activeTab === "Members" && (
+              <MemberTable
+                members={filteredMembers}
+                canManageMemberFinance={activeAdmin.role === "super_admin"}
+              />
+            )}
           {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} />}
@@ -228,10 +233,10 @@ function buildAdminNotifications(members: Member[], transactions: Transaction[],
     .filter((transaction) => transaction.status === "pending")
     .map((transaction) => ({
       id: `transaction-${transaction.id}`,
-      title: transaction.type === "topup" ? "New Top Up request" : "New withdrawal request",
+      title: transaction.type === "topup" ? "New Top Up request" : transaction.type === "withdrawal" ? "New withdrawal request" : "New balance reward",
       text: `${transaction.member} requested ${formatNotificationAmount(transaction.amount)}. Status: Pending.`,
       time: transaction.createdAt,
-      tone: transaction.type === "topup" ? ("topup" as const) : ("withdrawal" as const),
+      tone: transaction.type === "topup" ? ("topup" as const) : transaction.type === "withdrawal" ? ("withdrawal" as const) : ("completed" as const),
       sortTime: parseRecordDate(transaction.createdAt)?.getTime() ?? 0,
     }));
 

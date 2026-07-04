@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, CreditCard, Upload, Wallet, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3, CreditCard, Landmark, Send, Upload, UserRound, Wallet, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass } from "../common";
 import { createTransaction, MIN_WITHDRAWAL_AMOUNT, validateWithdrawalRequest } from "../../services/transactionsService";
@@ -31,10 +31,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const currentMember = state.members.find((item) => item.username === member);
   const withdrawalBlockMessage =
     type === "withdraw" && currentMember ? validateWithdrawalRequest(currentMember, state.orders, amount) : "";
-const isTopUp = type === "topup";
-const statusText = isTopUp ? "Pending Topup" : "Pending Withdrawal";
-const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
-
+  const isPageVariant = variant === "page";
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -111,33 +108,48 @@ const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
   };
 
   const form = (
-    <form className={`w-full rounded bg-white shadow-panel ${variant === "page" ? "p-5 sm:p-6" : "max-w-lg p-5"}`} onSubmit={handleSubmit}>
-      <div className="flex items-start gap-4">
-        <div className={`grid h-12 w-12 shrink-0 place-items-center rounded ${type === "topup" ? "bg-mint text-forest" : "bg-rose-50 text-coral"}`}>
-          {type === "topup" ? <CreditCard size={23} /> : <Wallet size={23} />}
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-wide text-forest">{type === "topup" ? "Top Up" : "Withdrawal"}</p>
-          <h2 className="mt-1 text-2xl font-black text-slate-900">{type === "topup" ? "Create Top Up Request" : "Create Withdrawal Request"}</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">Submit your request for administrator review. Pending requests will appear in your account history.</p>
+      <form
+        className={`w-full overflow-hidden bg-white shadow-[0_18px_55px_rgba(15,23,42,0.12)] ${
+          isPageVariant
+            ? "rounded-3xl"
+            : "max-h-[calc(100vh-2rem)] max-w-4xl overflow-y-auto rounded-2xl sm:rounded-3xl"
+        }`}
+        onSubmit={handleSubmit}
+      >
+      <div className="border-b border-slate-100 p-5 sm:p-6">
+        <div className="flex items-start gap-4">
+          <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${type === "topup" ? "bg-mint text-forest" : "bg-emerald-50 text-forest"}`}>
+            {type === "topup" ? <CreditCard size={23} /> : <Wallet size={23} />}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wide text-forest">{type === "topup" ? "Top Up" : "Withdrawal"}</p>
+              <h2 className="mt-1 text-xl font-black leading-tight text-slate-900 sm:text-2xl">{type === "topup" ? "Create Top Up Request" : "Create Withdrawal Request"}</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">Submit your request for administrator review. Pending requests will appear in your account history.</p>
+          </div>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_220px]">
+        <div
+          className={`grid gap-4 p-4 sm:gap-5 sm:p-6 ${
+            isPageVariant
+              ? "lg:grid-cols-[minmax(0,1fr)_240px]"
+              : "md:grid-cols-[minmax(0,1fr)_230px]"
+          }`}
+        >
         <div className="grid gap-4">
-          <div className="rounded border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
             <div className="flex items-start gap-3">
               <Clock3 className="mt-0.5 shrink-0" size={18} />
-              <p className="font-semibold">Your request will be reviewed by an admin before the balance changes.</p>
+              <p className="font-bold">Your request will be reviewed by an admin before the balance changes.</p>
             </div>
           </div>
 
           {type === "topup" && (
-            <div className="max-h-56 overflow-y-auto rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-bold uppercase text-slate-500">Daily bank information</p>
               {activeBanks.length ? (
                 activeBanks.map((bank) => (
-                  <div key={bank.id} className="mt-2 rounded border border-slate-200 bg-white p-3 text-sm">
+                  <div key={bank.id} className="mt-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
                     <p className="text-xs font-bold uppercase text-slate-500">Bank name</p>
                     <p className="font-black">{bank.bank}</p>
                     <p className="mt-2 text-xs font-bold uppercase text-slate-500">Account owner name</p>
@@ -147,43 +159,45 @@ const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
                   </div>
                 ))
               ) : (
-                <p className="mt-2 rounded bg-amber-50 p-3 text-sm font-bold text-amber-700">
+                <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-700">
                   Bank details are not available yet. Please contact customer service.
                 </p>
               )}
             </div>
           )}
 
-          <Field label="Amount (Rp)">
-            <input
-              className={inputClass}
-              type="number"
-              min={type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT}
-              step={1000}
-              value={amount}
-              onChange={(event) => setAmount(Number(event.target.value))}
-              disabled={loading}
-            />
-          </Field>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <Field label="Amount (Rp)">
+              <input
+                className={`${inputClass} rounded-xl bg-white`}
+                type="number"
+                min={type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT}
+                step={1000}
+                value={amount}
+                onChange={(event) => setAmount(Number(event.target.value))}
+                disabled={loading}
+              />
+            </Field>
 
-          <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Minimum: {formatRupiah(type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT)}
-            {type === "topup" ? ` | Maximum: ${formatRupiah(maxTopUp)}` : ""} | Amount: <span className="font-bold text-slate-700">{formatRupiah(amount)}</span>
+            <div className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-500">
+              Minimum: {formatRupiah(type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT)}
+              {type === "topup" ? ` | Maximum: ${formatRupiah(maxTopUp)}` : ""} | Amount: <span className="font-bold text-slate-700">{formatRupiah(amount)}</span>
+            </div>
           </div>
 
           {type === "withdraw" && withdrawalBlockMessage && (
-            <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-700">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-700">
               {withdrawalBlockMessage}
             </div>
           )}
 
           {type === "topup" && (
-            <div className="grid gap-3">
+            <div className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4">
               <Field label="Sender name">
-                <input className={inputClass} value={senderName} onChange={(event) => setSenderName(event.target.value)} disabled={loading} />
+                <input className={`${inputClass} rounded-xl`} value={senderName} onChange={(event) => setSenderName(event.target.value)} disabled={loading} />
               </Field>
               <Field label="Payment proof image">
-                <label className="flex cursor-pointer items-center gap-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm font-bold text-slate-600 hover:border-forest hover:bg-mint">
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm font-bold text-slate-600 hover:border-forest hover:bg-mint">
                   <Upload size={18} className="text-forest" />
                   <span className="min-w-0 flex-1 truncate">{proofFile ? proofFile.name : "Upload image proof"}</span>
                   <input className="sr-only" type="file" accept="image/*" onChange={(event) => setProofFile(event.target.files?.[0] ?? null)} disabled={loading} />
@@ -193,26 +207,29 @@ const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
           )}
 
           {type === "withdraw" && (
-            <div className="grid gap-3">
-              <div className="rounded border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <div className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
                 <p className="font-black">Withdrawal destination</p>
                 <p className="mt-1 leading-6">Enter the bank account where the approved withdrawal should be released.</p>
               </div>
-              <Field label="Bank name">
-                <input className={inputClass} value={withdrawalBankName} onChange={(event) => setWithdrawalBankName(event.target.value)} disabled={loading} placeholder="Example: BCA, BRI, Mandiri" />
-              </Field>
-              <Field label="Account holder name">
-                <input className={inputClass} value={withdrawalAccountName} onChange={(event) => setWithdrawalAccountName(event.target.value)} disabled={loading} placeholder="Name on the bank account" />
-              </Field>
-              <Field label="Account number">
-                <input className={inputClass} value={withdrawalAccountNumber} onChange={(event) => setWithdrawalAccountNumber(event.target.value)} disabled={loading} inputMode="numeric" placeholder="Bank account number" />
-              </Field>
+
+              <IconField icon={<Landmark size={17} />} label="Bank name">
+                <input className={`${inputClass} rounded-xl`} value={withdrawalBankName} onChange={(event) => setWithdrawalBankName(event.target.value)} disabled={loading} placeholder="Example: BCA, BRI, Mandiri" />
+              </IconField>
+
+              <IconField icon={<UserRound size={17} />} label="Account holder name">
+                <input className={`${inputClass} rounded-xl`} value={withdrawalAccountName} onChange={(event) => setWithdrawalAccountName(event.target.value)} disabled={loading} placeholder="Name on the bank account" />
+              </IconField>
+
+              <IconField icon={<CreditCard size={17} />} label="Account number">
+                <input className={`${inputClass} rounded-xl`} value={withdrawalAccountNumber} onChange={(event) => setWithdrawalAccountNumber(event.target.value)} disabled={loading} inputMode="numeric" placeholder="Bank account number" />
+              </IconField>
             </div>
           )}
 
           {message && (
             <p
-              className={`rounded p-3 text-sm font-semibold ${
+              className={`rounded-2xl p-3 text-sm font-semibold ${
                 message.includes("✗") ? "bg-red-50 text-red-700" : message.includes("✓") ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
               }`}
             >
@@ -221,11 +238,11 @@ const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
           )}
         </div>
 
-        <aside className="rounded bg-gradient-to-br from-forest to-emerald-600 p-4 text-white">
+        <aside className="rounded-3xl bg-gradient-to-br from-forest to-emerald-600 p-5 text-white lg:sticky lg:top-4 lg:self-start">
           <p className="text-xs font-black uppercase tracking-wide text-white/70">Request amount</p>
           <p className="mt-2 break-words text-3xl font-black">{formatRupiah(amount)}</p>
           <div className="mt-5 space-y-3 text-sm">
-            <SummaryItem label="Status" value={statusText} />
+            <SummaryItem label="Status" value={type === "withdraw" ? "Pending Withdrawal" : "Pending Top Up"} />
             <SummaryItem label="Member" value={member} />
             <SummaryItem label="Admin scope" value={admin} />
             {type === "withdraw" && withdrawalBankName && <SummaryItem label="Withdrawal bank" value={withdrawalBankName} />}
@@ -233,29 +250,48 @@ const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
         </aside>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <button className="rounded border border-slate-200 px-3 py-3 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50" type="button" onClick={onClose} disabled={loading}>
+      <div className="grid gap-3 border-t border-slate-100 p-5 sm:grid-cols-2 sm:p-6">
+        <button className="rounded-2xl border border-slate-200 px-3 py-3 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50" type="button" onClick={onClose} disabled={loading}>
           Cancel
         </button>
-        <button className="rounded bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || Boolean(withdrawalBlockMessage)}>
-          {loading ? "Submitting..." : submitText}
+        <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || Boolean(withdrawalBlockMessage)}>
+          {loading ? (
+            "Submitting..."
+          ) : (
+            <>
+              {type === "withdraw" ? <Send size={17} /> : <CheckCircle2 size={17} />}
+              {type === "withdraw" ? "Submit Withdrawal" : "Submit Top Up"}
+            </>
+          )}
         </button>
       </div>
     </form>
   );
 
-  if (variant === "page") return form;
+    if (isPageVariant) return form;
 
+    return (
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-3 py-4 sm:px-4 sm:py-8">
+        {form}
+      </div>
+    );
+}
+
+function IconField({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/50 px-4 py-8">
-      {form}
+    <div>
+      <label className="mb-1.5 flex items-center gap-2 text-sm font-bold text-slate-700">
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-forest">{icon}</span>
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
 
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded bg-white/10 px-3 py-2">
+    <div className="rounded-2xl bg-white/10 px-3 py-2">
       <p className="text-[11px] font-black uppercase tracking-wide text-white/60">{label}</p>
       <p className="mt-1 break-words font-bold">{value}</p>
     </div>

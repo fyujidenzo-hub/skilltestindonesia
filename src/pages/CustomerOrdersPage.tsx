@@ -63,23 +63,82 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       ? orders.filter((order) => order.id !== activeOrder.id)
       : orders;
 
-  const notifications = useMemo<CustomerNotification[]>(() => {
-    if (!currentMember) return [];
+const notifications = useMemo<CustomerNotification[]>(() => {
+  if (!currentMember) return [];
 
-    return state.orders
-      .filter((order) => order.member === currentMember.username && getOrderState(order) !== "diserahkan")
-      .slice(0, 4)
-      .map((order) => {
-        const orderState = getOrderState(order);
-        return {
-          id: order.id,
-          title: orderState === "rejected" ? "Product request rejected" : orderState === "waiting_assignment" ? "Waiting assignment" : "Order update",
-          text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
-          tone: orderState === "rejected" ? ("danger" as const) : ("info" as const),
-          targetPath: "/orders",
-        };
-      });
-  }, [currentMember, state.orders]);
+  const rejectedOrderNotifications = state.orders
+    .filter(
+      (order) =>
+        order.member === currentMember.username &&
+        getOrderState(order) === "rejected"
+    )
+    .slice(0, 3)
+    .map((order) => ({
+      id: `order-rejected-${order.id}`,
+      title: "Product request rejected",
+      text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+      tone: "danger" as const,
+      targetPath: "/orders",
+    }));
+
+  const orderNotifications = state.orders
+    .filter((order) => {
+      const orderState = getOrderState(order);
+
+      return (
+        order.member === currentMember.username &&
+        orderState !== "diserahkan" &&
+        orderState !== "rejected"
+      );
+    })
+    .slice(0, 3)
+    .map((order) => {
+      const orderState = getOrderState(order);
+
+      return {
+        id: `order-${order.id}`,
+        title:
+          orderState === "waiting_assignment"
+            ? "Waiting assignment"
+            : orderState === "product_assigned"
+              ? "Product assigned"
+              : orderState === "waiting_shipment"
+                ? "Waiting shipment"
+                : orderState === "belum_diserahkan"
+                  ? "Waiting delivery"
+                  : "Order update",
+        text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
+        tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
+        targetPath: "/orders",
+      };
+    });
+
+  const transactionNotifications = state.transactions
+    .filter((transaction) => transaction.member === currentMember.username)
+    .slice(0, 4)
+    .map((transaction) => ({
+      id: `transaction-${transaction.id}`,
+      title:
+        transaction.status === "pending"
+          ? `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} pending`
+          : `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} ${transaction.status}`,
+      text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
+      tone:
+        transaction.status === "approved"
+          ? ("success" as const)
+          : transaction.status === "rejected"
+            ? ("danger" as const)
+            : ("warning" as const),
+      targetPath: transaction.type === "topup" ? "/topup" : "/withdraw",
+    }));
+
+  return [
+    ...rejectedOrderNotifications,
+    ...orderNotifications,
+    ...transactionNotifications,
+  ].slice(0, 6);
+}, [currentMember, state.orders, state.transactions]);
+
 
   const logout = () => {
     clearActiveCustomerId();
@@ -187,29 +246,30 @@ const handleRejectChangedProduct = async () => {
     setIsSubmitting(false);
   }
 };
-  const submitOrder = async () => {
-    if (!confirmOrder || !currentMember) return;
-    setIsSubmitting(true);
-    setMessage("");
-    try {
-      const result = await completeWorkflowOrder(
-        {
-          ...confirmOrder,
-          submittedAt: confirmOrder.submittedAt || new Date().toISOString().slice(0, 16).replace("T", " "),
-        },
-        currentMember,
-      );
-      dispatch({ type: "completeOrderWithMember", payload: result });
-      setReviewOrderId(result.order.id);
-      setConfirmOrder(null);
-      setMessage("Order sent successfully. Commission has been added to your balance.");
-    } catch (error) {
-      console.error("Failed to submit order:", error);
-      setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+ const submitOrder = async () => {
+  if (!confirmOrder || !currentMember) return;
+  setIsSubmitting(true);
+  setMessage("");
+
+  try {
+    const result = await submitWorkflowOrder(
+      {
+        ...confirmOrder,
+        submittedAt: confirmOrder.submittedAt || new Date().toISOString().slice(0, 16).replace("T", " "),
+      },
+      currentMember,
+    );
+
+    dispatch({ type: "completeOrderWithMember", payload: result });
+    setConfirmOrder(null);
+    setMessage("Order sent successfully. Waiting for delivery confirmation.");
+  } catch (error) {
+    console.error("Failed to submit order:", error);
+    setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const submitReview = async () => {
     const targetOrder = state.orders.find((order) => order.id === reviewOrderId);

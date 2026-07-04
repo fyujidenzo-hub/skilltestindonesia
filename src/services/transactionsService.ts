@@ -83,7 +83,7 @@ export async function createTransaction(transaction: Omit<Transaction, "id"> & {
   const id = transaction.id || crypto.randomUUID();
   const requestId =
     transaction.requestId ||
-    `${transaction.type === "topup" ? "TU" : "WD"}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    `${transaction.type === "topup" ? "TU" : transaction.type === "withdrawal" ? "WD" : "RW"}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const nextTransaction: Transaction = {
     ...transaction,
     id,
@@ -100,6 +100,46 @@ export async function createTransaction(transaction: Omit<Transaction, "id"> & {
   };
   await setDoc(doc(db, COLLECTION, id), nextTransaction);
   return nextTransaction;
+}
+
+export async function createRewardTransaction({
+  member,
+  admin = "Super Admin",
+  amount,
+  createdAt = nowStamp(),
+}: {
+  member: string;
+  admin?: string;
+  amount: number;
+  createdAt?: string;
+}): Promise<Transaction> {
+  if (!db) throw new Error("Firebase not initialized");
+
+  const safeAmount = Math.max(0, Number(amount) || 0);
+  if (safeAmount <= 0) throw new Error("Reward amount must be greater than zero.");
+
+  const id = crypto.randomUUID();
+  const rewardTransaction: Transaction = {
+    id,
+    requestId: `RW-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    member,
+    admin,
+    type: "reward",
+    amount: safeAmount,
+    status: "approved",
+    createdAt,
+    creditedAt: createdAt,
+    senderName: "Super Admin",
+    withdrawalBankName: "",
+    withdrawalAccountName: "",
+    withdrawalAccountNumber: "",
+    proofName: "",
+    proofType: "",
+    proofDataUrl: "",
+  };
+
+  await setDoc(doc(db, COLLECTION, id), rewardTransaction);
+  return rewardTransaction;
 }
 
 export async function updateTransaction(id: string, data: Partial<Transaction>): Promise<void> {
@@ -139,7 +179,7 @@ export async function approveTransactionRequest(transactionItem: Transaction, me
         if (liveTransaction.amount > currentBalance) throw new Error("Insufficient balance.");
       }
 
-      const signedAmount = liveTransaction.type === "topup" ? liveTransaction.amount : -liveTransaction.amount;
+      const signedAmount = liveTransaction.type === "withdrawal" ? -liveTransaction.amount : liveTransaction.amount;
       nextBalance = Math.max(0, currentBalance + signedAmount);
       transaction.update(txRef, { status, creditedAt: nowStamp() });
       transaction.update(memberRef, { balance: nextBalance });

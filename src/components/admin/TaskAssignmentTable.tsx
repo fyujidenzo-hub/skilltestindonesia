@@ -181,29 +181,47 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                 {products.length === 0 ? (
                   <p className="text-sm text-slate-500">No products available</p>
                 ) : (
-                  products.map((product) => (
-                    <div key={product.id} className="grid grid-cols-[auto_1fr] items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={(selectedQuantities[product.id] ?? 0) > 0}
-                        onChange={(e) =>
-                          setSelectedQuantities((current) => {
-                            const next = { ...current };
-                            if (e.target.checked) next[product.id] = Math.max(1, next[product.id] ?? 1);
-                            else delete next[product.id];
-                            return next;
-                          })
-                        }
-                        className="rounded"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">{product.code} - {product.name}</p>
-                        <p className="text-xs text-slate-500">
-                          {formatRupiah(product.price)} · {product.quantity > 0 ? "Available" : "Unavailable"}
-                        </p>
-                      </div>
-                    </div>
-                  ))
+                    products.map((product) => {
+                      const isAvailable = product.quantity > 0;
+
+                      return (
+                        <div
+                          key={product.id}
+                          className={`grid grid-cols-[auto_1fr] items-center gap-2 text-sm ${
+                            !isAvailable ? "opacity-60" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            disabled={!isAvailable}
+                            checked={isAvailable && (selectedQuantities[product.id] ?? 0) > 0}
+                            onChange={(e) =>
+                              setSelectedQuantities((current) => {
+                                const next = { ...current };
+
+                                if (!isAvailable) {
+                                  delete next[product.id];
+                                  return next;
+                                }
+
+                                if (e.target.checked) next[product.id] = Math.max(1, next[product.id] ?? 1);
+                                else delete next[product.id];
+
+                                return next;
+                              })
+                            }
+                            className="rounded disabled:cursor-not-allowed"
+                          />
+
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">{product.code} - {product.name}</p>
+                            <p className={`text-xs ${isAvailable ? "text-slate-500" : "font-bold text-rose-600"}`}>
+                              {formatRupiah(product.price)} · {isAvailable ? "Available" : "Unavailable"}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
                 )}
               </div>
             </Field>

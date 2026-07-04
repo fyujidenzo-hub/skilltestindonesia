@@ -72,7 +72,7 @@ export interface Transaction {
   requestId?: string;
   member: string;
   admin: string;
-  type: "topup" | "withdrawal";
+  type: "topup" | "withdrawal" | "reward";
   amount: number;
   status: TransactionStatus;
   createdAt: string;

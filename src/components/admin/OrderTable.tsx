@@ -46,8 +46,8 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const startRow = visibleRows.length ? rowPage * rowPageSize + 1 : 0;
   const endRow = Math.min(visibleRows.length, (rowPage + 1) * rowPageSize);
 
-  const sortedProducts = useMemo(() => {
-    const sorted = [...products];
+ const sortedProducts = useMemo(() => {
+  const sorted = products.filter((product) => product.quantity > 0);
     if (productSort === "price-high") {
       return sorted.sort((a, b) => b.price - a.price);
     } else if (productSort === "price-low") {

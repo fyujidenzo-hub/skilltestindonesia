@@ -8,6 +8,7 @@ import { createOrder } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
+import type { Transaction } from "../types";
 import { formatRupiah } from "../utils";
 
 const workAccountBanner = "/assets/work-account-banner.png";
@@ -74,10 +75,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
       .slice(0, 3)
       .map((transaction) => ({
         id: `transaction-${transaction.id}`,
-        title:
-          transaction.status === "pending"
-            ? `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} pending`
-            : `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} ${transaction.status}`,
+        title: getCustomerTransactionTitle(transaction),
         text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
         tone:
           transaction.status === "approved"
@@ -266,4 +264,10 @@ function DashboardMetric({ icon, label, description, value }: { icon: React.Reac
       <span className="shrink-0 text-right text-xl font-black text-forest">{value}</span>
     </div>
   );
+}
+
+
+function getCustomerTransactionTitle(transaction: Transaction) {
+  const label = transaction.type === "reward" ? "Balance Reward" : transaction.type === "topup" ? "Balance Top-up" : "Withdrawal";
+  return transaction.status === "pending" ? `${label} pending` : `${label} ${transaction.status}`;
 }

@@ -1,8 +1,10 @@
-import { BadgeDollarSign, Banknote, Pencil, Plus, ShieldCheck, UserPlus, WalletCards } from "lucide-react";
+import { AlertTriangle, BadgeDollarSign, Banknote, Pencil, Plus, ShieldCheck, Trash2, UserPlus, WalletCards, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Panel } from "../common";
+import { useAppStore } from "../../store/AppStore";
 import type { AppState } from "../../types";
 import { formatRupiah } from "../../utils";
+import { deleteBank } from "../../services/banksService";
 import BankForm from "./BankForm";
 import StatCard from "./StatCard";
 
@@ -19,8 +21,32 @@ interface OverviewPanelProps {
 }
 
 export default function OverviewPanel({ state, totals, canManageBanks = false }: OverviewPanelProps) {
+  const { dispatch } = useAppStore();
   const [showBankForm, setShowBankForm] = useState(false);
   const [editingBankId, setEditingBankId] = useState("");
+  const [deletingBankId, setDeletingBankId] = useState("");
+  const [bankMessage, setBankMessage] = useState("");
+  const [bankToDelete, setBankToDelete] = useState<AppState["banks"][number] | null>(null);
+
+  const handleConfirmDeleteBank = async () => {
+    if (!bankToDelete) return;
+
+    setDeletingBankId(bankToDelete.id);
+    setBankMessage("");
+
+    try {
+      await deleteBank(bankToDelete.id);
+      dispatch({ type: "deleteBank", payload: { id: bankToDelete.id } });
+      if (editingBankId === bankToDelete.id) setEditingBankId("");
+      setBankToDelete(null);
+      setBankMessage("Bank account deleted successfully.");
+    } catch (error) {
+      console.error("Failed to delete bank account:", error);
+      setBankMessage("Unable to delete bank account. Check Firestore bank rules.");
+    } finally {
+      setDeletingBankId("");
+    }
+  };
   const maxRegistrations = Math.max(1, ...state.admins.map((admin) => admin.registrations));
   const maxDailyFinance = Math.max(1, ...state.admins.flatMap((admin) => [admin.todayDeposits, admin.todayWithdrawals]));
   const pendingTransactions = state.transactions.filter((transaction) => transaction.status === "pending").length;
@@ -186,62 +212,175 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
           </div>
         </Panel>
 
-        <Panel
-          title="Deposit Bank Placements"
-          action={
-            canManageBanks ? (
+        {canManageBanks && (
+          <Panel
+            title="Deposit Bank Placements"
+            action={
               <button
-                className="inline-flex items-center gap-1 text-sm font-semibold text-forest"
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-forest hover:bg-emerald-100"
                 onClick={() => {
                   setEditingBankId("");
+                  setBankMessage("");
                   setShowBankForm(!showBankForm);
                 }}
               >
                 <Plus size={16} /> Add
               </button>
-            ) : null
-          }
-        >
-          {showBankForm && canManageBanks && <BankForm onDone={() => setShowBankForm(false)} />}
-          <div className="mt-3 space-y-3">
-            {state.banks.length ? (
-              state.banks.map((bank) => (
-                <div key={bank.id} className="rounded border border-slate-200 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-bold">{bank.bank}</p>
-                      <p className="text-sm text-slate-500">{bank.accountName}</p>
-                    </div>
-                    <span className={`rounded px-2 py-1 text-xs font-bold ${bank.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                      {bank.active ? "Active" : "Paused"}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-lg font-bold">{bank.accountNumber}</p>
-                  <p className="text-xs text-slate-500">Minimum deposit {formatRupiah(bank.minDeposit)}</p>
-                  {canManageBanks && (
-                    <button
-                      className="mt-3 inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
-                      onClick={() => {
-                        setShowBankForm(false);
-                        setEditingBankId(editingBankId === bank.id ? "" : bank.id);
-                      }}
-                    >
-                      <Pencil size={13} />
-                      Edit bank settings
-                    </button>
-                  )}
-                  {editingBankId === bank.id && canManageBanks && (
-                    <div className="mt-3">
-                      <BankForm bank={bank} onDone={() => setEditingBankId("")} />
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No bank placements yet. Add one to show deposit instructions on the customer store.</p>
+            }
+          >
+            {showBankForm && <BankForm onDone={() => setShowBankForm(false)} />}
+
+            {bankMessage && (
+              <p className={`mt-3 rounded px-3 py-2 text-sm font-bold ${bankMessage.startsWith("Unable") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+                {bankMessage}
+              </p>
             )}
+
+            <div className="mt-3 space-y-3">
+              {state.banks.length ? (
+                state.banks.map((bank) => (
+                  <div key={bank.id} className="rounded-2xl border border-slate-200 p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
+                      <div className="min-w-0">
+                        <p className="break-words font-bold">{bank.bank}</p>
+                        <p className="break-words text-sm text-slate-500">{bank.accountName}</p>
+                      </div>
+                      <span className={`rounded px-2 py-1 text-xs font-bold ${bank.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                        {bank.active ? "Active" : "Paused"}
+                      </span>
+                    </div>
+                    <p className="mt-3 break-all rounded-xl bg-slate-50 px-3 py-2 text-base font-black text-slate-900 sm:text-lg">{bank.accountNumber}</p>
+                    <p className="mt-1 text-xs text-slate-500">Minimum deposit {formatRupiah(bank.minDeposit)}</p>
+
+                    <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                      <button
+                        className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50"
+                        onClick={() => {
+                          setShowBankForm(false);
+                          setBankMessage("");
+                          setEditingBankId(editingBankId === bank.id ? "" : bank.id);
+                        }}
+                      >
+                        <Pencil size={13} />
+                        Edit
+                      </button>
+
+                      <button
+                        className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-black text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                        disabled={deletingBankId === bank.id}
+                        onClick={() => {
+                          setBankMessage("");
+                          setBankToDelete(bank);
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        {deletingBankId === bank.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+
+                    {editingBankId === bank.id && (
+                      <div className="mt-3">
+                        <BankForm bank={bank} onDone={() => setEditingBankId("")} />
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No bank placements yet. Add one to show deposit instructions on the customer store.</p>
+              )}
+            </div>
+          </Panel>
+        )}
+      </div>
+
+      {bankToDelete && (
+        <DeleteBankDialog
+          bank={bankToDelete}
+          isDeleting={deletingBankId === bankToDelete.id}
+          onCancel={() => {
+            if (deletingBankId) return;
+            setBankToDelete(null);
+          }}
+          onConfirm={handleConfirmDeleteBank}
+        />
+      )}
+    </div>
+  );
+}
+
+function DeleteBankDialog({
+  bank,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  bank: AppState["banks"][number];
+  isDeleting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-950/60 px-0 py-0 sm:items-center sm:px-4 sm:py-6">
+      <div className="max-h-[calc(100dvh-0.75rem)] w-full overflow-y-auto rounded-t-[2rem] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.32)] sm:max-h-[calc(100vh-3rem)] sm:max-w-md sm:rounded-3xl">
+        <div className="bg-gradient-to-br from-rose-50 to-white p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-100 text-rose-700 sm:h-12 sm:w-12">
+              <AlertTriangle size={22} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-wide text-rose-600">Delete bank account</p>
+              <h3 className="mt-1 text-lg font-black leading-tight text-slate-900 sm:text-xl">Are you sure?</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                This bank account will be removed from customer top-up instructions immediately.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-slate-500 shadow-sm hover:bg-slate-100 disabled:opacity-50"
+              onClick={onCancel}
+              disabled={isDeleting}
+              aria-label="Close delete bank dialog"
+            >
+              <X size={17} />
+            </button>
           </div>
-        </Panel>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-black uppercase text-slate-500">Bank account</p>
+            <p className="mt-1 break-words text-lg font-black text-slate-900">{bank.bank}</p>
+            <p className="mt-1 break-words text-sm font-semibold text-slate-600">{bank.accountName}</p>
+            <p className="mt-2 break-all rounded-xl bg-white px-3 py-2 text-sm font-black text-forest">{bank.accountNumber}</p>
+            <p className="mt-2 text-xs font-semibold text-slate-500">Minimum deposit {formatRupiah(bank.minDeposit)}</p>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-800">
+            This action cannot be undone from the admin panel.
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+            <button
+              type="button"
+              className="order-2 rounded-2xl border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:order-1"
+              onClick={onCancel}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="order-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 font-black text-white hover:bg-rose-700 disabled:bg-slate-400 sm:order-2"
+              onClick={onConfirm}
+              disabled={isDeleting}
+            >
+              <Trash2 size={17} />
+              {isDeleting ? "Deleting..." : "Delete bank"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

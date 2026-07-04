@@ -30,8 +30,10 @@ type Action =
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
   | { type: "addBank"; payload: Omit<BankPlacement, "id"> & { id?: string } }
   | { type: "updateBank"; payload: BankPlacement }
+  | { type: "deleteBank"; payload: { id: string } }
   | { type: "addAdmin"; payload: StaffAdmin }
   | { type: "updateAdmin"; payload: StaffAdmin }
+  | { type: "deleteAdmin"; payload: { id: string } }
   | { type: "updateAccount"; payload: AppState["account"] };
 
 interface AppStoreValue {
@@ -266,8 +268,10 @@ function reducer(state: AppState, action: Action): AppState {
   if (action.type === "addProduct") return { ...state, products: [{ ...action.payload, id: action.payload.id ?? nextId("prod") }, ...state.products] };
   if (action.type === "addBank") return { ...state, banks: [{ ...action.payload, id: action.payload.id ?? nextId("bank") }, ...state.banks] };
   if (action.type === "updateBank") return { ...state, banks: state.banks.map((bank) => (bank.id === action.payload.id ? action.payload : bank)) };
+  if (action.type === "deleteBank") return { ...state, banks: state.banks.filter((bank) => bank.id !== action.payload.id) };
   if (action.type === "addAdmin") return { ...state, admins: [action.payload, ...state.admins] };
   if (action.type === "updateAdmin") return { ...state, admins: state.admins.map((admin) => (admin.id === action.payload.id ? action.payload : admin)) };
+  if (action.type === "deleteAdmin") return { ...state, admins: state.admins.filter((admin) => admin.id !== action.payload.id) };
   if (action.type === "updateAccount") return { ...state, account: action.payload };
 
   return state;

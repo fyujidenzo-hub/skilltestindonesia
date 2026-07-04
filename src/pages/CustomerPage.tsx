@@ -15,7 +15,7 @@ import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { updateMember } from "../services/membersService";
 import { useAppStore } from "../store/AppStore";
-import type { Order, Product } from "../types";
+import type { Order, Product, Transaction } from "../types";
 import { formatRupiah, shortDate } from "../utils";
 
 const favoriteStoragePrefix = "tokopedia-product-favorites";
@@ -103,10 +103,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       .slice(0, 4)
       .map((transaction) => ({
         id: `transaction-${transaction.id}`,
-        title:
-          transaction.status === "pending"
-            ? `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} pending`
-            : `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} ${transaction.status}`,
+        title: getCustomerTransactionTitle(transaction),
         text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
         tone:
           transaction.status === "approved"
@@ -293,84 +290,95 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   };
 
   if (!ready) {
-    return (
-      <main className="grid min-h-screen place-items-center customer-page-bg text-ink">
-        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
-      </main>
-    );
-  }
-
-  if (state.members.length === 0) {
-    return (
-      <main className="min-h-screen customer-page-bg pb-24 text-ink flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">No Data Available</h1>
-          <p className="text-gray-600 mb-6">Please seed Firestore with sample data to continue.</p>
-          <button
-            onClick={() => navigate("/admin")}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Go to Admin Panel
-          </button>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen customer-page-bg pb-24 text-ink">
-      <CustomerHeader
-        query={query}
-        activeUsername={currentMember?.username}
-        notifications={notifications}
-        onQueryChange={setQuery}
-        onLogout={logout}
-        navigate={navigate}
+    <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
+      <div className="rounded-2xl bg-white/90 px-6 py-5 text-sm font-bold text-slate-600 shadow-panel backdrop-blur">
+        Restoring member session...
+      </div>
+    </main>
+  );
+}
+
+if (state.members.length === 0) {
+  return (
+    <main className="flex min-h-screen items-center justify-center customer-page-bg px-4 pb-24 text-ink">
+      <div className="rounded-3xl bg-white/90 p-6 text-center shadow-panel backdrop-blur sm:p-8">
+        <h1 className="mb-4 text-2xl font-black sm:text-3xl">
+          No Data Available
+        </h1>
+
+        <p className="mb-6 text-sm font-semibold text-slate-600 sm:text-base">
+          Please seed Firestore with sample data to continue.
+        </p>
+
+        <button
+          onClick={() => navigate("/admin")}
+          className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700"
+        >
+          Go to Admin Panel
+        </button>
+      </div>
+    </main>
+  );
+}
+
+return (
+  <main className="min-h-screen customer-page-bg pb-24 text-ink">
+    <CustomerHeader
+      query={query}
+      activeUsername={currentMember?.username}
+      notifications={notifications}
+      onQueryChange={setQuery}
+      onLogout={logout}
+      navigate={navigate}
+    />
+
+    <CustomerHero
+      balance={currentMember?.balance ?? 0}
+      username={currentMember?.username}
+      phone={currentMember?.phone}
+      onTopUp={() => requireLogin(() => setActiveModal("topup"))}
+      onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
+    />
+
+    {loginAlert && (
+      <LoginRequiredAlert
+        message={loginAlert}
+        onClose={() => setLoginAlert("")}
+        onLogin={() => {
+          setLoginAlert("");
+          navigate("/login");
+        }}
       />
-      <CustomerHero
-        balance={currentMember?.balance ?? 0}
-        username={currentMember?.username}
-        phone={currentMember?.phone}
+    )}
+
+    <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
+      <StoreShortcutGrid
+        navigate={navigate}
+        isLoggedIn={Boolean(currentMember)}
         onTopUp={() => requireLogin(() => setActiveModal("topup"))}
         onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
       />
-      {loginAlert && (
-        <LoginRequiredAlert
-          message={loginAlert}
-          onClose={() => setLoginAlert("")}
-          onLogin={() => {
-            setLoginAlert("");
-            navigate("/login");
-          }}
-        />
+
+      {taskMessage && (
+        <p className="mt-5 rounded-2xl bg-emerald-50/95 p-4 text-sm font-bold text-emerald-700 shadow-sm backdrop-blur">
+          {taskMessage}
+        </p>
       )}
 
-  <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-  <StoreShortcutGrid
-    navigate={navigate}
-    isLoggedIn={Boolean(currentMember)}
-    onTopUp={() => requireLogin(() => setActiveModal("topup"))}
-    onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
-  />
-
-  {taskMessage && (
-    <p className="mt-5 rounded bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
-      {taskMessage}
-    </p>
-  )}
-
-  <div className="mt-6 mx-auto w-full max-w-4xl">
-    <RecentRecords
-      transactions={
-        currentMember
-          ? state.transactions.filter(
-              (transaction) => transaction.member === currentMember.username
-            )
-          : []
-      }
-    />
-  </div>
-</section>
+      <div className="mx-auto mt-6 w-full max-w-4xl">
+        <RecentRecords
+          transactions={
+            currentMember
+              ? state.transactions.filter(
+                  (transaction) =>
+                    transaction.member === currentMember.username
+                )
+              : []
+          }
+        />
+      </div>
+    </section>
 
       <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} active="home" />
       {activeModal && currentMember && (
@@ -535,4 +543,10 @@ function LoginRequiredAlert({ message, onClose, onLogin }: { message: string; on
       </div>
     </div>
   );
+}
+
+
+function getCustomerTransactionTitle(transaction: Transaction) {
+  const label = transaction.type === "reward" ? "Balance Reward" : transaction.type === "topup" ? "Balance Top-up" : "Withdrawal";
+  return transaction.status === "pending" ? `${label} pending` : `${label} ${transaction.status}`;
 }
