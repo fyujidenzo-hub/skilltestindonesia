@@ -46,15 +46,25 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
     return state.transactions.filter((transaction) => transaction.member === member.username);
   }, [member, state.transactions]);
 
-  const frozenBalance = useMemo(() => {
-    return memberOrders.reduce((total, order) => {
-      const orderState = getOrderState(order);
-      if (orderState === "diserahkan") return total;
-      return total + (order.requiredBalance ?? order.value ?? 0);
-    }, 0);
-  }, [memberOrders]);
+  // const frozenBalance = useMemo(() => {
+  //   return memberOrders.reduce((total, order) => {
+  //     const orderState = getOrderState(order);
 
-  const effectiveBalance = member ? Math.max(0, member.balance - frozenBalance) : 0;
+  //     const shouldFreeze =
+  //       orderState === "product_assigned" ||
+  //       orderState === "waiting_shipment" ||
+  //       orderState === "belum_diserahkan";
+
+  //     if (!shouldFreeze) return total;
+
+  //     return total + (order.requiredBalance ?? order.value ?? 0);
+  //   }, 0);
+  // }, [memberOrders]);
+
+  const frozenBalance = 0;
+
+  const workAccountBalance = member ? Number(member.balance ?? 0) : 0;
+  const effectiveBalance = workAccountBalance;
   const topUpHistory = memberTransactions.filter((transaction) => transaction.type === "topup");
   const withdrawalHistory = memberTransactions.filter((transaction) => transaction.type === "withdrawal");
   const completedOrderCount = Math.min(member?.totalOrders ?? 0, dailyOrderTarget);
