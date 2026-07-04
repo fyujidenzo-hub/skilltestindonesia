@@ -88,7 +88,6 @@ const assignedCommission = assignedProducts.length
   // The order amount is NOT deducted. It is only an eligibility requirement.
   const hasEnoughBalanceForOrder = currentBalance >= assignedOrderAmount;
   const isZeroBalance = currentBalance <= 0;
-  const balanceShortage = Math.max(assignedOrderAmount - currentBalance, 0);
   const cannotSendOrder = isLoading || !hasEnoughBalanceForOrder || isZeroBalance;
 
   const handleSubmitClick = async () => {
@@ -324,33 +323,6 @@ const assignedCommission = assignedProducts.length
               </div>
             ) : (
               <>
-                {!hasEnoughBalanceForOrder && (
-                  <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <div className="flex gap-2">
-                      <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-700" />
-                      <div>
-                        <p className="text-sm font-black text-amber-900">
-                          Top up required before sending this order.
-                        </p>
-                        <p className="mt-1 text-xs text-amber-800">
-                          Your balance must be equal to or higher than the order amount.
-                          Shortage: {formatRupiah(balanceShortage)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {onTopUp && (
-                      <button
-                        type="button"
-                        onClick={onTopUp}
-                        className="mt-3 w-full rounded-xl bg-sky-600 px-4 py-2 text-sm font-black text-white hover:bg-sky-700"
-                      >
-                        Top Up Now
-                      </button>
-                    )}
-                  </div>
-                )}
-
                 <button
                   type="button"
                   onClick={handleSubmitClick}
