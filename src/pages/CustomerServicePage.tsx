@@ -106,7 +106,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
               Notice to all users: the task/order completion time is 2 hours.
               Complete orders within the specified time limit. If you exceed the
               time limit, your account balance may be frozen. Top ups and
-              withdrawals outside 09:00 WIB - 21:00 WIB require permission from
+              withdrawals outside 08:00 AM - 5:00 PM UTC +8 require permission from
               our Customer Service team. If there is a problem with your
               transaction, please contact Customer Service immediately.
             </p>
