@@ -69,7 +69,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
     try {
       const amount = Math.max(0, Number(form.amount) || 0);
-      const isDirectBalanceCredit = modalType === "balance" || modalType === "rewards";
+      const isDirectBalanceCredit = modalType === "balance";
       const nextMember: Member =
         modalType === "edit"
           ? { ...activeMember, username: form.username.trim(), phone: form.phone.trim(), level: form.level as Member["level"] }
@@ -91,9 +91,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
       setMessage(
         modalType === "edit"
           ? "Member updated."
-          : modalType === "rewards"
-            ? "Reward balance added and recorded."
-            : "Balance reward added and recorded."
+          : "Balance reward added and recorded."
       );
       setTimeout(closeModal, 600);
     } catch (error) {

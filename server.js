@@ -18,18 +18,20 @@ const gmailEmail = process.env.GMAIL_EMAIL;
 const gmailPassword = process.env.GMAIL_APP_PASSWORD;
 
 if (!gmailEmail || !gmailPassword) {
-  console.error("❌ Error: GMAIL_EMAIL or GMAIL_APP_PASSWORD not found in .env");
-  process.exit(1);
+  console.warn("GMAIL_EMAIL or GMAIL_APP_PASSWORD not set; email API disabled.");
 }
 
-// Create Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: gmailEmail,
-    pass: gmailPassword,
-  },
-});
+// Create Nodemailer transporter only when credentials are available.
+const transporter =
+  gmailEmail && gmailPassword
+    ? nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: gmailEmail,
+          pass: gmailPassword,
+        },
+      })
+    : null;
 
 app.use(express.json());
 app.use(cors());
@@ -42,6 +44,10 @@ app.post("/api/send-email", async (req, res) => {
 
     if (!to || !subject || !html) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    if (!transporter || !gmailEmail) {
+      return res.status(503).json({ error: "Email service is not configured" });
     }
 
     const info = await transporter.sendMail({
@@ -76,6 +82,6 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
-  console.log(`✓ Server running on port ${PORT}`);
-  console.log(`✓ Email service ready`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Email service ${transporter ? "ready" : "disabled"}`);
 });
