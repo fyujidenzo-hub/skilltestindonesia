@@ -1,10 +1,10 @@
-import { BadgeCheck, Boxes, Eye, Package, Pencil, Plus, Tag, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Boxes, Eye, Package, Pencil, Plus, Tag, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { Panel } from "../common";
 import type { Product } from "../../types";
 import { formatRupiah } from "../../utils";
 import ProductForm from "./ProductForm";
-import { updateProduct } from "../../services/productsService";
+import { deleteProduct, updateProduct } from "../../services/productsService";
 import { useAppStore } from "../../store/AppStore";
 
 export default function CatalogAdmin({ products }: { products: Product[] }) {
@@ -12,7 +12,9 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
   const [showForm, setShowForm] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   const handleSaveStatus = async (product: Product, available: boolean) => {
@@ -45,6 +47,26 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
       setStatusMessage("Unable to update product status. Check Firestore product rules.");
     } finally {
       setIsSavingStatus(false);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    setIsDeletingProduct(true);
+    setStatusMessage("");
+    try {
+      await deleteProduct(productToDelete.id);
+      dispatch({ type: "deleteProduct", payload: { id: productToDelete.id } });
+      setSelectedProduct((current) => (current?.id === productToDelete.id ? null : current));
+      setEditingProduct((current) => (current?.id === productToDelete.id ? null : current));
+      setStatusMessage(`${productToDelete.name} deleted successfully.`);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      setStatusMessage("Unable to delete product. Check Firestore product rules.");
+    } finally {
+      setIsDeletingProduct(false);
     }
   };
 
@@ -144,10 +166,10 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                     </p>
                   </div>
 
-                  <div className="mt-1 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-3 gap-3">
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 transition hover:border-forest hover:text-forest"
+                      className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-2 text-xs font-black text-slate-700 transition hover:border-forest hover:text-forest"
                       onClick={() => setSelectedProduct(product)}
                     >
                       <Eye size={15} /> Details
@@ -155,10 +177,18 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
 
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-3 py-2 text-sm font-black text-white transition hover:bg-forest/90"
+                      className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl bg-forest px-2 py-2 text-xs font-black text-white transition hover:bg-forest/90"
                       onClick={() => setEditingProduct(product)}
                     >
                       <Pencil size={15} /> Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl bg-rose-50 px-2 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-100"
+                      onClick={() => setProductToDelete(product)}
+                    >
+                      <Trash2 size={15} /> Delete
                     </button>
                   </div>
                 </div>
@@ -184,7 +214,57 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
           onSave={(available) => handleSaveStatus(editingProduct, available)}
         />
       )}
+
+      {productToDelete && (
+        <DeleteProductDialog
+          product={productToDelete}
+          isDeleting={isDeletingProduct}
+          onCancel={() => {
+            if (!isDeletingProduct) setProductToDelete(null);
+          }}
+          onConfirm={handleDeleteProduct}
+        />
+      )}
     </Panel>
+  );
+}
+
+function DeleteProductDialog({
+  product,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  product: Product;
+  isDeleting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60 px-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-panel">
+        <div className="flex items-start gap-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-rose-50 text-rose-600">
+            <AlertTriangle size={22} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900">Delete product?</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {product.name} will be removed from the catalog.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button type="button" className="rounded-xl border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50" onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </button>
+          <button type="button" className="rounded-xl bg-rose-600 px-4 py-3 font-black text-white disabled:bg-slate-400" onClick={onConfirm} disabled={isDeleting}>
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

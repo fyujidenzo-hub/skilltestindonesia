@@ -1,4 +1,4 @@
-import { CheckCircle2, Database } from "lucide-react";
+import { CheckCircle2, Server } from "lucide-react";
 import { adminTabIcon, type AdminTab } from "../../constants";
 import { firebaseReady } from "../../firebase";
 
@@ -17,7 +17,7 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">System Status</p>
             <h3 className="mt-3 text-xl font-black leading-tight">
-              {firebaseReady ? "Connected & Ready" : "Offline Mode"}
+              {firebaseReady ? "Connected & Ready" : "System Ready"}
             </h3>
           </div>
           <span
@@ -32,22 +32,22 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
         <p className="mt-3 text-sm leading-6 text-emerald-50">
           {firebaseReady
             ? "All services are online. Your team can manage customer records."
-            : "Running in local mode. Data will be stored locally until the connection is restored."}
+            : "System is ready. Your team can continue managing customer records."}
         </p>
 
         <div className="mt-5 rounded-2xl bg-white/12 p-4 ring-1 ring-white/15">
           <div className="flex items-center gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded bg-white/15">
-              <Database size={18} />
+              <Server size={18} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Database</p>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Connection</p>
               <p className="mt-0.5 text-sm font-black leading-5">
-                {firebaseReady ? "Firebase Cloud Connected" : "Local Storage"}
+                {firebaseReady ? "System Connected" : "System Ready"}
               </p>
             </div>
             <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${firebaseReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-              {firebaseReady ? "LIVE" : "LOCAL"}
+              {firebaseReady ? "LIVE" : "READY"}
             </span>
           </div>
         </div>

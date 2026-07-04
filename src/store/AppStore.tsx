@@ -29,6 +29,7 @@ type Action =
   | { type: "completeOrderWithMember"; payload: { order: Order; member: Member } }
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
   | { type: "updateProduct"; payload: Product }
+  | { type: "deleteProduct"; payload: { id: string } }
   | { type: "addBank"; payload: Omit<BankPlacement, "id"> & { id?: string } }
   | { type: "updateBank"; payload: BankPlacement }
   | { type: "deleteBank"; payload: { id: string } }
@@ -268,6 +269,7 @@ function reducer(state: AppState, action: Action): AppState {
 
   if (action.type === "addProduct") return { ...state, products: [{ ...action.payload, id: action.payload.id ?? nextId("prod") }, ...state.products] };
   if (action.type === "updateProduct") return { ...state, products: state.products.map((product) => (product.id === action.payload.id ? action.payload : product)) };
+  if (action.type === "deleteProduct") return { ...state, products: state.products.filter((product) => product.id !== action.payload.id) };
   if (action.type === "addBank") return { ...state, banks: [{ ...action.payload, id: action.payload.id ?? nextId("bank") }, ...state.banks] };
   if (action.type === "updateBank") return { ...state, banks: state.banks.map((bank) => (bank.id === action.payload.id ? action.payload : bank)) };
   if (action.type === "deleteBank") return { ...state, banks: state.banks.filter((bank) => bank.id !== action.payload.id) };

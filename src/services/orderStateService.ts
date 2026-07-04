@@ -43,8 +43,8 @@ export function getOrderStateLabel(state: OrderState): string {
   const labels: Record<OrderState, string> = {
     no_task: "No Task",
     waiting_assignment: "Waiting for Assignment",
-    product_assigned: "Product Assigned",
-    waiting_shipment: "Waiting for Shipment",
+    product_assigned: "Task Assigned",
+    waiting_shipment: "",
     belum_diserahkan: "Not delivered",
     diserahkan: "Delivered",
     rejected: "Rejected",

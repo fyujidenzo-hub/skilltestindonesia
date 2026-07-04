@@ -14,6 +14,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
   const currentMember = activeCustomerId
     ? state.members.find((member) => member.id === activeCustomerId)
     : undefined;
+  const telegramUrl = state.account.customerServiceTelegramUrl?.trim();
 
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
@@ -93,7 +94,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
           className="mb-5 text-sm font-bold text-forest hover:underline"
           onClick={() => navigate("/")}
         >
-          Back to store
+          Home
         </button>
 
         <div className="rounded bg-white p-5 shadow-panel sm:p-7">
@@ -112,15 +113,34 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
           </div>
 
           <div className="mt-6 rounded bg-white p-6 text-center shadow-panel ring-1 ring-slate-100">
-            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-sky-50 text-sky-500">
+            <a
+              className={`mx-auto grid h-20 w-20 place-items-center rounded-full bg-sky-50 text-sky-500 transition ${
+                telegramUrl ? "hover:bg-sky-100 hover:text-sky-600" : "pointer-events-none text-slate-300"
+              }`}
+              href={telegramUrl || undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Open Telegram customer service"
+            >
               <Send size={34} />
-            </div>
+            </a>
             <p className="mt-4 text-base font-black text-slate-800">
               Customer Service
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              09:00 WIB - 21:00 WIB
+              08:00 AM - 5:00 PM UTC +8
             </p>
+            <a
+              className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-sm transition sm:w-auto ${
+                telegramUrl ? "hover:bg-sky-600" : "pointer-events-none bg-slate-300"
+              }`}
+              href={telegramUrl || undefined}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Send size={17} />
+              Chat Customer Service
+            </a>
           </div>
         </div>
       </section>

@@ -126,5 +126,7 @@ export interface AppState {
     username: string;
     password: string;
     withdrawalPassword: string;
+    siteUrl?: string;
+    customerServiceTelegramUrl?: string;
   };
 }

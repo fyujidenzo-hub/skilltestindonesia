@@ -5,6 +5,8 @@ export interface AppSettings {
   username: string;
   password: string;
   withdrawalPassword: string;
+  siteUrl?: string;
+  customerServiceTelegramUrl?: string;
 }
 
 const COLLECTION = "settings";
@@ -16,7 +18,7 @@ export async function getSettings(): Promise<AppSettings | null> {
   return snapshot.exists() ? (snapshot.data() as AppSettings) : null;
 }
 
-export async function updateSettings(settings: AppSettings): Promise<void> {
+export async function updateSettings(settings: Partial<AppSettings>): Promise<void> {
   if (!db) throw new Error("Firebase not initialized");
   await setDoc(doc(db, COLLECTION, SETTINGS_DOC), settings, { merge: true });
 }

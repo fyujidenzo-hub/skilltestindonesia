@@ -125,7 +125,8 @@ service cloud.firestore {
         'adminChangedAt',
         'rating',
         'review',
-        'reviewedAt'
+        'reviewedAt',
+        'commissionCreditedAt'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.referenceNumber)
@@ -168,6 +169,10 @@ service cloud.firestore {
         !request.resource.data.keys().hasAny(['reviewedAt'])
         || isOptionalString(request.resource.data.reviewedAt)
       )
+      && (
+        !request.resource.data.keys().hasAny(['commissionCreditedAt'])
+        || isOptionalString(request.resource.data.commissionCreditedAt)
+      )
       && request.resource.data.value >= 0
       && request.resource.data.commission >= 0
       && request.resource.data.requiredBalance >= 0
@@ -193,16 +198,24 @@ service cloud.firestore {
         'withdrawalAccountNumber',
         'proofName',
         'proofType',
-        'proofDataUrl'
+        'proofDataUrl',
+        'creditedAt'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.requestId)
       && isString(request.resource.data.member)
       && isString(request.resource.data.admin)
-      && request.resource.data.type in ['topup', 'withdrawal']
+      && request.resource.data.type in ['topup', 'withdrawal', 'reward']
       && isNumber(request.resource.data.amount)
-      && request.resource.data.amount >= 10000
-      && request.resource.data.status == 'pending'
+      && (
+        (request.resource.data.type == 'withdrawal' && request.resource.data.amount >= 100000)
+        || (request.resource.data.type == 'topup' && request.resource.data.amount >= 10000)
+        || (request.resource.data.type == 'reward' && request.resource.data.amount > 0)
+      )
+      && (
+        (request.resource.data.type == 'reward' && request.resource.data.status == 'approved')
+        || (request.resource.data.type in ['topup', 'withdrawal'] && request.resource.data.status == 'pending')
+      )
       && isString(request.resource.data.createdAt)
       && isOptionalString(request.resource.data.senderName)
       && isOptionalString(request.resource.data.withdrawalBankName)
@@ -212,7 +225,14 @@ service cloud.firestore {
       && isOptionalString(request.resource.data.proofType)
       && isOptionalString(request.resource.data.proofDataUrl)
       && (
-        request.resource.data.type == 'withdrawal'
+        !request.resource.data.keys().hasAny(['creditedAt'])
+        || (
+          (request.resource.data.type == 'reward' && isString(request.resource.data.creditedAt))
+          || (request.resource.data.type in ['topup', 'withdrawal'] && request.resource.data.creditedAt == '')
+        )
+      )
+      && (
+        request.resource.data.type in ['withdrawal', 'reward']
         || (
           isString(request.resource.data.senderName)
           && isString(request.resource.data.proofName)
@@ -221,7 +241,7 @@ service cloud.firestore {
         )
       )
       && (
-        request.resource.data.type == 'topup'
+        request.resource.data.type in ['topup', 'reward']
         || (
           isString(request.resource.data.withdrawalBankName)
           && isString(request.resource.data.withdrawalAccountName)
@@ -231,12 +251,28 @@ service cloud.firestore {
     }
 
     function isValidTransactionStatusUpdate() {
-      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['status'])
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+
+      return changed.hasOnly(['status', 'creditedAt'])
+      && changed.hasAny(['status'])
       && resource.data.status == 'pending'
-      && request.resource.data.status in ['approved', 'rejected'];
+      && request.resource.data.status in ['approved', 'rejected']
+      && (
+        (request.resource.data.status == 'approved'
+          && changed.hasAny(['creditedAt'])
+          && isString(request.resource.data.creditedAt))
+        || (request.resource.data.status == 'rejected'
+          && (
+            !changed.hasAny(['creditedAt'])
+            || request.resource.data.creditedAt == resource.data.creditedAt
+            || request.resource.data.creditedAt == ''
+          ))
+      );
     }
 
     function isValidMemberBalanceUpdate() {
+      // NOTE: This app writes member balance directly from client code.
+      // These rules validate shape only. Full anti-tamper protection needs Firebase Auth + Cloud Functions.
       return request.resource.data.diff(resource.data).changedKeys().hasOnly(['balance', 'totalOrders'])
       && isNumber(request.resource.data.balance)
       && request.resource.data.balance >= 0
@@ -335,6 +371,37 @@ service cloud.firestore {
       && isString(request.resource.data.password);
     }
 
+    function isValidSettings(settingId) {
+      return settingId == 'account'
+      && request.resource.data.keys().hasOnly([
+        'username',
+        'password',
+        'withdrawalPassword',
+        'siteUrl',
+        'customerServiceTelegramUrl'
+      ])
+      && (
+        !request.resource.data.keys().hasAny(['username'])
+        || isString(request.resource.data.username)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['password'])
+        || isString(request.resource.data.password)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['withdrawalPassword'])
+        || isString(request.resource.data.withdrawalPassword)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['siteUrl'])
+        || isOptionalString(request.resource.data.siteUrl)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['customerServiceTelegramUrl'])
+        || isOptionalString(request.resource.data.customerServiceTelegramUrl)
+      );
+    }
+
     match /members/{memberId} {
       allow read: if true;
       allow create: if request.resource.data.id == memberId && isValidMemberCreate();
@@ -346,19 +413,19 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.resource.data.id == adminId && isValidStaffCreate();
       allow update: if request.resource.data.id == adminId && isValidStaffUpdate();
-      allow delete: if false;
+      allow delete: if resource.data.role in ['admin', 'employee'];
     }
 
     match /products/{productId} {
       allow read: if true;
       allow create, update: if request.resource.data.id == productId && isValidProduct();
-      allow delete: if false;
+      allow delete: if true;
     }
 
     match /banks/{bankId} {
       allow read: if true;
       allow create, update: if request.resource.data.id == bankId && isValidBank();
-      allow delete: if false;
+      allow delete: if true;
     }
 
     match /orders/{orderId} {
@@ -377,7 +444,7 @@ service cloud.firestore {
 
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isValidSettings(settingId);
     }
   }
 }

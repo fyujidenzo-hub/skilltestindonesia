@@ -8,6 +8,8 @@ const emptyAccount = {
   username: "",
   password: "",
   withdrawalPassword: "",
+  siteUrl: initialState.account.siteUrl,
+  customerServiceTelegramUrl: "",
 };
 
 function emptyState(): AppState {
@@ -67,7 +69,7 @@ function mergeWithRequiredDefaults(state: AppState): AppState {
     banks: state.banks,
     transactions: state.transactions,
     orders: state.orders,
-    account: state.account.username ? state.account : emptyAccount,
+    account: { ...emptyAccount, ...state.account },
   };
 }
 

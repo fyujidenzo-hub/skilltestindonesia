@@ -38,5 +38,7 @@ export const initialState: AppState = {
     username: "operations.owner",
     password: "admin123",
     withdrawalPassword: "000000",
+    siteUrl: "https://tokopediakaririndonesia.onrender.com",
+    customerServiceTelegramUrl: "",
   },
 };

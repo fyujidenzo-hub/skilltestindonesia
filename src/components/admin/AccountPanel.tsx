@@ -1,26 +1,32 @@
-import { BadgeCheck, Copy, KeyRound, Link2, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck, Copy, KeyRound, Link2, Send, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { roleLabel } from "../../services/adminSession";
 import { updateAdmin } from "../../services/adminsService";
+import { updateSettings } from "../../services/settingsService";
 import { useAppStore } from "../../store/AppStore";
 import type { StaffAdmin } from "../../types";
 
-const publicSiteUrl = "https://tokopediakaririndonesia.onrender.com";
-
 export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin }) {
-  const { dispatch } = useAppStore();
+  const { state, dispatch } = useAppStore();
   const [form, setForm] = useState({
     name: activeAdmin.name,
     username: activeAdmin.username ?? "",
     password: "",
     confirmPassword: "",
   });
+  const [settingsForm, setSettingsForm] = useState({
+    siteUrl: state.account.siteUrl ?? "",
+    customerServiceTelegramUrl: state.account.customerServiceTelegramUrl ?? "",
+  });
   const [message, setMessage] = useState("");
+  const [settingsMessage, setSettingsMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const inviteCode = activeAdmin.invitationCode ?? activeAdmin.code;
   const adminCode = activeAdmin.adminCode ?? activeAdmin.code;
-  const inviteLink = `${publicSiteUrl}/register?code=${inviteCode}`;
+  const siteUrl = normalizeUrl(state.account.siteUrl) || window.location.origin;
+  const inviteLink = `${siteUrl}/register?code=${inviteCode}`;
 
   const saveProfile = async () => {
     if (!form.name.trim() || !form.username.trim()) {
@@ -62,6 +68,41 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
       setMessage("Firebase save failed. Check Firestore admin update rules.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveWhiteLabelSettings = async () => {
+    const nextSiteUrl = normalizeUrl(settingsForm.siteUrl);
+    const nextTelegramUrl = normalizeUrl(settingsForm.customerServiceTelegramUrl);
+
+    if (!nextSiteUrl) {
+      setSettingsMessage("Website link is required.");
+      return;
+    }
+
+    setSavingSettings(true);
+    setSettingsMessage("Saving settings...");
+    try {
+      const nextAccount = {
+        ...state.account,
+        siteUrl: nextSiteUrl,
+        customerServiceTelegramUrl: nextTelegramUrl,
+      };
+      await updateSettings({
+        siteUrl: nextSiteUrl,
+        customerServiceTelegramUrl: nextTelegramUrl,
+      });
+      dispatch({ type: "updateAccount", payload: nextAccount });
+      setSettingsForm({
+        siteUrl: nextSiteUrl,
+        customerServiceTelegramUrl: nextTelegramUrl,
+      });
+      setSettingsMessage("Website and customer service links updated.");
+    } catch (error) {
+      console.error("Failed to update settings:", error);
+      setSettingsMessage("Firebase save failed. Check Firestore settings rules.");
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -143,8 +184,44 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
           </p>
         )}
       </Panel>
+
+      {activeAdmin.role === "super_admin" && (
+        <Panel title="White Label Settings">
+          <div className="grid gap-4">
+            <Field label="Website link">
+              <div className="relative">
+                <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                <input className={`${inputClass} w-full pl-10`} value={settingsForm.siteUrl} onChange={(event) => setSettingsForm({ ...settingsForm, siteUrl: event.target.value })} placeholder="https://your-domain.com" />
+              </div>
+            </Field>
+
+            <Field label="Customer service Telegram link">
+              <div className="relative">
+                <Send className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                <input className={`${inputClass} w-full pl-10`} value={settingsForm.customerServiceTelegramUrl} onChange={(event) => setSettingsForm({ ...settingsForm, customerServiceTelegramUrl: event.target.value })} placeholder="https://t.me/your_support" />
+              </div>
+            </Field>
+          </div>
+
+          <button className="mt-5 w-full rounded bg-forest px-4 py-3 text-sm font-black text-white disabled:bg-slate-400 sm:w-auto" disabled={savingSettings} onClick={saveWhiteLabelSettings}>
+            {savingSettings ? "Saving..." : "Save settings"}
+          </button>
+
+          {settingsMessage && (
+            <p className={`mt-4 rounded px-3 py-2 text-sm font-bold ${settingsMessage.includes("failed") || settingsMessage.includes("required") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+              {settingsMessage}
+            </p>
+          )}
+        </Panel>
+      )}
     </div>
   );
+}
+
+function normalizeUrl(value?: string) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed.replace(/\/+$/, "") : `https://${trimmed.replace(/\/+$/, "")}`;
 }
 
 function InfoPill({ label, value }: { label: string; value: string }) {

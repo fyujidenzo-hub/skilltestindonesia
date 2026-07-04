@@ -96,7 +96,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
       setTimeout(closeModal, 600);
     } catch (error) {
       console.error("Failed to update member:", error);
-      setMessage("Firebase update failed. Check Firestore member rules.");
+      setMessage("Firebase update failed. Check Firestore member/transaction rules.");
     } finally {
       setSaving(false);
     }
