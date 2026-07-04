@@ -236,7 +236,7 @@ const handleRejectChangedProduct = async () => {
 
   if (!ready) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f4f6f5] text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg text-ink">
         <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
       </main>
     );
@@ -244,7 +244,7 @@ const handleRejectChangedProduct = async () => {
 
   if (!currentMember) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f4f6f5] px-4 text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <div className="w-full max-w-sm rounded bg-white p-6 text-center shadow-panel">
           <h1 className="text-2xl font-black">Login required</h1>
           <p className="mt-2 text-sm text-slate-500">Please login before viewing your task orders.</p>
@@ -257,7 +257,7 @@ const handleRejectChangedProduct = async () => {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
+    <main className="min-h-screen customer-page-bg pb-24 text-ink">
       <CustomerHeader query={query} activeUsername={currentMember.username} notifications={notifications} onQueryChange={setQuery} onLogout={logout} navigate={navigate} />
 
       <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">

@@ -11,7 +11,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
 
   if (!ready) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f4f6f5] px-4 text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
       </main>
     );
@@ -19,7 +19,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
 
   if (!member) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f4f6f5] px-4 text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <section className="w-full max-w-md rounded bg-white p-6 text-center shadow-panel">
           <h1 className="text-2xl font-black">Login required</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">Please log in before creating a {type === "topup" ? "top up" : "withdrawal"} request.</p>
@@ -32,7 +32,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
+    <main className="min-h-screen customer-page-bg pb-24 text-ink">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
           <button className="inline-flex items-center gap-2 text-sm font-bold text-forest" onClick={() => navigate("/profile")}>

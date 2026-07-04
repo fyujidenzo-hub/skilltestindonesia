@@ -11,7 +11,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
 
   return (
-    <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
+    <main className="min-h-screen customer-page-bg pb-24 text-ink">
       <CustomerHeader
         query=""
         activeUsername={currentMember?.username}

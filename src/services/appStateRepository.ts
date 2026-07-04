@@ -1,3 +1,4 @@
+import { firebaseReady } from "../firebase";
 import { initialState } from "../data";
 import type { AppState } from "../types";
 
@@ -8,6 +9,19 @@ const emptyAccount = {
   password: "",
   withdrawalPassword: "",
 };
+
+function emptyState(): AppState {
+  return {
+    ...initialState,
+    admins: [],
+    members: [],
+    products: [],
+    banks: [],
+    transactions: [],
+    orders: [],
+    account: emptyAccount,
+  };
+}
 
 function hasUsefulData(state: AppState) {
   return Boolean(
@@ -25,7 +39,10 @@ function mergeAdminDefaults(admins: AppState["admins"]) {
   if (!admins.length) return [];
 
   const enrichedAdmins = admins.map((admin) => {
-    const fallback = initialState.admins.find((item) => item.id === admin.id || item.code === admin.code || item.name === admin.name);
+    const fallback = initialState.admins.find(
+      (item) => item.id === admin.id || item.code === admin.code || item.name === admin.name,
+    );
+
     return {
       ...fallback,
       ...admin,
@@ -50,7 +67,7 @@ function mergeWithRequiredDefaults(state: AppState): AppState {
     banks: state.banks,
     transactions: state.transactions,
     orders: state.orders,
-    account: state.account.username ? state.account : initialState.account,
+    account: state.account.username ? state.account : emptyAccount,
   };
 }
 
@@ -84,18 +101,32 @@ export async function loadStoredState(): Promise<AppState> {
       account: account ?? emptyAccount,
     };
 
-    if (hasUsefulData(firestoreState)) return mergeWithRequiredDefaults(firestoreState);
+    if (hasUsefulData(firestoreState)) {
+      return mergeWithRequiredDefaults(firestoreState);
+    }
+
+    // Important:
+    // If Firebase is configured but Firestore is empty,
+    // DO NOT fall back to old localStorage data.
+    if (firebaseReady) {
+      return emptyState();
+    }
   } catch (error) {
     console.error("Unable to load Firestore state:", error);
+
+    // If Firebase exists but fails/empty, do not use stale local browser data.
+    if (firebaseReady) {
+      return emptyState();
+    }
   }
 
-  // MOBILE/IN-APP BROWSER SAFETY:
-  // Some iPhone in-app browsers can block localStorage and crash the React app.
-  // Keep this fallback guarded so the page does not turn into a white screen.
+  // Only use localStorage when Firebase is NOT configured.
   try {
     const stored = window.localStorage?.getItem(storageKey);
+
     if (stored) {
       const localState = JSON.parse(stored) as AppState;
+
       if (hasUsefulData(localState)) {
         return {
           ...mergeWithRequiredDefaults(localState),
@@ -107,20 +138,15 @@ export async function loadStoredState(): Promise<AppState> {
     console.warn("Unable to load local state:", error);
   }
 
-  return {
-    ...initialState,
-    admins: [],
-    members: [],
-    products: [],
-    banks: [],
-    transactions: [],
-    orders: [],
-  };
+  return emptyState();
 }
 
 export function saveLocalState(state: AppState) {
-  // MOBILE/IN-APP BROWSER SAFETY:
-  // localStorage can throw on iPhone private/in-app browsers. Do not crash the app.
+  // Important:
+  // When Firebase is active, do not keep saving app data to localStorage,
+  // because it can make the app look like it is using old Firebase data.
+  if (firebaseReady) return;
+
   try {
     window.localStorage?.setItem(storageKey, JSON.stringify(state));
   } catch (error) {

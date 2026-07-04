@@ -62,7 +62,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
 
   if (!ready) {
     return (
-      <main className="grid min-h-screen place-items-center bg-mint px-4 text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
       </main>
     );
@@ -70,7 +70,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
 
   if (!member) {
     return (
-      <main className="grid min-h-screen place-items-center bg-mint px-4 text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <section className="w-full max-w-md rounded bg-white p-6 text-center shadow-panel">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-mint text-forest">
             <UserRound size={26} />
@@ -144,7 +144,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
   ];
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#e5fff3_0,#f5f7f6_34%,#eef2f1_100%)] pb-24 text-ink">
+    <main className="min-h-screen customer-page-bg pb-24 text-ink">
       <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <button className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black text-forest transition hover:bg-mint" onClick={() => navigate("/")}>

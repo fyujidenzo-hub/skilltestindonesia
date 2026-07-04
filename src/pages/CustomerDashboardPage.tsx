@@ -138,14 +138,14 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
 
   if (!ready) {
     return (
-      <main className="grid min-h-screen place-items-center bg-cloud text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg text-ink">
         <div className="rounded-2xl bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-cloud pb-28 text-ink">
+    <main className="min-h-screen customer-page-bg pb-28 text-ink">
       <CustomerHeader
         query={query}
         activeUsername={currentMember?.username}

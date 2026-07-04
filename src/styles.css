@@ -78,3 +78,54 @@ select:focus {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+.customer-page-bg {
+  min-height: 100vh;
+  background-color: #f4f6f5;
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(244, 246, 245, 0.55) 0%,
+      rgba(244, 246, 245, 0.68) 45%,
+      rgba(244, 246, 245, 0.82) 100%
+    ),
+    url("/assets/customer-page-bg.jpeg");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .customer-page-bg {
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(244, 246, 245, 0.58) 0%,
+        rgba(244, 246, 245, 0.72) 55%,
+        rgba(244, 246, 245, 0.88) 100%
+      ),
+      url("/assets/customer-page-bg.jpeg");
+    background-size: cover;
+    background-position: center top;
+    background-attachment: scroll;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .customer-page-bg {
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(244, 246, 245, 0.50) 0%,
+        rgba(244, 246, 245, 0.70) 48%,
+        rgba(244, 246, 245, 0.92) 100%
+      ),
+      url("/assets/customer-page-bg.jpeg");
+    background-size: cover;
+    background-position: center top;
+    background-attachment: scroll;
+  }
+}

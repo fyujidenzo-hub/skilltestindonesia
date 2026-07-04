@@ -31,6 +31,9 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const currentMember = state.members.find((item) => item.username === member);
   const withdrawalBlockMessage =
     type === "withdraw" && currentMember ? validateWithdrawalRequest(currentMember, state.orders, amount) : "";
+const isTopUp = type === "topup";
+const statusText = isTopUp ? "Pending Topup" : "Pending Withdrawal";
+const submitText = isTopUp ? "Submit Topup" : "Submit Withdrawal";
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -222,7 +225,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
           <p className="text-xs font-black uppercase tracking-wide text-white/70">Request amount</p>
           <p className="mt-2 break-words text-3xl font-black">{formatRupiah(amount)}</p>
           <div className="mt-5 space-y-3 text-sm">
-            <SummaryItem label="Status" value="Pending Withdrawal" />
+            <SummaryItem label="Status" value={statusText} />
             <SummaryItem label="Member" value={member} />
             <SummaryItem label="Admin scope" value={admin} />
             {type === "withdraw" && withdrawalBankName && <SummaryItem label="Withdrawal bank" value={withdrawalBankName} />}
@@ -235,7 +238,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
           Cancel
         </button>
         <button className="rounded bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || Boolean(withdrawalBlockMessage)}>
-          {loading ? "Submitting..." : "Submit Withdrawal"}
+          {loading ? "Submitting..." : submitText}
         </button>
       </div>
     </form>

@@ -294,7 +294,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   if (!ready) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f4f6f5] text-ink">
+      <main className="grid min-h-screen place-items-center customer-page-bg text-ink">
         <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
       </main>
     );
@@ -302,7 +302,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   if (state.members.length === 0) {
     return (
-      <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink flex items-center justify-center">
+      <main className="min-h-screen customer-page-bg pb-24 text-ink flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-4">No Data Available</h1>
           <p className="text-gray-600 mb-6">Please seed Firestore with sample data to continue.</p>
@@ -318,7 +318,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
+    <main className="min-h-screen customer-page-bg pb-24 text-ink">
       <CustomerHeader
         query={query}
         activeUsername={currentMember?.username}
