@@ -13,9 +13,9 @@ export default function ProductGrid({ products, onClearSearch }: ProductGridProp
   return (
     <section id="products">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xl font-black">Recommended products</h2>
+        <h2 className="text-xl font-black">Produk yang direkomendasikan</h2>
         <button className="text-sm font-bold text-forest" onClick={onClearSearch}>
-          See all
+          Lihat semua
         </button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -28,7 +28,7 @@ export default function ProductGrid({ products, onClearSearch }: ProductGridProp
           ))
         ) : (
           <div className="rounded bg-white p-6 text-center text-sm text-slate-500 shadow-panel sm:col-span-2 xl:col-span-3">
-            No products currently. Products added from the admin catalog will appear here.
+            Saat ini tidak ada produk. Produk yang ditambahkan dari katalog admin akan muncul di sini.
           </div>
         )}
       </div>

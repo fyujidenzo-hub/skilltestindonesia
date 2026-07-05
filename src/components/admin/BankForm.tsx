@@ -23,7 +23,7 @@ export default function BankForm({ bank, onDone }: { bank?: BankPlacement; onDon
       onSubmit={async (event) => {
         event.preventDefault();
         setSaving(true);
-        setMessage(isEditing ? "Updating bank settings..." : "Saving bank placement...");
+        setMessage(isEditing ? "Memperbarui pengaturan bank..." : "Penempatan dana tabungan...");
 
         try {
           if (bank) {
@@ -52,7 +52,7 @@ export default function BankForm({ bank, onDone }: { bank?: BankPlacement; onDon
       <input className={inputClass} type="number" placeholder="Minimum deposit" required value={form.minDeposit} onChange={(event) => setForm({ ...form, minDeposit: Number(event.target.value) })} />
       <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
         <input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} />
-        Active bank details
+        Detail rekening aktif
       </label>
       {message && (
         <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
@@ -60,7 +60,7 @@ export default function BankForm({ bank, onDone }: { bank?: BankPlacement; onDon
         </p>
       )}
       <button disabled={saving} className="rounded bg-forest px-4 py-2 font-bold text-white disabled:bg-slate-400">
-        {saving ? "Saving..." : isEditing ? "Update bank settings" : "Save bank"}
+        {saving ? "Penghematan..." : isEditing ? "Perbarui pengaturan bank" : "Simpan bank"}
       </button>
     </form>
   );

@@ -171,7 +171,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             }`}
             onClick={() => setShowFilters((current) => !current)}
           >
-            <Filter size={16} /> Filters
+            <Filter size={16} /> Filter
           </button>
         }
       >
@@ -188,28 +188,28 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
         <div className="mt-4 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
             <div>
-              <p className="text-sm font-black text-slate-900">Order records</p>
-              <p className="text-xs text-slate-500">Showing {startRow}-{endRow} of {visibleRows.length} records</p>
+              <p className="text-sm font-black text-slate-900">Catatan pesanan</p>
+              <p className="text-xs text-slate-500">Menampilkan {startRow}-{endRow} of {visibleRows.length} catatan</p>
             </div>
-            <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per page</span>
+            <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per halaman</span>
           </div>
 
           <div className="overflow-x-auto">
           <table className="w-full min-w-[1450px] border-separate border-spacing-0 bg-white text-left text-[13px]">
             <thead className="bg-slate-900 text-left text-xs uppercase text-white">
               <tr>
-                <Th>Order Code</Th>
-                <Th>User</Th>
-                <Th>Name</Th>
-                <Th>User Balance</Th>
-                <Th>Product</Th>
-                <Th>Total Price</Th>
-                <Th>Commission</Th>
-                <Th>Balance Shortage</Th>
+                <Th>Kode Pesanan</Th>
+                <Th>Pengguna</Th>
+                <Th>Nama</Th>
+                <Th>Saldo Pengguna</Th>
+                <Th>Produk</Th>
+                <Th>Total Harga</Th>
+                <Th>Komisi</Th>
+                <Th>Kekurangan Saldo</Th>
                 <Th>Status</Th>
-                <Th>Task</Th>
-                <Th>Date</Th>
-                <Th>Action</Th>
+                <Th>Tugas</Th>
+                <Th>Tanggal</Th>
+                <Th>Tindakan</Th>
               </tr>
             </thead>
             <tbody>
@@ -248,7 +248,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                           <div className="grid gap-1">
                             {needsApproval && (
                               <span className="mb-1 inline-flex w-fit rounded bg-amber-50 px-2 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
-                                User requested this product
+                                Pengguna meminta produk ini.
                               </span>
                             )}
                             {assignedProducts.map((product) => (
@@ -259,7 +259,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                             ))}
                           </div>
                         ) : (
-                          <span className="text-slate-400">Waiting product</span>
+                          <span className="text-slate-400">Menunggu produk</span>
                         )}
                       </Td>
                       <Td>{formatRupiah(order.value ?? 0)}</Td>
@@ -273,11 +273,11 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                       </Td>
                       <Td>
                         <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : isRejected ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
-                          {isCompleted ? "Completed" : isRejected ? "Rejected" : "Pending"}
+                          {isCompleted ? "Selesai" : isRejected ? "Ditolak" : "Tertunda"}
                         </span>
                       </Td>
                       <Td>
-                        <span className="font-black text-slate-900">Task {taskProgress} / {taskTarget}</span>
+                        <span className="font-black text-slate-900">Tugas{taskProgress} / {taskTarget}</span>
                       </Td>
                       <Td>{shortDate(order.createdAt)}</Td>
                       <Td>
@@ -288,21 +288,21 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                               disabled={isSaving}
                               onClick={() => approveRequestedProduct(order)}
                             >
-                              <CheckCircle2 size={14} /> Accept
+                              <CheckCircle2 size={14} /> Menerima
                             </button>
                             <button
                               className="inline-flex items-center justify-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700 disabled:bg-slate-300"
                               disabled={isSaving}
                               onClick={() => openProductModal(order)}
                             >
-                              <PackagePlus size={14} /> Change Product
+                              <PackagePlus size={14} /> Ganti Produk
                             </button>
                             <button
                               className="inline-flex items-center justify-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-black text-white hover:bg-rose-700 disabled:bg-slate-300"
                               disabled={isSaving}
                               onClick={() => rejectRequestedProduct(order)}
                             >
-                              <X size={14} /> Reject
+                              <X size={14} /> Menolak
                             </button>
                           </div>
                         ) : !hasProduct && !isCompleted && !isRejected ? (
@@ -310,19 +310,19 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                             className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
                             onClick={() => openProductModal(order)}
                           >
-                            <PackagePlus size={14} /> Add Product
+                            <PackagePlus size={14} /> Tambah Produk
                           </button>
                         ) : hasProduct && !isCompleted && !isRejected ? (
                           <span className="inline-flex max-w-[140px] rounded bg-amber-100 px-3 py-2 text-xs font-black leading-4 text-amber-700">
-                            Product selected, waiting for completion
+                            Produk telah dipilih, menunggu penyelesaian
                           </span>
                         ) : isRejected ? (
                           <span className="inline-flex rounded bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">
-                            Rejected
+                            Ditolak
                           </span>
                         ) : (
                           <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">
-                            Completed
+                            Selesai
                           </span>
                         )}
                       </Td>
@@ -332,7 +332,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
               ) : (
                 <tr>
                   <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
-                    No order records in this admin scope yet.
+                    Belum ada catatan pesanan dalam lingkup admin ini.
                   </td>
                 </tr>
               )}
@@ -358,7 +358,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             </div>
 
             <div className="border-b border-slate-100 px-5 py-3">
-              <label className="text-xs font-bold text-slate-600">Sort by price</label>
+              <label className="text-xs font-bold text-slate-600">Urutkan berdasarkan harga</label>
               <select
                 value={productSort}
                 onChange={(e) => {
@@ -367,9 +367,9 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                 }}
                 className="mt-2 w-full rounded border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900"
               >
-                <option value="none">Default order</option>
-                <option value="price-high">Highest price to lowest</option>
-                <option value="price-low">Lowest price to highest</option>
+                <option value="none">Urutan default</option>
+                <option value="price-high">Harga tertinggi ke terendah</option>
+                <option value="price-low">Harga terendah ke tertinggi</option>
               </select>
             </div>
 
@@ -407,21 +407,21 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                   <ChevronLeft size={16} /> Previous
                 </button>
                 <span className="text-xs font-bold text-slate-500">
-                  Page {productPage + 1} of {productPages}
+                 Halaman {productPage + 1} of {productPages}
                 </span>
                 <button
                   className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-sm font-bold disabled:text-slate-300"
                   disabled={productPage >= productPages - 1}
                   onClick={() => setProductPage((page) => Math.min(productPages - 1, page + 1))}
                 >
-                  Next <ChevronRight size={16} />
+                  Berikutnya <ChevronRight size={16} />
                 </button>
               </div>
             </div>
 
             <div className="flex gap-3 border-t border-slate-100 px-5 py-4">
               <button className="flex-1 rounded border border-slate-200 px-4 py-3 font-black hover:bg-slate-50" onClick={closeProductModal}>
-                Cancel
+                Membatalkan
               </button>
               <button
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded bg-forest px-4 py-3 font-black text-white disabled:bg-slate-400"
@@ -480,7 +480,7 @@ function OrderAction({ hasProduct, isCompleted, onAdd }: { hasProduct: boolean; 
   if (!hasProduct && !isCompleted) {
     return (
       <button className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700" onClick={onAdd}>
-        <PackagePlus size={14} /> Add Product
+        <PackagePlus size={14} /> Tambah Produk
       </button>
     );
   }
@@ -488,7 +488,7 @@ function OrderAction({ hasProduct, isCompleted, onAdd }: { hasProduct: boolean; 
   if (hasProduct && !isCompleted) {
     return (
       <span className="inline-flex max-w-[180px] rounded bg-amber-100 px-3 py-2 text-xs font-black leading-4 text-amber-700">
-        Product selected, waiting for completion
+        Produk telah dipilih, menunggu penyelesaian
       </span>
     );
   }
@@ -502,10 +502,10 @@ function TablePagination({ page, totalPages, onPageChange }: { page: number; tot
       <p className="text-xs font-semibold text-slate-500">Page {page + 1} of {totalPages}</p>
       <div className="flex gap-2">
         <button className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 disabled:text-slate-300 sm:flex-none" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
-          Previous
+          Sebelumnya
         </button>
         <button className="flex-1 rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-300 sm:flex-none" disabled={page >= totalPages - 1} onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}>
-          Next
+         Berikutnya
         </button>
       </div>
     </div>

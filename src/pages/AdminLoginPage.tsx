@@ -17,8 +17,8 @@ export default function AdminLoginPage({ navigate }: { navigate: Navigate }) {
         <div className="grid h-12 w-12 place-items-center rounded bg-slate-900 text-white">
           <ShieldCheck size={23} />
         </div>
-        <h1 className="mt-4 text-3xl font-black">Admin login</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Sign in with a super admin, admin, or employee account.</p>
+        <h1 className="mt-4 text-3xl font-black">Login admin</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500">Masuk menggunakan akun super admin, admin, atau karyawan.</p>
 
         <form
           className="mt-6 grid gap-3"
@@ -52,9 +52,9 @@ export default function AdminLoginPage({ navigate }: { navigate: Navigate }) {
               {message}
             </p>
           )}
-          <button className="h-12 rounded bg-slate-900 font-bold text-white hover:bg-slate-800">Login to admin board</button>
+          <button className="h-12 rounded bg-slate-900 font-bold text-white hover:bg-slate-800">Masuk</button>
           <button type="button" className="h-11 rounded border border-slate-200 font-bold text-slate-700 hover:bg-slate-50" onClick={() => navigate("/")}>
-            Back to customer store
+            Kembali ke halaman Kerja
           </button>
         </form>
 

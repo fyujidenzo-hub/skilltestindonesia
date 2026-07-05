@@ -119,7 +119,7 @@ export default function ProductForm() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div>
-          <label className="text-xs font-bold text-slate-600">Price (IDR)</label>
+          <label className="text-xs font-bold text-slate-600">Harga (IDR)</label>
           <input
             className={inputClass}
             type="number"
@@ -130,13 +130,13 @@ export default function ProductForm() {
         </div>
 
         <div>
-          <label className="text-xs font-bold text-slate-600">Commission (20% auto)</label>
+          <label className="text-xs font-bold text-slate-600">Komisi (20% otomatis)</label>
           <input className={inputClass} type="number" disabled value={form.commission} />
         </div>
       </div>
 
       <div>
-        <label className="text-xs font-bold text-slate-600">Required work balance (IDR)</label>
+        <label className="text-xs font-bold text-slate-600">Keseimbangan pekerjaan yang diperlukan (IDR)</label>
         <input
           className={inputClass}
           type="number"

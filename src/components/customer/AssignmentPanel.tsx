@@ -163,18 +163,17 @@ const assignedCommission = assignedProducts.length
             <Package size={34} />
           </div>
 
-          <h3 className="mb-2 text-lg font-bold">No Task Assigned</h3>
+          <h3 className="mb-2 text-lg font-bold">Tidak Ada Tugas yang Ditugaskan</h3>
 
           <p className="mb-6 text-sm text-slate-500">
-            Take a general task, or select a product card to request a specific order.
+            Ambil tugas umum, atau pilih kartu produk untuk meminta pesanan khusus.
           </p>
-
           {isZeroBalance && (
             <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left">
               <div className="flex gap-2">
                 <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-700" />
                 <p className="text-sm font-semibold text-amber-900">
-                  New users with zero balance cannot accept order tasks yet. Please wait for the admin sign-up bonus or top up your account first.
+                  Pengguna baru dengan saldo nol belum dapat menerima tugas pesanan. Harap tunggu bonus pendaftaran dari admin atau lakukan isi ulang saldo akun Anda terlebih dahulu.
                 </p>
               </div>
 
@@ -184,7 +183,7 @@ const assignedCommission = assignedProducts.length
                   onClick={onTopUp}
                   className="mt-3 w-full rounded-xl bg-sky-600 px-4 py-2 text-sm font-black text-white hover:bg-sky-700"
                 >
-                  Top Up Now
+                  Isi Saldo Sekarang
                 </button>
               )}
             </div>
@@ -221,8 +220,8 @@ const assignedCommission = assignedProducts.length
 
             <p className="mb-4 text-sm text-slate-600">
               {requestedProductName
-                ? `Your request for ${requestedProductName} has been sent. Admin will approve it before you can send the order.`
-                : "Your order task has been taken. Admin will add the assigned product."}
+                ? `Permintaan Anda untuk ${requestedProductName} telah dikirim. Admin akan menyetujuinya sebelum Anda dapat mengirimkan pesanan.`
+                : "Tugas pemesanan Anda telah diambil. Admin akan menambahkan produk yang ditugaskan."}
             </p>
 
             <div className="text-xs text-slate-500">
@@ -244,7 +243,7 @@ const assignedCommission = assignedProducts.length
         <div className="rounded-3xl border border-white bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
           <div className="mb-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">Assigned Products</h3>
+              <h3 className="text-lg font-bold">Produk yang Ditugaskan</h3>
 
               <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-700">
                 {getOrderStateLabel(state)}
@@ -282,18 +281,18 @@ const assignedCommission = assignedProducts.length
                       )}
 
                       <div>
-                        <p className="text-xs uppercase text-slate-500">Product</p>
+                        <p className="text-xs uppercase text-slate-500">Produk</p>
                         <p className="font-bold">{product.name}</p>
                         <p className="text-sm text-slate-600">{product.code}</p>
                       </div>
 
                       <div>
-                        <p className="text-xs uppercase text-slate-500">Order Price</p>
+                        <p className="text-xs uppercase text-slate-500">Harga Pesanan</p>
                         <p className="font-bold">
                           {formatRupiah(product.price * product.quantity)}
                         </p>
                         <p className="text-sm text-emerald-700">
-                          Commission: {formatRupiah(product.commission * product.quantity)}
+                         Komisi: {formatRupiah(product.commission * product.quantity)}
                         </p>
                       </div>
                     </div>
@@ -305,21 +304,21 @@ const assignedCommission = assignedProducts.length
             {(state === "product_assigned" || state === "waiting_shipment") && (
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex justify-between gap-4">
-                  <span className="text-sm text-slate-600">Your Balance:</span>
+                  <span className="text-sm text-slate-600">Saldo Anda:</span>
                   <span className="font-black text-slate-900">
                     {formatRupiah(currentBalance)}
                   </span>
                 </div>
 
                 <div className="mt-2 flex justify-between gap-4">
-                  <span className="text-sm text-slate-600">Order Amount:</span>
+                  <span className="text-sm text-slate-600">Jumlah Pesanan:</span>
                   <span className="font-black text-slate-900">
                     {formatRupiah(assignedOrderAmount)}
                   </span>
                 </div>
 
                 <div className="mt-2 flex justify-between gap-4">
-                  <span className="text-sm text-slate-600">Commission to Earn:</span>
+                  <span className="text-sm text-slate-600">Komisi yang Diperoleh:</span>
                   <span className="font-black text-emerald-700">
                     + {formatRupiah(assignedCommission)}
                   </span>
@@ -332,11 +331,11 @@ const assignedCommission = assignedProducts.length
             (order?.requiresCustomerApproval ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-sm font-black text-amber-800">
-                  Admin changed the product
+                 Admin mengubah produk tersebut.
                 </p>
 
                 <p className="mt-1 text-xs text-amber-700">
-                  Review the assigned product above. Accept it to continue, or reject it to cancel this task.
+                  Tinjau produk yang ditugaskan di atas. Terima untuk melanjutkan, atau tolak untuk membatalkan tugas ini.
                 </p>
 
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -346,7 +345,7 @@ const assignedCommission = assignedProducts.length
                     disabled={isLoading}
                     className="rounded-xl bg-forest px-4 py-3 text-sm font-black text-white disabled:bg-slate-400"
                   >
-                    Accept Product
+                    Terima Produk
                   </button>
 
                   <button
@@ -355,7 +354,7 @@ const assignedCommission = assignedProducts.length
                     disabled={isLoading}
                     className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white disabled:bg-slate-400"
                   >
-                    Reject Product
+                    Produk Ditolak
                   </button>
                 </div>
               </div>
@@ -388,8 +387,8 @@ const assignedCommission = assignedProducts.length
 
                   <p className="text-xs text-slate-600">
                     {state === "diserahkan"
-                      ? "Your order has been successfully completed and delivered."
-                      : "Your order has been submitted and is waiting for delivery confirmation."}
+                      ? "Pesanan Anda telah berhasil diselesaikan dan dikirim."
+                      : "Pesanan Anda telah diajukan dan sedang menunggu konfirmasi pengiriman."}
                   </p>
 
                   <button
@@ -397,7 +396,7 @@ const assignedCommission = assignedProducts.length
                     onClick={() => setShowReceipt(true)}
                     className="mt-2 text-xs font-bold text-emerald-700 hover:underline"
                   >
-                    Download Receipt →
+                    Unduh Bukti Pembayaran →
                   </button>
 
                   {state === "belum_diserahkan" && (
@@ -407,7 +406,7 @@ const assignedCommission = assignedProducts.length
                       disabled={isLoading}
                       className="mt-3 w-full rounded-xl bg-forest px-3 py-2 text-xs font-bold text-white disabled:bg-slate-400"
                     >
-                      Confirm Shipment
+                      Konfirmasi Pengiriman
                     </button>
                   )}
                 </div>

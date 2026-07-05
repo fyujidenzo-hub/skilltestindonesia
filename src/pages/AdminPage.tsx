@@ -118,7 +118,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
   if (!ready) {
     return (
       <main className="grid min-h-screen place-items-center bg-cloud text-ink">
-        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring admin session...</div>
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Memulihkan sesi admin...</div>
       </main>
     );
   }
@@ -234,7 +234,7 @@ function buildAdminNotifications(members: Member[], transactions: Transaction[],
     .filter((transaction) => transaction.status === "pending")
     .map((transaction) => ({
       id: `transaction-${transaction.id}`,
-      title: transaction.type === "topup" ? "New Top Up request" : transaction.type === "withdrawal" ? "New withdrawal request" : "New balance reward",
+      title: transaction.type === "topup" ? "New Top Up request" : transaction.type === "withdrawal" ? "Permintaan penarikan baru" : "Imbalan saldo baru",
       text: `${transaction.member} requested ${formatNotificationAmount(transaction.amount)}. Status: Pending.`,
       time: transaction.createdAt,
       tone: transaction.type === "topup" ? ("topup" as const) : transaction.type === "withdrawal" ? ("withdrawal" as const) : ("completed" as const),
@@ -245,9 +245,9 @@ function buildAdminNotifications(members: Member[], transactions: Transaction[],
     .filter((order) => getAdminOrderStatus(order) !== "completed")
     .map((order) => ({
       id: `order-${order.id}`,
-      title: getAdminOrderStatus(order) === "pending" ? "Order waiting assignment" : "Order in progress",
-      text: `${order.member} has ${order.productName ? order.productName : "an order task"} pending.`,
-      time: order.createdAt,
+      title: getAdminOrderStatus(order) === "pending" ? "Pesanan menunggu penugasan" : "Pesanan sedang diproses",
+      text: `${order.member} has ${order.productName ? order.productName : "tugas pesanan"} tertunda.`,
+      waktu: order.createdAt,
       tone: "order" as const,
       sortTime: parseRecordDate(order.createdAt)?.getTime() ?? 0,
     }));
@@ -257,7 +257,7 @@ function buildAdminNotifications(members: Member[], transactions: Transaction[],
     .map((order) => ({
       id: `completed-order-${order.id}`,
       title: "Order completed",
-      text: `${order.member} completed ${order.productName || "an order task"}.`,
+      text: `${order.member} completed ${order.productName || "sebuah tugas pemesanan"}.`,
       time: order.completedAt ?? order.createdAt,
       tone: "completed" as const,
       sortTime: parseRecordDate(order.completedAt ?? order.createdAt)?.getTime() ?? 0,

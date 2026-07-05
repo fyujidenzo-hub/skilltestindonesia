@@ -51,8 +51,8 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
           <div className="invisible absolute right-0 top-full z-50 w-80 max-w-[calc(100vw-2rem)] pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
             <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-slate-200">
               <div className="border-b border-slate-100 px-4 py-3">
-                <p className="text-sm font-black">Notifications</p>
-                <p className="text-xs text-slate-500">{notifications.length ? "Recent account activity" : "You are all caught up"}</p>
+                <p className="text-sm font-black">Notifikasi</p>
+                <p className="text-xs text-slate-500">{notifications.length ? "Aktivitas akun terkini" : "Anda sudah melihat semuanya"}</p>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length ? (
@@ -76,8 +76,8 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
                     <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400">
                       <Bell size={20} />
                     </div>
-                    <p className="mt-3 text-sm font-bold text-slate-700">No notifications currently</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">Order updates, top-up requests, and withdrawal updates will appear here.</p>
+                    <p className="mt-3 text-sm font-bold text-slate-700">Tidak ada notifikasi saat ini</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Pembaruan pesanan, permintaan isi saldo, dan pembaruan penarikan akan muncul di sini.</p>
                   </div>
                 )}
               </div>
@@ -96,21 +96,21 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
                   onClick={() => navigate("/profile")}
                 >
                   <UserRound size={16} />
-                  Profile
+                  Profil
                 </button>
                 <button
                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-mint hover:text-forest"
                   onClick={() => navigate("/profile#settings")}
                 >
                   <Settings size={16} />
-                  Settings
+                  Pengaturan
                 </button>
                 <button
                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-coral hover:bg-rose-50"
                   onClick={onLogout}
                 >
                   <LogOut size={16} />
-                  Logout
+                  Keluar
                 </button>
               </div>
             </div>

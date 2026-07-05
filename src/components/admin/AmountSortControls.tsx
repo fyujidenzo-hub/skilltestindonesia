@@ -21,7 +21,7 @@ export default function AmountSortControls({ value, onChange, label = "Amount", 
         onClick={() => toggleSort("asc")}
         aria-pressed={value === "asc"}
       >
-        ↑ Lowest first
+       ↑ Terendah lebih dulu
       </button>
       <button
         type="button"
@@ -29,7 +29,7 @@ export default function AmountSortControls({ value, onChange, label = "Amount", 
         onClick={() => toggleSort("desc")}
         aria-pressed={value === "desc"}
       >
-        ↓ Highest first
+        ↓ Tertinggi lebih dulu
       </button>
     </div>
   );

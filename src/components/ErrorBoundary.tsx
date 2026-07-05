@@ -30,7 +30,7 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
         <div className="mx-auto max-w-md rounded-3xl bg-white p-6 shadow-panel">
           <h1 className="text-xl font-black">Unable to load app</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Please refresh the page. If you opened this inside WhatsApp or another in-app browser, tap the menu and open it in Safari/Chrome.
+            Silakan segarkan halaman ini. Jika Anda membukanya di dalam WhatsApp atau browser dalam aplikasi lainnya, ketuk menu lalu buka di Safari/Chrome.
           </p>
           {this.state.message ? (
             <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-xs text-rose-700">
@@ -42,7 +42,7 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
             onClick={() => window.location.reload()}
             className="mt-5 w-full rounded-2xl bg-emerald-600 px-4 py-3 font-black text-white"
           >
-            Refresh
+           Menyegarkan
           </button>
         </div>
       </main>

@@ -24,7 +24,7 @@ export default function CustomerHero({ balance, username, phone, onTopUp, onWith
           <div className="bg-[linear-gradient(135deg,#047857_0%,#15945f_48%,#84cc16_100%)] px-4 py-6 text-white sm:px-6 lg:px-8">
             <div className="grid gap-5 lg:grid-cols-[1fr_360px] lg:items-end">
               <div className="min-w-0">
-                <p className="text-lg font-semibold text-white/90 sm:text-2xl">Welcome to the Tokopedia work account,</p>
+                <p className="text-lg font-semibold text-white/90 sm:text-2xl">Selamat datang di akun kerja Tokopedia,</p>
                 <h1 className="mt-2 break-words text-4xl font-black leading-tight sm:text-5xl">
                   {username || "Guest User"}
                 </h1>

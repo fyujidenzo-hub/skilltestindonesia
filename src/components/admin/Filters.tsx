@@ -9,7 +9,7 @@ export default function Filters({ children }: { children?: React.ReactNode }) {
         <input className={inputClass} placeholder="Username / ID" />
         <input className={inputClass} placeholder="Phone number" />
         <button className="inline-flex h-11 items-center justify-center gap-2 rounded bg-sky-500 px-4 text-sm font-bold text-white">
-          <Search size={17} /> Search
+          <Search size={17} /> Mencari
         </button>
       </div>
       {children && <div className="border-t border-slate-200 pt-3">{children}</div>}

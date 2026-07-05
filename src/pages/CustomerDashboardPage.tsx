@@ -180,14 +180,14 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
               <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white/92 text-forest shadow-sm">
                 <ClipboardList size={38} />
               </div>
-              <h1 className="mt-4 text-center text-3xl font-black">Classic</h1>
+              <h1 className="mt-4 text-center text-3xl font-black">Klasik</h1>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/45">
                 <div className="h-full rounded-full bg-white" style={{ width: `${completionPercent}%` }} />
               </div>
-              <p className="mt-4 text-center text-sm font-semibold text-white/90">Tasks completed</p>
+              <p className="mt-4 text-center text-sm font-semibold text-white/90">Tugas selesai</p>
               <p className="text-center text-4xl font-black">{completedOrders.length}</p>
               <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest">
-                Complete your first task <Star className="ml-1 inline" size={16} fill="currentColor" />
+                Selesaikan tugas pertama Anda <Star className="ml-1 inline" size={16} fill="currentColor" />
               </div>
             </section>
 
@@ -196,10 +196,10 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
                 <ShoppingBag size={38} />
               </div>
               <p className="mt-7 text-5xl font-black text-forest">{completionPercent}%</p>
-              <p className="mt-2 text-lg font-black text-slate-800">Total task target</p>
+              <p className="mt-2 text-lg font-black text-slate-800">Total target tugas</p>
               <p className="text-3xl font-black">{dailyOrderTarget}</p>
               <div className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-forest">
-                You can do this! <CheckCircle2 className="ml-1 inline" size={16} />
+                Anda bisa melakukan ini.! <CheckCircle2 className="ml-1 inline" size={16} />
               </div>
             </section>
           </div>
@@ -215,7 +215,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
             <DashboardMetric
               icon={<WalletCards size={22} />}
               label="Work account balance"
-              description="Balance increases after completed order tasks"
+              description="Saldo bertambah setelah tugas pesanan diselesaikan."
               value={formatRupiah(currentMember?.balance ?? 0)}
             />
             <button
@@ -230,7 +230,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
               disabled={isAcceptingTask || (currentMember?.balance === 0)}
             >
               {currentMember ? <Banknote size={20} /> : <LogIn size={20} />}
-              {isAcceptingTask ? "Accepting..." : currentMember?.balance === 0 ? "Need Sign-up Bonus or Top Up" : currentMember ? "Take Order" : "Login to Take Order"}
+              {isAcceptingTask ? "Accepting..." : currentMember?.balance === 0 ? "Butuh Bonus Pendaftaran atau Isi Saldo?" : currentMember ? "Terima Pesanan" : "Masuk untuk Menerima Pesanan"}
             </button>
           </section>
 
@@ -238,8 +238,8 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
             <div className="flex items-center gap-4">
               <img className="h-16 w-16 rounded-2xl object-cover ring-1 ring-emerald-100" src={customerLogo} alt="Tokopedia work account mascot" />
               <div>
-                <p className="text-lg font-black text-forest">Keep going</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">Finish all assigned tasks and keep your work account active every day.</p>
+                <p className="text-lg font-black text-forest">Teruslah melangkah</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">Selesaikan semua tugas yang diberikan dan jaga akun kerja Anda tetap aktif setiap hari.</p>
               </div>
             </div>
           </section>
@@ -268,6 +268,6 @@ function DashboardMetric({ icon, label, description, value }: { icon: React.Reac
 
 
 function getCustomerTransactionTitle(transaction: Transaction) {
-  const label = transaction.type === "reward" ? "Balance Reward" : transaction.type === "topup" ? "Balance Top-up" : "Withdrawal";
+  const label = transaction.type === "reward" ? "Balance Reward" : transaction.type === "topup" ? "Isi Saldo" : "Penarikan";
   return transaction.status === "pending" ? `${label} pending` : `${label} ${transaction.status}`;
 }

@@ -82,8 +82,8 @@ export default function WalletValidation({
 
           <div className="mb-6 rounded border border-amber-200 bg-amber-50 p-4">
             <p className="text-sm text-amber-900">
-              Your balance must be equal to or higher than the order amount before
-              you can complete this task. Please top up first.
+            Saldo Anda harus sama dengan atau lebih besar dari jumlah pesanan sebelum
+              Anda dapat menyelesaikan tugas ini. Harap lakukan isi ulang terlebih dahulu.
             </p>
           </div>
 
@@ -93,7 +93,7 @@ export default function WalletValidation({
               onClick={onCancel}
               className="rounded border border-slate-200 px-4 py-2 font-bold hover:bg-slate-50"
             >
-              Cancel
+              Membatalkan
             </button>
 
             <button
@@ -101,7 +101,7 @@ export default function WalletValidation({
               onClick={onConfirm}
               className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-700"
             >
-              Top Up Now
+              Isi Saldo Sekarang
             </button>
           </div>
         </div>
@@ -112,25 +112,25 @@ export default function WalletValidation({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
       <div className="w-full max-w-sm rounded bg-white p-6 shadow-panel">
-        <h3 className="mb-4 text-xl font-bold">Confirm Order Submission</h3>
+        <h3 className="mb-4 text-xl font-bold">Konfirmasi Pengiriman Pesanan</h3>
 
         <div className="mb-4 space-y-2 rounded bg-slate-50 p-4">
           <div className="flex justify-between gap-4">
-            <span className="text-sm text-slate-600">Order Amount:</span>
+            <span className="text-sm text-slate-600">Jumlah Pesanan:</span>
             <span className="font-bold text-slate-900">
               {formatRupiah(orderAmount)}
             </span>
           </div>
 
           <div className="flex justify-between gap-4">
-            <span className="text-sm text-slate-600">Your Balance:</span>
+            <span className="text-sm text-slate-600">Saldo Anda:</span>
             <span className="font-bold text-emerald-700">
               {formatRupiah(currentBalance)}
             </span>
           </div>
 
           <div className="flex justify-between gap-4">
-            <span className="text-sm text-slate-600">Commission Earned:</span>
+            <span className="text-sm text-slate-600">Komisi yang Diperoleh:</span>
             <span className="font-bold text-emerald-700">
               + {formatRupiah(commissionAmount)}
             </span>
@@ -138,7 +138,7 @@ export default function WalletValidation({
 
           <div className="flex justify-between gap-4 border-t border-slate-200 pt-2">
             <span className="text-sm font-bold text-slate-600">
-              Balance After Completion:
+             Saldo Setelah Penyelesaian:
             </span>
             <span className="font-bold text-emerald-700">
               {formatRupiah(balanceAfterCompletion)}
@@ -147,8 +147,8 @@ export default function WalletValidation({
         </div>
 
         <p className="mb-6 text-sm text-slate-600">
-          Your balance is eligible for this order. The order amount will not be
-          deducted. Only the commission will be added after the order is completed.
+          Saldo Anda memenuhi syarat untuk pesanan ini. Jumlah pesanan tidak akan
+          dipotong. Hanya komisi yang akan ditambahkan setelah pesanan selesai.
         </p>
 
         <div className="grid grid-cols-2 gap-3">
@@ -158,7 +158,7 @@ export default function WalletValidation({
             disabled={isLoading}
             className="rounded border border-slate-200 px-4 py-2 font-bold hover:bg-slate-50 disabled:opacity-50"
           >
-            Cancel
+            Membatalkan
           </button>
 
           <button
@@ -167,7 +167,7 @@ export default function WalletValidation({
             disabled={isLoading}
             className="rounded bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
           >
-            {isLoading ? "Submitting..." : "Confirm"}
+            {isLoading ? "Mengirim..." : "Konfirmasi"}
           </button>
         </div>
       </div>

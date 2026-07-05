@@ -79,7 +79,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       setRegistrationBonus(result.registrationBonus);
       setMessage("");
     } else {
-      setMessage("✗ Invalid invitation code");
+      setMessage("✗ Kode undangan tidak valid");
     }
   };
 
@@ -87,27 +87,27 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     e.preventDefault();
 
     if (!form.username.trim()) {
-      setMessage("✗ Username is required");
+      setMessage("✗ Nama pengguna wajib diisi.");
       return;
     }
 
     if (!form.phone.trim()) {
-      setMessage("✗ Phone number is required");
+      setMessage("✗ Nomor telepon wajib diisi.");
       return;
     }
 
     if (!form.accountPassword.trim()) {
-      setMessage("✗ Password is required");
+      setMessage("✗ Kata sandi diperlukan.");
       return;
     }
 
     if (!form.withdrawalPassword.trim()) {
-      setMessage("✗ Withdrawal password is required");
+      setMessage("✗ Kata sandi penarikan diperlukan.");
       return;
     }
 
     setLoading(true);
-    setMessage("Creating account...");
+    setMessage("Membuat akun..");
 
     const memberId = String(Date.now()).slice(-6);
 
@@ -143,10 +143,10 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       });
 
       setActiveCustomerId(memberId);
-      setMessage("✓ Account created! Redirecting...");
+      setMessage("✓ Akun berhasil dibuat! Mengalihkan...");
       setTimeout(() => navigate("/"), 1500);
     } else {
-      setMessage("✗ Failed to save. Please try again.");
+      setMessage("✗ Gagal menyimpan. Silakan coba lagi.");
     }
   };
 
@@ -166,21 +166,21 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
           onClick={() => navigate("/")}
         >
           <Store size={18} />
-          Back to store
+          Kembali ke Masuk
         </button>
 
         <h1 className="text-3xl font-black tracking-tight text-slate-900">
-          Create Work Account
+          Buat Akun Kerja
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Complete your account details. Your account will be linked to the
-          verified admin team.
+          Lengkapi detail akun Anda. Akun Anda akan ditautkan ke
+          tim admin yang telah diverifikasi.
         </p>
-<div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">
-  Note: You need an invitation code from your referrer to create an account.
-  If you don’t have a code yet, please contact your referrer or admin for assistance.
-</div>
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">
+          Catatan: Anda memerlukan kode undangan dari pihak yang mereferensikan Anda untuk membuat akun.
+          Jika Anda belum memiliki kode, silakan hubungi pihak yang mereferensikan Anda atau admin untuk mendapatkan bantuan.
+        </div>
         {!verified ? (
           <form className="mt-7 grid gap-4" onSubmit={handleVerifyCode}>
             <Field label="Invitation code">
@@ -208,7 +208,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
           <form className="mt-7 grid gap-4" onSubmit={handleRegister}>
             {verifiedAdmin && (
               <div className="rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-                ✓ Invitation verified: {verifiedAdmin}
+                ✓ Undangan telah diverifikasi: {verifiedAdmin}
               </div>
             )}
 
@@ -285,7 +285,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
               }}
               className="h-12 w-full rounded-xl border-2 border-forest font-bold text-forest transition hover:bg-forest/10"
             >
-              Change invitation code
+              Ubah kode undangan
             </button>
           </form>
         )}

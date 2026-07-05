@@ -29,7 +29,7 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
         <ShortcutInfoModal
           icon={<ReceiptText size={24} />}
           title="Records"
-          description="Review your task orders, top-up history, withdrawal history, and account activity from your profile and task pages."
+          description="Tinjau pesanan tugas, riwayat isi saldo, riwayat penarikan, dan aktivitas akun Anda melalui halaman profil dan tugas."
           primaryLabel="Open profile records"
           onPrimary={() => {
             setModal(null);
@@ -48,8 +48,8 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
         <ShortcutInfoModal
           icon={<ShieldCheck size={24} />}
           title="Security Settings"
-          description="Manage your account password and withdrawal password from your profile security section."
-          primaryLabel={isLoggedIn ? "Open security" : "Login first"}
+          description="Kelola kata sandi akun dan kata sandi penarikan Anda melalui bagian keamanan profil."
+          primaryLabel={isLoggedIn ? "Keamanan terbuka" : "Masuk terlebih dahulu"}
           onPrimary={() => {
             setModal(null);
             navigate(isLoggedIn ? "/profile" : "/login");
@@ -61,14 +61,14 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
       {modal === "account" && (
         <ShortcutInfoModal
           icon={<User size={24} />}
-          title={isLoggedIn ? "Account Profile" : "Customer Login"}
-          description={isLoggedIn ? "View your balance, referral code, order history, and account settings." : "Login to access your work account, order tasks, top-up, and withdrawal requests."}
-          primaryLabel={isLoggedIn ? "Open profile" : "Login"}
+          title={isLoggedIn ? "Profil Akun" : "Masuk Pelanggan"}
+          description={isLoggedIn ? "Lihat saldo, kode referral, riwayat pesanan, dan pengaturan akun Anda." : "Masuk untuk mengakses akun kerja, memesan tugas, melakukan isi ulang saldo, dan mengajukan penarikan dana."}
+          primaryLabel={isLoggedIn ? "Buka profil" : "Masuk"}
           onPrimary={() => {
             setModal(null);
             navigate(isLoggedIn ? "/profile" : "/login");
           }}
-          secondaryLabel={isLoggedIn ? "Task orders" : "Create account"}
+          secondaryLabel={isLoggedIn ? "Perintah tugas" : "Buat akun"}
           onSecondary={() => {
             setModal(null);
             navigate(isLoggedIn ? "/orders" : "/register");

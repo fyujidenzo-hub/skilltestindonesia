@@ -66,9 +66,9 @@ export default function FinanceTable({
       </Panel>
       <Panel title="Security Controls">
         <div className="space-y-3">
-          <SecurityItem icon={<KeyRound />} title="Change account password" text="Use the Account tab to update admin credentials." />
-          <SecurityItem icon={<LockKeyhole />} title="Change withdrawal password" text="Separate PIN for withdrawal approval requests." />
-          <SecurityItem icon={<Eye />} title="Audit activity" text="Transactions and order changes persist automatically." />
+          <SecurityItem icon={<KeyRound />} title="Change account password" text="Gunakan tab Akun untuk memperbarui kredensial admin." />
+          <SecurityItem icon={<LockKeyhole />} title="Change withdrawal password" text="PIN terpisah untuk permintaan persetujuan penarikan." />
+          <SecurityItem icon={<Eye />} title="Audit activity" text="Transaksi dan perubahan pesanan tersimpan secara otomatis dan berkelanjutan." />
         </div>
       </Panel>
     </div>

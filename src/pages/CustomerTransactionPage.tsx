@@ -69,7 +69,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
   if (!ready) {
     return (
       <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
-        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Memulihkan sesi anggota...</div>
       </main>
     );
   }
@@ -78,10 +78,10 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
     return (
       <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <section className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-panel">
-          <h1 className="text-2xl font-black">Login required</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Please log in before creating a {type === "topup" ? "top up" : "withdrawal"} request.</p>
+          <h1 className="text-2xl font-black">Login diperlukan</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Silakan masuk sebelum membuat {type === "topup" ? "top up" : "withdrawal"} meminta.</p>
           <button className="mt-5 h-11 w-full rounded-2xl bg-forest font-bold text-white" onClick={() => navigate("/login")}>
-            Go to login
+           Lanjut ke halaman masuk
           </button>
         </section>
       </main>
@@ -101,7 +101,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
 
       <section className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
         <button className="mb-4 inline-flex items-center gap-2 text-sm font-black text-forest hover:underline" onClick={() => navigate("/profile")}>
-          <ArrowLeft size={17} /> Back to profile
+          <ArrowLeft size={17} /> Kembali ke profil
         </button>
 
         {type === "withdraw" ? <WithdrawalNotice /> : <TopUpNotice />}

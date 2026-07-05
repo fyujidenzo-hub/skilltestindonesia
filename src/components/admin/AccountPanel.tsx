@@ -134,13 +134,13 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
           <div className="flex items-start gap-3">
             <Link2 className="mt-0.5 shrink-0 text-forest" size={18} />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase text-slate-500">Register link</p>
+              <p className="text-xs font-black uppercase text-slate-500">Tautan pendaftaran</p>
               <p className="mt-1 break-all text-sm font-black text-forest">{inviteLink}</p>
             </div>
           </div>
           <button className="mt-3 inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-black text-white" onClick={copyInviteLink}>
             <Copy size={15} />
-            Copy link
+            Salin tautan
           </button>
         </div>
       </Panel>

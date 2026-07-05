@@ -40,7 +40,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
 
       setEditingProduct(null);
       setStatusMessage(
-        `${product.name} is now ${available ? "Available" : "Unavailable"}.`
+        `${product.name} is now ${available ? "Tersedia" : "Tidak tersedia"}.`
       );
     } catch (error) {
       console.error("Failed to update product status:", error);
@@ -72,13 +72,13 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
 
   return (
     <Panel
-      title="Product Catalog"
+      title="Katalog Produk"
       action={
         <button
           className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white"
           onClick={() => setShowForm(!showForm)}
         >
-          <Plus size={16} /> Add product
+          <Plus size={16} /> Tambahkan produk
         </button>
       }
     >
@@ -87,7 +87,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
       {statusMessage && (
         <p
           className={`mt-4 rounded px-4 py-3 text-sm font-bold ${
-            statusMessage.startsWith("Unable")
+            statusMessage.startsWith("Tidak dapat")
               ? "bg-red-50 text-red-700"
               : "bg-emerald-50 text-emerald-700"
           }`}
@@ -153,14 +153,14 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                   <div className="grid grid-cols-2 gap-2">
                     <p className="rounded-xl bg-emerald-50 p-3 text-emerald-800">
                       <span className="block text-xs font-bold uppercase text-emerald-600">
-                        Commission
+                        Komisi
                       </span>
                       {formatRupiah(product.commission)}
                     </p>
 
                     <p className="rounded-xl bg-slate-50 p-3">
                       <span className="block text-xs font-bold uppercase text-slate-500">
-                        Category
+                        Kategori
                       </span>
                       {product.category}
                     </p>
@@ -172,7 +172,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                       className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-2 text-xs font-black text-slate-700 transition hover:border-forest hover:text-forest"
                       onClick={() => setSelectedProduct(product)}
                     >
-                      <Eye size={15} /> Details
+                      <Eye size={15} /> Rincian
                     </button>
 
                     <button
@@ -180,7 +180,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                       className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl bg-forest px-2 py-2 text-xs font-black text-white transition hover:bg-forest/90"
                       onClick={() => setEditingProduct(product)}
                     >
-                      <Pencil size={15} /> Edit
+                      <Pencil size={15} /> Sunting
                     </button>
 
                     <button
@@ -188,7 +188,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                       className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl bg-rose-50 px-2 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-100"
                       onClick={() => setProductToDelete(product)}
                     >
-                      <Trash2 size={15} /> Delete
+                      <Trash2 size={15} /> Menghapus
                     </button>
                   </div>
                 </div>
@@ -248,19 +248,19 @@ function DeleteProductDialog({
             <AlertTriangle size={22} />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-900">Delete product?</h2>
+            <h2 className="text-xl font-black text-slate-900">Hapus produk?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {product.name} will be removed from the catalog.
+              {product.name} akan dihapus dari katalog.
             </p>
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button type="button" className="rounded-xl border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50" onClick={onCancel} disabled={isDeleting}>
-            Cancel
+            Membatalkan
           </button>
           <button type="button" className="rounded-xl bg-rose-600 px-4 py-3 font-black text-white disabled:bg-slate-400" onClick={onConfirm} disabled={isDeleting}>
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? "Menghapus..." : "Menghapus"}
           </button>
         </div>
       </div>
@@ -297,7 +297,7 @@ function ProductDetailsModal({
                   : "bg-rose-50 text-rose-700"
               }`}
             >
-              {isAvailable ? "Available" : "Unavailable"}
+              {isAvailable ? "Tersedia" : "Tidak tersedia"}
             </span>
           </div>
 
@@ -305,7 +305,7 @@ function ProductDetailsModal({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-forest">
-                  Product details
+                  Detail produk
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-slate-900">
                   {product.name}
@@ -320,7 +320,8 @@ function ProductDetailsModal({
                   className="inline-flex h-10 items-center gap-2 rounded-full bg-forest px-4 text-sm font-black text-white hover:bg-forest/90"
                   onClick={onEdit}
                 >
-                  <Pencil size={16} /> Edit
+                  <Pencil size={16} /> 
+                          Sunting
                 </button>
 
                 <button
@@ -352,7 +353,7 @@ function ProductDetailsModal({
                   isAvailable ? "text-emerald-800" : "text-rose-800"
                 }`}
               >
-                Catalog status
+                Status katalog
               </p>
 
               <p
@@ -360,7 +361,7 @@ function ProductDetailsModal({
                   isAvailable ? "text-emerald-700" : "text-rose-700"
                 }`}
               >
-                This product is currently{" "}
+                Produk ini saat ini{" "}
                 {isAvailable
                   ? "available for task assignment."
                   : "unavailable for task assignment."}
@@ -393,7 +394,7 @@ function ProductStatusModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-forest">
-              Edit product status
+              Ubah status produk
             </p>
             <h2 className="mt-2 text-xl font-black text-slate-900">
               {product.name}
@@ -414,7 +415,7 @@ function ProductStatusModal({
 
         <div className="mt-5 rounded-2xl bg-slate-50 p-4">
           <p className="text-xs font-black uppercase text-slate-500">
-            Current status
+            Status saat ini
           </p>
           <p
             className={`mt-1 font-black ${
@@ -435,9 +436,9 @@ function ProductStatusModal({
             }`}
             onClick={() => setAvailable(true)}
           >
-            <span className="block font-black">Available</span>
+            <span className="block font-black">Tersedia</span>
             <span className="mt-1 block text-xs font-semibold">
-              Customers/admins can use this item for tasks.
+              Pelanggan/admin dapat menggunakan item ini untuk berbagai tugas.
             </span>
           </button>
 
@@ -450,9 +451,9 @@ function ProductStatusModal({
             }`}
             onClick={() => setAvailable(false)}
           >
-            <span className="block font-black">Unavailable</span>
+            <span className="block font-black">Tidak tersedia</span>
             <span className="mt-1 block text-xs font-semibold">
-              This item will show as unavailable and cannot be assigned.
+           Item ini akan ditampilkan sebagai tidak tersedia dan tidak dapat ditetapkan.
             </span>
           </button>
         </div>
@@ -463,7 +464,7 @@ function ProductStatusModal({
             className="rounded-xl border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50"
             onClick={onClose}
           >
-            Cancel
+           Membatalkan
           </button>
 
           <button

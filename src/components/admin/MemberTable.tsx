@@ -98,9 +98,9 @@ const openModal = (member: Member, type: "edit" | "balance") => {
       setMessage(
         modalType === "edit"
           ? resetWithdrawalPassword
-            ? "Member updated and withdrawal password reset."
-            : "Member updated."
-          : "Balance reward added and recorded."
+            ? "Data anggota telah diperbarui dan kata sandi penarikan telah diatur ulang."
+            : "Anggota telah diperbarui."
+          : "Imbalan saldo telah ditambahkan dan dicatat."
       );
       setTimeout(closeModal, 600);
     } catch (error) {
@@ -124,26 +124,26 @@ const openModal = (member: Member, type: "edit" | "balance") => {
       <div className="mt-4 rounded border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
           <div>
-            <p className="text-sm font-black text-slate-900">Customer account records</p>
+            <p className="text-sm font-black text-slate-900">Catatan akun kerja</p>
             <p className="text-xs text-slate-500">
-              Showing {startRow}-{endRow} of {sortedMembers.length} members
+              Menampilkan {startRow}-{endRow} of {sortedMembers.length} anggota
             </p>
           </div>
-          <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per page</span>
+          <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per halaman</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-left text-[13px]">
             <thead className="bg-slate-900 text-xs uppercase text-white">
               <tr>
-                <MemberTh>Promotion Code</MemberTh>
-                <MemberTh>User</MemberTh>
-                <MemberTh>Name / Account</MemberTh>
-                <MemberTh>Balance</MemberTh>
-                <MemberTh>Orders</MemberTh>
-                <MemberTh>Level</MemberTh>
-                <MemberTh>Last Login</MemberTh>
-                <MemberTh>Action</MemberTh>
+                <MemberTh>Kode Promosi</MemberTh>
+                <MemberTh>Pengguna</MemberTh>
+                <MemberTh>Nama / Akun</MemberTh>
+                <MemberTh>Keseimbangan</MemberTh>
+                <MemberTh>Pesanan</MemberTh>
+                <MemberTh>Tingkat</MemberTh>
+                <MemberTh>Login Terakhir</MemberTh>
+                <MemberTh>Tindakan</MemberTh>
               </tr>
             </thead>
             <tbody>
@@ -188,7 +188,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
               ) : (
                 <tr>
                   <td colSpan={8} className="p-6 text-center text-sm text-slate-500">
-                    No members found in this admin scope.
+                    Tidak ada anggota yang ditemukan dalam cakupan admin ini.
                   </td>
                 </tr>
               )}
@@ -210,15 +210,15 @@ const openModal = (member: Member, type: "edit" | "balance") => {
             {modalType === "edit" ? (
               <div className="mt-5 grid gap-3">
                 <label className="text-xs font-bold text-slate-600">
-                  Username
+                  Nama belakang
                   <input className="mt-1 w-full rounded border border-slate-200 px-3 py-2" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required />
                 </label>
                 <label className="text-xs font-bold text-slate-600">
-                  Phone
+                  Telepon
                   <input className="mt-1 w-full rounded border border-slate-200 px-3 py-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required />
                 </label>
                 <label className="text-xs font-bold text-slate-600">
-                  Level
+                  Tingkat
                   <select className="mt-1 w-full rounded border border-slate-200 px-3 py-2" value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })}>
                     <option>Starter</option>
                     <option>Silver</option>
@@ -230,7 +230,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                 {canManageMemberFinance && (
                   <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
                     <label className="text-xs font-bold text-amber-800">
-                      Reset Withdrawal Password
+                      Atur Ulang Kata Sandi Penarikan
                       <input
                         className="mt-1 w-full rounded border border-amber-200 bg-white px-3 py-2 text-slate-900"
                         value={form.withdrawalPassword}
@@ -241,14 +241,14 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                       />
                     </label>
                     <p className="mt-2 text-xs font-semibold leading-5 text-amber-700">
-                      Leave this blank if you do not want to change the member's withdrawal password.
+                     Biarkan kosong jika Anda tidak ingin mengubah kata sandi penarikan anggota.
                     </p>
                   </div>
                 )}
               </div>
             ) : (
               <label className="mt-5 block text-xs font-bold text-slate-600">
-Balance amount
+Jumlah saldo
                 <input className="mt-1 w-full rounded border border-slate-200 px-3 py-2" type="number" min={0} value={form.amount || ""} onChange={(event) => setForm({ ...form, amount: Number(event.target.value) || 0 })} placeholder="Rp 0" required />
               </label>
             )}
@@ -257,7 +257,7 @@ Balance amount
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button type="button" className="rounded border border-slate-200 px-3 py-2 font-bold" onClick={closeModal} disabled={saving}>
-                Cancel
+                Membatalkan
               </button>
               <button className="rounded bg-forest px-3 py-2 font-bold text-white disabled:bg-slate-400" disabled={saving}>
                 {saving ? "Saving..." : "Submit"}
@@ -294,7 +294,7 @@ function MemberActions({
         className="rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
         onClick={() => onOpen(member, "edit")}
       >
-        Edit
+        Sunting
       </button>
 
       {canManageMemberFinance && (
@@ -302,7 +302,7 @@ function MemberActions({
           className="rounded bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700"
           onClick={() => onOpen(member, "balance")}
         >
-          Add Balance
+          Tambah Saldo
         </button>
       )}
     </div>
@@ -317,10 +317,10 @@ function Pagination({ page, totalPages, onPageChange }: { page: number; totalPag
       </p>
       <div className="flex gap-2">
         <button className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 disabled:text-slate-300 sm:flex-none" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
-          Previous
+          Sebelumnya
         </button>
         <button className="flex-1 rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-300 sm:flex-none" disabled={page >= totalPages - 1} onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}>
-          Next
+          Berikutnya
         </button>
       </div>
     </div>

@@ -100,15 +100,15 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
         <div className="rounded bg-white p-5 shadow-panel sm:p-7">
           <div className="rounded bg-forest p-5 text-white">
             <h1 className="text-xl font-black sm:text-2xl">
-              Dedicated Customer Service
+              Layanan Pelanggan yang Berdedikasi
             </h1>
             <p className="mt-4 text-sm leading-7 text-emerald-50">
-              Notice to all users: the task/order completion time is 2 hours.
-              Complete orders within the specified time limit. If you exceed the
-              time limit, your account balance may be frozen. Top ups and
-              withdrawals outside 08:00 AM - 5:00 PM UTC +8 require permission from
-              our Customer Service team. If there is a problem with your
-              transaction, please contact Customer Service immediately.
+              Pemberitahuan bagi seluruh pengguna: waktu penyelesaian tugas/pesanan adalah 2 jam.
+              Harap selesaikan pesanan dalam batas waktu yang ditentukan. Jika Anda melampaui
+              batas waktu tersebut, saldo akun Anda dapat dibekukan. Pengisian saldo (top-up) dan
+              penarikan dana di luar jam 08.00 – 17.00 (UTC +8) memerlukan persetujuan dari
+              tim Layanan Pelanggan kami. Jika terjadi masalah pada transaksi Anda,
+              silakan segera hubungi Layanan Pelanggan.
             </p>
           </div>
 
@@ -120,15 +120,15 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
               href={telegramUrl || undefined}
               target="_blank"
               rel="noreferrer"
-              aria-label="Open Telegram customer service"
+              aria-label="Buka layanan pelanggan Telegram"
             >
               <Send size={34} />
             </a>
             <p className="mt-4 text-base font-black text-slate-800">
-              Customer Service
+             Pelayanan pelanggan
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              08:00 AM - 5:00 PM UTC +8
+              08:00 AM - 5:00 PM
             </p>
             <a
               className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-sm transition sm:w-auto ${
@@ -139,7 +139,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
               rel="noreferrer"
             >
               <Send size={17} />
-              Chat Customer Service
+              Obrolan Layanan Pelanggan
             </a>
           </div>
         </div>

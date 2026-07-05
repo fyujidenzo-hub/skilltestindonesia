@@ -183,10 +183,10 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "addOrder", payload: order });
-      setTaskMessage(product ? "Product request sent. Waiting for admin approval." : "Successfully took order. Waiting for admin to assign a product.");
+      setTaskMessage(product ? "Permintaan produk telah dikirim. Menunggu persetujuan admin." : "Pesanan berhasil diterima. Menunggu admin menetapkan produk.");
     } catch (error) {
       console.error("Failed to accept task:", error);
-      setTaskMessage("Unable to accept task. Please try again.");
+      setTaskMessage("Tidak dapat menerima tugas. Silakan coba lagi.");
     } finally {
       setIsAcceptingTask(false);
     }
@@ -215,10 +215,10 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         currentMember,
       );
       dispatch({ type: "completeOrderWithMember", payload: result });
-      setTaskMessage("Order submitted successfully. Your balance was not deducted. Commission will be added after completion.");
+      setTaskMessage("Pesanan berhasil dikirimkan. Saldo Anda tidak dipotong. Komisi akan ditambahkan setelah penyelesaian.");
     } catch (error) {
       console.error("Failed to submit order:", error);
-      setTaskMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
+      setTaskMessage(error instanceof Error ? error.message : "Tidak dapat mengirimkan pesanan. Silakan coba lagi.");
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -231,10 +231,10 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     try {
       const result = await completeWorkflowOrder(activeOrder, currentMember);
       dispatch({ type: "completeOrderWithMember", payload: result });
-      setTaskMessage(`Order completed. Commission ${result.order.commission.toLocaleString("id-ID")} IDR added to your balance.`);
+      setTaskMessage(`Pesanan selesai. Komisi. ${result.order.commission.toLocaleString("id-ID")} IDR telah ditambahkan ke saldo Anda.`);
     } catch (error) {
       console.error("Failed to confirm shipment:", error);
-      setTaskMessage(error instanceof Error ? error.message : "Unable to confirm shipment.");
+      setTaskMessage(error instanceof Error ? error.message : "Tidak dapat mengonfirmasi pengiriman.");
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -248,7 +248,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         requiresCustomerApproval: false,
       });
       dispatch({ type: "updateOrder", payload: order });
-      setTaskMessage("Changed product accepted. You can now send the order.");
+      setTaskMessage("Produk yang diubah telah disetujui. Anda sekarang dapat mengirimkan pesanan tersebut.");
     } catch (error) {
       console.error("Failed to accept changed product:", error);
       setTaskMessage(error instanceof Error ? error.message : "Unable to accept changed product.");
@@ -266,10 +266,10 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         completedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "updateOrder", payload: order });
-      setTaskMessage("Changed product rejected. You can take another order.");
+      setTaskMessage("Produk yang digantung ditolak. Anda dapat mengambil pesanan lain.");
     } catch (error) {
       console.error("Failed to reject changed product:", error);
-      setTaskMessage(error instanceof Error ? error.message : "Unable to reject changed product.");
+      setTaskMessage(error instanceof Error ? error.message : "Tidak dapat menolak produk yang telah diubah.");
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -277,7 +277,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   const requireLogin = (nextAction: () => void) => {
     if (!currentMember) {
-      setLoginAlert("You have to log in first!");
+      setLoginAlert("Anda harus masuk terlebih dahulu!");
       return;
     }
     nextAction();
@@ -293,7 +293,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   return (
     <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
       <div className="rounded-2xl bg-white/90 px-6 py-5 text-sm font-bold text-slate-600 shadow-panel backdrop-blur">
-        Restoring member session...
+        Memulihkan sesi anggota...
       </div>
     </main>
   );
@@ -304,18 +304,18 @@ if (state.members.length === 0) {
     <main className="flex min-h-screen items-center justify-center customer-page-bg px-4 pb-24 text-ink">
       <div className="rounded-3xl bg-white/90 p-6 text-center shadow-panel backdrop-blur sm:p-8">
         <h1 className="mb-4 text-2xl font-black sm:text-3xl">
-          No Data Available
+          Tidak ada data yang tersedia
         </h1>
 
         <p className="mb-6 text-sm font-semibold text-slate-600 sm:text-base">
-          Please seed Firestore with sample data to continue.
+         Harap isi Firestore dengan data contoh untuk melanjutkan.
         </p>
 
         <button
           onClick={() => navigate("/admin")}
           className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700"
         >
-          Go to Admin Panel
+          Buka Panel Admin
         </button>
       </div>
     </main>
@@ -441,21 +441,21 @@ function TaskStatusModal({
 
   const statusLabel =
     state === "no_task"
-      ? "No active task"
+      ? "Tidak ada tugas aktif"
       : state === "waiting_assignment"
-        ? "Waiting for admin assignment"
+        ? "Menunggu penugasan admin"
         : state === "product_assigned"
-          ? "Ready to send"
+          ? "Siap dikirim"
           : state === "waiting_shipment" || state === "belum_diserahkan"
-            ? "Waiting for shipment"
-            : "Completed";
+            ? "Menunggu pengiriman"
+            : "Selesai";
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-4">
       <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-panel">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-forest">Task status report</p>
+            <p className="text-xs font-black uppercase tracking-wide text-forest">Laporan status tugas</p>
             <h2 className="mt-1 text-2xl font-black text-slate-900">{statusLabel}</h2>
           </div>
           <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close task status">
@@ -488,22 +488,22 @@ function TaskStatusModal({
 
           {shortage > 0 && (
             <div className="rounded border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-              Sorry, your balance is insufficient by {formatRupiah(shortage)}. Please top up first.
+             Maaf, saldo Anda tidak mencukupi. {formatRupiah(shortage)}. Silakan isi saldo terlebih dahulu.
             </div>
           )}
 
           <div className="flex flex-col gap-2 sm:flex-row">
             {state === "no_task" ? (
               <button className="flex-1 rounded bg-forest px-4 py-3 font-black text-white" onClick={onTakeOrder}>
-                Take Order
+                Menerima Pesanan
               </button>
             ) : (
               <button className="flex-1 rounded bg-forest px-4 py-3 font-black text-white" onClick={onOpenOrders}>
-                Open task orders
+                Perintah tugas yang sedang berjalan
               </button>
             )}
             <button className="flex-1 rounded border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50" onClick={onTopUp}>
-              Top up balance
+              Isi ulang saldo
             </button>
           </div>
         </div>
@@ -531,9 +531,9 @@ function LoginRequiredAlert({ message, onClose, onLogin }: { message: string; on
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-black text-slate-900">{message}</p>
-            <p className="mt-1 text-sm leading-5 text-slate-500">Please log in before using top up, withdrawal, or order tasks.</p>
+            <p className="mt-1 text-sm leading-5 text-slate-500">Silakan masuk sebelum melakukan isi ulang, penarikan, atau tugas pemesanan.</p>
             <button className="mt-3 rounded bg-forest px-4 py-2 text-sm font-black text-white" onClick={onLogin}>
-              Login now
+              Masuk sekarang
             </button>
           </div>
           <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close login alert">

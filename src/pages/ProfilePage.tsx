@@ -73,7 +73,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
   if (!ready) {
     return (
       <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
-        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Memulihkan sesi anggota...</div>
       </main>
     );
   }
@@ -85,10 +85,10 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-mint text-forest">
             <UserRound size={26} />
           </div>
-          <h1 className="mt-4 text-2xl font-black">Login required</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Sign in to view your profile, balance, and order history.</p>
+          <h1 className="mt-4 text-2xl font-black">Perlu masuk</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Masuk untuk melihat profil, saldo, dan riwayat pesanan Anda.</p>
           <button className="mt-5 h-11 w-full rounded bg-forest font-bold text-white" onClick={() => navigate("/login")}>
-            Go to login
+           Lanjut ke halaman masuk
           </button>
         </section>
       </main>
@@ -115,7 +115,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
       };
       await updateMember(member.id, settingsMode === "account" ? { accountPassword: newPassword.trim() } : { withdrawalPassword: newPassword.trim() });
       dispatch({ type: "updateMember", payload: updatedMember });
-      setSettingsMessage(settingsMode === "account" ? "Account password updated." : "Withdrawal password updated.");
+      setSettingsMessage(settingsMode === "account" ? "Kata sandi akun telah diperbarui." : "Kata sandi penarikan telah diperbarui.");
       setSettingsMode(null);
       setNewPassword("");
     } catch (error) {
@@ -129,7 +129,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
   const menuItems = [
     {
       label: "Loan",
-      description: "View current loan availability",
+      description: "Lihat ketersediaan pinjaman saat ini",
       icon: <Banknote size={19} />,
       onClick: () => {
         setMenuMessage("Loan services are not available for this account yet.");
@@ -159,11 +159,11 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <button className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black text-forest transition hover:bg-mint" onClick={() => navigate("/")}>
             <ArrowLeft size={18} />
-            Home
+            Rumah
           </button>
           <button className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel" onClick={logout}>
             <LogOut size={16} />
-            Logout
+            Keluar
           </button>
         </div>
       </header>
@@ -187,11 +187,11 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                   <img className="h-full w-full object-cover" src={customerLogo} alt="Customer avatar" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">Member account</p>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">Akun anggota</p>
                   <h1 className="mt-1 break-words text-3xl font-black leading-tight sm:text-4xl">{member.username}</h1>
                   {member.phone && (
                     <p className="mt-2 inline-flex rounded-full bg-emerald-950/25 px-3 py-1 text-sm font-bold text-white/95 ring-1 ring-white/15">
-                      Phone number {member.phone}
+                      Nomor telepon {member.phone}
                     </p>
                   )}
                 </div>
@@ -205,16 +205,16 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             </div>
             <div className="grid gap-3 rounded-[1.5rem] bg-white/95 p-4 text-slate-900 shadow-[0_18px_50px_rgba(15,23,42,0.18)] ring-1 ring-white/60 lg:min-w-[320px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-black text-slate-500">Work Account Balance</span>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-forest">Active</span>
+                <span className="text-sm font-black text-slate-500">Saldo Akun Kerja</span>
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-forest">Aktif</span>
               </div>
               <strong className="block break-words text-3xl font-black sm:text-4xl">{formatRupiah(member.balance)}</strong>
               <div className="grid grid-cols-2 gap-2">
                 <button className="rounded-2xl bg-forest px-4 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700" onClick={() => navigate("/topup")}>
-                  Top Up
+                  Isi Saldo
                 </button>
                 <button className="rounded-2xl bg-[#ff6f5e] px-4 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#f45e4c]" onClick={() => navigate("/withdraw")}>
-                  Withdraw
+                  Menarik
                 </button>
               </div>
             </div>
@@ -226,10 +226,10 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             <section className="rounded-[1.5rem] border border-white bg-white/95 p-4 shadow-[0_18px_48px_rgba(15,23,42,0.07)] ring-1 ring-slate-100 sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-forest">Order progress</p>
-                  <h2 className="mt-1 text-xl font-black text-slate-900">{completedOrderCount} of {dailyOrderTarget} tasks completed</h2>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-forest">Progres pesanan</p>
+                  <h2 className="mt-1 text-xl font-black text-slate-900">{completedOrderCount} dari {dailyOrderTarget} tugas selesai</h2>
                 </div>
-                <span className="w-fit rounded-full bg-mint px-4 py-2 text-sm font-black text-forest">{completionPercent}% complete</span>
+                <span className="w-fit rounded-full bg-mint px-4 py-2 text-sm font-black text-forest">{completionPercent}% menyelesaikan</span>
               </div>
               <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full rounded-full bg-gradient-to-r from-forest to-lime-400 transition-all" style={{ width: `${completionPercent}%` }} />
@@ -248,7 +248,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                 <div className="mb-4 flex items-start justify-between gap-3 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
                   <span>{menuMessage}</span>
                   <button className="text-amber-900" onClick={() => setMenuMessage("")}>
-                    Dismiss
+                    Membubarkan
                   </button>
                 </div>
               )}
@@ -287,7 +287,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                     </div>
                   ))
                 ) : (
-                  <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No order history yet.</p>
+                  <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">Belum ada riwayat pesanan.</p>
                 )}
               </div>
             </Panel>
@@ -311,7 +311,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             <div id="loan-info">
               <Panel title="Loan">
                 <p className="text-sm leading-6 text-slate-600">
-                  Loan services are currently unavailable for this account. If this feature is enabled later, eligible loan details will appear here.
+                Layanan pinjaman saat ini tidak tersedia untuk akun ini. Jika fitur ini diaktifkan di kemudian hari, rincian pinjaman yang memenuhi syarat akan muncul di sini.
                 </p>
               </Panel>
             </div>
@@ -319,7 +319,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             <div id="withdrawal-info">
               <Panel title="Withdrawal Information">
                 <p className="text-sm leading-6 text-slate-600">
-                  Withdrawal requests are reviewed by the administrator. Approved requests will be marked in your withdrawal history.
+                  Permintaan penarikan ditinjau oleh administrator. Permintaan yang disetujui akan ditandai dalam riwayat penarikan Anda.
                 </p>
               </Panel>
             </div>
@@ -338,7 +338,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                   }}
                 >
                   <KeyRound size={17} className="text-forest" />
-                  Change account password
+                 Ubah kata sandi akun
                 </button>
                 <button
                   className="mt-3 flex w-full items-center gap-3 rounded border border-slate-200 px-3 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
@@ -349,7 +349,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                   }}
                 >
                   <CreditCard size={17} className="text-forest" />
-                  Change withdrawal password
+                  Ubah kata sandi penarikan
                 </button>
                 {settingsMode && (
                   <div className="mt-4 rounded bg-slate-50 p-4">
@@ -372,14 +372,14 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                           setSettingsMessage("");
                         }}
                       >
-                        Cancel
+                       Membatalkan
                       </button>
                       <button
                         className="rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-400"
                         disabled={isSavingSettings}
                         onClick={savePassword}
                       >
-                        Save
+                        Menyimpan
                       </button>
                     </div>
                   </div>

@@ -39,11 +39,11 @@ export default function LoginPage({ navigate }: { navigate: Navigate }) {
         </div>
 
         <h1 className="mt-6 text-center text-3xl font-black tracking-tight text-slate-900">
-          Tokopedia Work Account
+          Akun Kerja Tokopedia
         </h1>
 
         <p className="mt-2 text-center text-sm leading-6 text-slate-500">
-          Sign in using your username, email, or phone number.
+          Masuk menggunakan nama pengguna, email, atau nomor telepon Anda.
         </p>
 
         <form
@@ -52,22 +52,22 @@ export default function LoginPage({ navigate }: { navigate: Navigate }) {
             event.preventDefault();
 
             if (!ready) {
-              setMessage("Account data is still loading. Please try again in a moment.");
+              setMessage("Data akun masih dimuat. Silakan coba lagi nanti.");
               return;
             }
 
             if (!matchedMember) {
-              setMessage("No customer account found with those details.");
+              setMessage("Tidak ditemukan akun pelanggan dengan detail tersebut.");
               return;
             }
 
             if (!matchedMember.accountPassword) {
-              setMessage("This sample account has no password. Please use a registered account.");
+              setMessage("Akun contoh ini tidak memiliki kata sandi. Silakan gunakan akun yang terdaftar.");
               return;
             }
 
             if (matchedMember.accountPassword !== password) {
-              setMessage("Incorrect password.");
+              setMessage("Kata sandi salah.");
               return;
             }
 
@@ -93,7 +93,7 @@ export default function LoginPage({ navigate }: { navigate: Navigate }) {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Your account password"
+              placeholder="Kata sandi akun Anda"
             />
           </Field>
 
@@ -118,11 +118,11 @@ export default function LoginPage({ navigate }: { navigate: Navigate }) {
             className="h-12 rounded-xl border-2 border-emerald-600 bg-white/70 font-bold text-emerald-700 transition hover:bg-emerald-50"
             onClick={() => navigate("/register")}
           >
-            Create Account
+            Buat Akun
           </button>
 
           <p className="mt-4 text-center text-xs font-medium text-slate-500">
-            Secure login • Tokopedia Karir Indonesia
+           Login aman • Tokopedia Karir Indonesia
           </p>
         </form>
       </section>

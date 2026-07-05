@@ -179,7 +179,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
             <Field label="Select Products">
               <div className="space-y-2 border rounded p-2 bg-white max-h-52 overflow-y-auto">
                 {products.length === 0 ? (
-                  <p className="text-sm text-slate-500">No products available</p>
+                  <p className="text-sm text-slate-500">Tidak ada produk yang tersedia</p>
                 ) : (
                     products.map((product) => {
                       const isAvailable = product.quantity > 0;
@@ -254,7 +254,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               disabled={isAssigning}
               className="flex-1 rounded bg-forest px-3 py-2 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400"
             >
-              {isAssigning ? "Assigning..." : "Save Task"}
+              {isAssigning ? "Menugaskan..." : "Simpan Tugas"}
             </button>
           </div>
         </form>
@@ -262,9 +262,9 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
 
       <div className="mb-4 flex flex-col gap-3 rounded border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-black text-slate-900">Task records</p>
+          <p className="text-sm font-black text-slate-900">Catatan tugas</p>
           <p className="text-xs text-slate-500">
-            Showing {startRow}-{endRow} of {visibleOrders.length} task records.
+            Menampilkan {startRow}-{endRow} of {visibleOrders.length} catatan tugas.
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:max-w-2xl sm:flex-row sm:items-center sm:justify-end">
@@ -299,25 +299,25 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
           </colgroup>
           <thead className="sticky top-0 z-10 bg-slate-900 text-xs uppercase text-white">
             <tr>
-              <TaskTh>Code</TaskTh>
-              <TaskTh>User</TaskTh>
-              <TaskTh>Name</TaskTh>
-              <TaskTh>User Balance</TaskTh>
-              <TaskTh>Product</TaskTh>
-              <TaskTh>Total Price</TaskTh>
-              <TaskTh>Commission</TaskTh>
-              <TaskTh>Balance Shortage</TaskTh>
+              <TaskTh>Kode</TaskTh>
+              <TaskTh>Pengguna</TaskTh>
+              <TaskTh>Nama</TaskTh>
+              <TaskTh>Saldo Pengguna</TaskTh>
+              <TaskTh>Produk</TaskTh>
+              <TaskTh>Total Harga</TaskTh>
+              <TaskTh>Komisi</TaskTh>
+              <TaskTh>Kekurangan Saldo</TaskTh>
               <TaskTh>Status</TaskTh>
-              <TaskTh>Task</TaskTh>
-              <TaskTh>Date</TaskTh>
-              <TaskTh>Action</TaskTh>
+              <TaskTh>Tugas</TaskTh>
+              <TaskTh>Tanggal</TaskTh>
+              <TaskTh>Tindakan</TaskTh>
             </tr>
           </thead>
           <tbody>
         {pagedOrders.length === 0 ? (
           <tr>
             <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
-              No task records found.
+             Tidak ada catatan tugas yang ditemukan.
             </td>
           </tr>
         ) : (
@@ -354,7 +354,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                       {assignedProducts.map((product) => `${product.name}\n${product.code}`).join("\n")}
                     </span>
                   ) : (
-                    <span className="text-slate-400">Pending assignment</span>
+                    <span className="text-slate-400">Penugasan tertunda</span>
                   )}
                 </TaskTd>
                 <TaskTd>{formatRupiah(totalPrice)}</TaskTd>
@@ -378,11 +378,11 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                       className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
                       onClick={() => openAssignFormForOrder(order.id)}
                     >
-                      <Plus size={14} /> Add Task
+                      <Plus size={14} /> Tambahkan Tugas
                     </button>
                   ) : state === "waiting_assignment" && hasProduct ? (
                     <span className="inline-flex w-full items-center justify-center rounded bg-amber-100 px-3 py-2 text-center text-xs font-black leading-4 text-amber-700">
-                      Pending approval
+                      Menunggu persetujuan
                     </span>
                   ) : state === "diserahkan" ? (
                     <span className="inline-flex w-full items-center justify-center rounded bg-emerald-100 px-3 py-2 text-center text-xs font-black leading-4 text-emerald-700">Product Selected</span>
@@ -390,7 +390,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
                     <span className="inline-flex w-full items-center justify-center rounded bg-rose-100 px-3 py-2 text-center text-xs font-black text-rose-700">Rejected</span>
                   ) : (
                     <span className="inline-flex w-full items-center justify-center rounded bg-amber-100 px-3 py-2 text-center text-xs font-black leading-4 text-amber-700">
-                      Product selected, waiting for completion
+                      Produk telah dipilih, menunggu penyelesaian
                     </span>
                   )}
                 </TaskTd>
@@ -438,7 +438,7 @@ function TablePagination({ page, totalPages, onPageChange }: { page: number; tot
   return (
     <div className="flex flex-col gap-3 border-x border-b border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs font-semibold text-slate-500">
-        Page {page + 1} of {totalPages}
+        Halaman {page + 1} of {totalPages}
       </p>
       <div className="flex gap-2">
         <button
@@ -446,14 +446,14 @@ function TablePagination({ page, totalPages, onPageChange }: { page: number; tot
           disabled={page === 0}
           onClick={() => onPageChange(Math.max(0, page - 1))}
         >
-          Previous
+         Sebelumnya
         </button>
         <button
           className="flex-1 rounded bg-forest px-3 py-2 text-sm font-black text-white disabled:bg-slate-300 sm:flex-none"
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
         >
-          Next
+          Berikutnya
         </button>
       </div>
     </div>

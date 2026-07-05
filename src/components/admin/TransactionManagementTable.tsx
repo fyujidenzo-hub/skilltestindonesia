@@ -18,7 +18,6 @@ export default function TransactionManagementTable({
 }) {
   const { dispatch } = useAppStore();
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
-  const [proofTransaction, setProofTransaction] = useState<Transaction | null>(null);
   const [message, setMessage] = useState("");
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
   const [topUpSort, setTopUpSort] = useState<AmountSort>("none");
@@ -75,7 +74,6 @@ export default function TransactionManagementTable({
           amountSort={topUpSort}
           onAmountSortChange={setTopUpSort}
           onViewDetails={setDetailTransaction}
-          onViewProof={setProofTransaction}
           onApprove={(transaction) => handleStatusChange(transaction, "approved")}
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
         />
@@ -90,7 +88,6 @@ export default function TransactionManagementTable({
           amountSort={withdrawalSort}
           onAmountSortChange={setWithdrawalSort}
           onViewDetails={setDetailTransaction}
-          onViewProof={setProofTransaction}
           onApprove={(transaction) => handleStatusChange(transaction, "approved")}
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
         />
@@ -98,9 +95,6 @@ export default function TransactionManagementTable({
 
       {detailTransaction && (
         <TransactionReceiptModal transaction={detailTransaction} member={members.find((item) => item.username === detailTransaction.member)} onClose={() => setDetailTransaction(null)} />
-      )}
-      {proofTransaction && (
-        <ProofImageModal transaction={proofTransaction} onClose={() => setProofTransaction(null)} />
       )}
     </Panel>
   );
@@ -128,7 +122,6 @@ function RequestTable({
   amountSort,
   onAmountSortChange,
   onViewDetails,
-  onViewProof,
   onApprove,
   onReject,
 }: {
@@ -142,7 +135,6 @@ function RequestTable({
   amountSort: AmountSort;
   onAmountSortChange: (value: AmountSort) => void;
   onViewDetails: (transaction: Transaction) => void;
-  onViewProof: (transaction: Transaction) => void;
   onApprove: (transaction: Transaction) => void;
   onReject: (transaction: Transaction) => void;
 }) {
@@ -155,12 +147,12 @@ function RequestTable({
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-4">
         <div>
           <h3 className="text-lg font-black text-slate-900">{title}</h3>
-          <p className="text-sm text-slate-500">Review request details, proof, and approval status.</p>
+          <p className="text-sm text-slate-500">Tinjau detail permintaan, bukti, dan status persetujuan.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <AmountSortControls value={amountSort} onChange={onAmountSortChange} label="amount" />
           <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
-            {transactions.length} records
+            {transactions.length} catatan
           </span>
         </div>
       </div>
@@ -170,23 +162,23 @@ function RequestTable({
           <thead className={`sticky top-0 z-20 bg-gradient-to-r ${headerTone} text-xs uppercase text-white shadow-sm`}>
             {tone === "topup" ? (
               <tr>
-                <Th className="w-[170px]">Code</Th>
-                <Th className="w-[170px]">User</Th>
-                <Th className="w-[150px]">Sender</Th>
-                <Th className="w-[130px]">Amount</Th>
-                <Th>Transfer Proof / Note</Th>
-                <Th>Payment Method</Th>
+               <Th className="w-[170px]">Kode</Th>
+                <Th className="w-[170px]">Pengguna</Th>
+                <Th className="w-[150px]">Pengirim</Th>
+                <Th className="w-[130px]">Jumlah</Th>
+                <Th>Bukti Transfer / Catatan</Th>
+                <Th>Metode Pembayaran</Th>
                 <Th className="w-[110px]">Status</Th>
-                <Th className="sticky right-0 z-30 w-[150px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Action</Th>
+                <Th className="sticky right-0 z-30 w-[150px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Aksi</Th>
               </tr>
             ) : (
               <tr>
-                <Th className="w-[190px]">Code</Th>
-                <Th className="w-[170px]">User</Th>
-                <Th className="w-[140px]">Amount</Th>
-                <Th>Withdrawal Information</Th>
+                <Th className="w-[190px]">Kode</Th>
+                <Th className="w-[170px]">Pengguna</Th>
+                <Th className="w-[140px]">Jumlah</Th>
+                <Th>Informasi Penarikan</Th>
                 <Th className="w-[110px]">Status</Th>
-                <Th className="sticky right-0 z-30 w-[150px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Action</Th>
+                <Th className="sticky right-0 z-30 w-[150px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Tindakan</Th>
               </tr>
             )}
           </thead>
@@ -215,7 +207,7 @@ function RequestTable({
                           <span className="whitespace-nowrap text-base font-black text-forest">{formatRupiah(transaction.amount)}</span>
                         </Td>
                         <Td className="border-t border-slate-200">
-                          <ProofCell transaction={transaction} onViewProof={onViewProof} />
+                          <ProofCell transaction={transaction} onViewDetails={onViewDetails} />
                         </Td>
                         <Td className="border-t border-slate-200">
                           <PaymentMethodCell transaction={transaction} />
@@ -241,17 +233,17 @@ function RequestTable({
                       <div className="grid min-w-[132px] gap-2">
                         <button className="inline-flex items-center justify-center gap-1 rounded border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
                           <ReceiptText size={14} />
-                          Details
+                          Rincian
                         </button>
                         {isPending && canApprove && (
                           <>
                             <button disabled={isProcessing} className="inline-flex items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:bg-slate-300" onClick={() => onApprove(transaction)}>
                               <CheckCircle2 size={14} />
-                              Approve
+                              Menyetujui
                             </button>
                             <button disabled={isProcessing} className="inline-flex items-center justify-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-black text-white disabled:bg-slate-300" onClick={() => onReject(transaction)}>
                               <XCircle size={14} />
-                              Reject
+                              Menolak
                             </button>
                           </>
                         )}
@@ -287,12 +279,12 @@ function statusStickyClass(status: Transaction["status"]) {
   return "bg-rose-50";
 }
 
-function ProofCell({ transaction, onViewProof }: { transaction: Transaction; onViewProof: (transaction: Transaction) => void }) {
+function ProofCell({ transaction, onViewDetails }: { transaction: Transaction; onViewDetails: (transaction: Transaction) => void }) {
   if (transaction.proofDataUrl) {
     return (
-      <button className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewProof(transaction)}>
+      <button className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
         <Eye size={14} />
-        View proof
+        Lihat bukti
       </button>
     );
   }
@@ -301,43 +293,7 @@ function ProofCell({ transaction, onViewProof }: { transaction: Transaction; onV
     return <span className="text-xs font-semibold text-slate-500">{transaction.proofName}</span>;
   }
 
-  return <span className="text-xs text-slate-400">No proof</span>;
-}
-
-function ProofImageModal({ transaction, onClose }: { transaction: Transaction; onClose: () => void }) {
-  const proofDownloadName = transaction.proofName || `${transaction.requestId ?? transaction.id}-proof.png`;
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-4">
-      <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-panel">
-        <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-forest">Payment proof</p>
-            <h2 className="break-all text-lg font-black text-slate-900">{transaction.proofName || transaction.requestId || transaction.id}</h2>
-          </div>
-          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close proof image">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="p-4">
-          {transaction.proofDataUrl ? (
-            <>
-              <img className="max-h-[70vh] w-full rounded border border-slate-100 object-contain" src={transaction.proofDataUrl} alt="Payment proof uploaded by member" />
-              <a className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded bg-forest px-4 py-3 text-sm font-black text-white sm:w-auto" href={transaction.proofDataUrl} download={proofDownloadName}>
-                <Download size={15} />
-                Save proof
-              </a>
-            </>
-          ) : (
-            <div className="grid min-h-72 place-items-center rounded bg-slate-50 text-center text-sm text-slate-500">
-              <p className="font-bold">No image proof stored for this request.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return <span className="text-xs text-slate-400">Tidak ada bukti</span>;
 }
 
 function PaymentMethodCell({ transaction }: { transaction: Transaction }) {
@@ -366,7 +322,8 @@ function StatusBadge({ status }: { status: Transaction["status"] }) {
     approved: "bg-emerald-100 text-emerald-700",
     rejected: "bg-rose-100 text-rose-700",
   };
-  return <span className={`rounded px-2 py-1 text-xs font-black capitalize ${styles[status]}`}>{status}</span>;
+  const label = status === "pending" ? "Pending Confirmation" : status === "approved" ? "Approved" : "Rejected";
+  return <span className={`rounded px-2 py-1 text-xs font-black ${styles[status]}`}>{label}</span>;
 }
 
 function TransactionReceiptModal({ transaction, member, onClose }: { transaction: Transaction; member?: Member; onClose: () => void }) {
@@ -374,7 +331,7 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
-      <div className={`max-h-[92vh] w-full overflow-hidden rounded bg-white shadow-panel ${transaction.type === "topup" ? "max-w-3xl" : "max-w-md"}`}>
+      <div className="w-full max-w-3xl overflow-hidden rounded bg-white shadow-panel">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded bg-mint text-forest">
@@ -390,11 +347,11 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
           </button>
         </div>
 
-        <div className={`max-h-[calc(92vh-76px)] overflow-y-auto p-4 sm:p-5 ${transaction.type === "topup" ? "grid gap-5 lg:grid-cols-[0.9fr_1.1fr]" : ""}`}>
+        <div className="grid gap-5 p-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded bg-slate-50 p-4">
             <p className="text-sm font-black text-slate-800">Request details</p>
             <div className="mt-4 grid gap-3">
-              <ReceiptRow label="Status" value={transaction.status} />
+              <ReceiptRow label="Status" value={transaction.status === "pending" ? "Pending Confirmation" : transaction.status} />
               <ReceiptRow label="Customer/User" value={transaction.member} />
               <ReceiptRow label="Phone" value={member?.phone ?? "-"} />
               <ReceiptRow label="Admin scope" value={transaction.admin} />
@@ -408,36 +365,34 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
               )}
               <ReceiptRow label="Amount" value={formatRupiah(transaction.amount)} strong />
               <ReceiptRow label="Created date" value={shortDate(transaction.createdAt)} />
-              {transaction.type === "topup" && <ReceiptRow label="Proof file" value={transaction.proofName || "No proof filename"} />}
+              <ReceiptRow label="Proof file" value={transaction.proofName || "No proof filename"} />
             </div>
           </div>
 
-          {transaction.type === "topup" && (
-            <div className="rounded border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-black text-slate-800">Payment proof image/link</p>
-                {transaction.proofDataUrl && (
-                  <a className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white" href={transaction.proofDataUrl} download={proofDownloadName}>
-                    <Download size={14} />
-                    Save proof
-                  </a>
-                )}
-              </div>
-              {transaction.proofDataUrl ? (
-                <a href={transaction.proofDataUrl} target="_blank" rel="noreferrer">
-                  <img className="max-h-[60vh] w-full rounded border border-slate-100 object-contain" src={transaction.proofDataUrl} alt="Payment proof uploaded by member" />
+          <div className="rounded border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-black text-slate-800">Payment proof image/link</p>
+              {transaction.proofDataUrl && (
+                <a className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white" href={transaction.proofDataUrl} download={proofDownloadName}>
+                  <Download size={14} />
+                  Simpan bukti
                 </a>
-              ) : (
-                <div className="grid min-h-72 place-items-center rounded bg-slate-50 text-center text-sm text-slate-500">
-                  <div>
-                    <ReceiptText className="mx-auto mb-3 text-slate-300" size={42} />
-                    <p className="font-bold">No image proof stored for this request.</p>
-                    <p className="mt-1">Older records may only have filename/type metadata.</p>
-                  </div>
-                </div>
               )}
             </div>
-          )}
+            {transaction.proofDataUrl ? (
+              <a href={transaction.proofDataUrl} target="_blank" rel="noreferrer">
+                <img className="max-h-[520px] w-full rounded border border-slate-100 object-contain" src={transaction.proofDataUrl} alt="Payment proof uploaded by member" />
+              </a>
+            ) : (
+              <div className="grid min-h-72 place-items-center rounded bg-slate-50 text-center text-sm text-slate-500">
+                <div>
+                  <ReceiptText className="mx-auto mb-3 text-slate-300" size={42} />
+                  <p className="font-bold">Tidak ada bukti gambar yang tersimpan untuk permintaan ini.</p>
+                  <p className="mt-1">Catatan lama mungkin hanya memiliki metadata nama/tipe file.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

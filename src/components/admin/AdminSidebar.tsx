@@ -15,9 +15,9 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
       <div className="mb-4 overflow-hidden rounded-[1.5rem] bg-[linear-gradient(145deg,#047857_0%,#0f9f6b_58%,#0f766e_100%)] p-5 text-white shadow-[0_22px_60px_rgba(15,118,110,0.24)]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">System Status</p>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">Status Sistem</p>
             <h3 className="mt-3 text-xl font-black leading-tight">
-              {firebaseReady ? "Connected & Ready" : "System Ready"}
+              {firebaseReady ? "Terhubung & Siap" : "Sistem Siap"}
             </h3>
           </div>
           <span
@@ -31,8 +31,8 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
 
         <p className="mt-3 text-sm leading-6 text-emerald-50">
           {firebaseReady
-            ? "All services are online. Your team can manage customer records."
-            : "System is ready. Your team can continue managing customer records."}
+            ? "Semua layanan tersedia secara daring. Tim Anda dapat mengelola data pelanggan."
+            : "Sistem siap. Tim Anda dapat melanjutkan pengelolaan data pelanggan."}
         </p>
 
         <div className="mt-5 rounded-2xl bg-white/12 p-4 ring-1 ring-white/15">
@@ -41,13 +41,13 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
               <Server size={18} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Connection</p>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Koneksi</p>
               <p className="mt-0.5 text-sm font-black leading-5">
-                {firebaseReady ? "System Connected" : "System Ready"}
+                {firebaseReady ? "Sistem Terhubung" : "Sistem Siap"}
               </p>
             </div>
             <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${firebaseReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-              {firebaseReady ? "LIVE" : "READY"}
+              {firebaseReady ? "HIDUP" : "SIAP"}
             </span>
           </div>
         </div>

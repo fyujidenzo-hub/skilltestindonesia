@@ -99,14 +99,14 @@ const notifications = useMemo<CustomerNotification[]>(() => {
         id: `order-${order.id}`,
         title:
           orderState === "waiting_assignment"
-            ? "Waiting assignment"
+            ? "Menunggu penugasan"
             : orderState === "product_assigned"
-              ? "Product assigned"
+              ? "Produk telah ditetapkan"
               : orderState === "waiting_shipment"
-                ? "Waiting shipment"
+                ? "Menunggu pengiriman"
                 : orderState === "belum_diserahkan"
-                  ? "Waiting delivery"
-                  : "Order update",
+                  ? "Menunggu pengiriman"
+                  : "Pembaruan pesanan",
         text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
         tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
         targetPath: "/orders",
@@ -157,7 +157,7 @@ const handleStartShipment = async () => {
     dispatch({ type: "updateOrder", payload: order });
   } catch (error) {
     console.error("Failed to prepare shipment:", error);
-    setMessage("Unable to prepare shipment. Please try again.");
+    setMessage("Tidak dapat menyiapkan pengiriman. Silakan coba lagi.");
   } finally {
     setIsSubmitting(false);
   }
@@ -181,7 +181,7 @@ const handleSubmitAssignmentOrder = async () => {
     );
 
     dispatch({ type: "completeOrderWithMember", payload: result });
-    setMessage("Order submitted successfully. Your balance was not deducted. Commission will be added after completion.");
+    setMessage("Pesanan berhasil dikirimkan. Saldo Anda tidak dipotong. Komisi akan ditambahkan setelah penyelesaian.");
   } catch (error) {
     console.error("Failed to submit order:", error);
     setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
@@ -218,7 +218,7 @@ const handleAcceptChangedProduct = async () => {
     });
 
     dispatch({ type: "updateOrder", payload: order });
-    setMessage("Changed product accepted. You can now send the order.");
+    setMessage("Produk yang diubah telah disetujui. Anda sekarang dapat mengirimkan pesanan tersebut.");
   } catch (error) {
     console.error("Failed to accept changed product:", error);
     setMessage(error instanceof Error ? error.message : "Unable to accept changed product.");
@@ -238,7 +238,7 @@ const handleRejectChangedProduct = async () => {
     });
 
     dispatch({ type: "updateOrder", payload: order });
-    setMessage("Changed product rejected. You can take another order.");
+    setMessage("Produk yang diubah ditolak. Anda dapat mengambil pesanan lain.");
   } catch (error) {
     console.error("Failed to reject changed product:", error);
     setMessage(error instanceof Error ? error.message : "Unable to reject changed product.");
@@ -265,7 +265,7 @@ const handleRejectChangedProduct = async () => {
     setMessage("Order sent successfully. Waiting for delivery confirmation.");
   } catch (error) {
     console.error("Failed to submit order:", error);
-    setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
+    setMessage(error instanceof Error ? error.message : "Tidak dapat mengirimkan pesanan. Silakan coba lagi..");
   } finally {
     setIsSubmitting(false);
   }
@@ -288,7 +288,7 @@ const handleRejectChangedProduct = async () => {
       setMessage("Review submitted.");
     } catch (error) {
       console.error("Failed to save review:", error);
-      setMessage("Unable to save review. Check Firestore order rules.");
+      setMessage("Tidak dapat menyimpan ulasan. Periksa aturan urutan Firestore.");
     } finally {
       setIsSubmitting(false);
     }
@@ -297,7 +297,7 @@ const handleRejectChangedProduct = async () => {
   if (!ready) {
     return (
       <main className="grid min-h-screen place-items-center customer-page-bg text-ink">
-        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Memulihkan sesi anggota...</div>
       </main>
     );
   }
@@ -306,10 +306,10 @@ const handleRejectChangedProduct = async () => {
     return (
       <main className="grid min-h-screen place-items-center customer-page-bg px-4 text-ink">
         <div className="w-full max-w-sm rounded bg-white p-6 text-center shadow-panel">
-          <h1 className="text-2xl font-black">Login required</h1>
-          <p className="mt-2 text-sm text-slate-500">Please login before viewing your task orders.</p>
+          <h1 className="text-2xl font-black">Perlu masuk</h1>
+          <p className="mt-2 text-sm text-slate-500">Silakan masuk untuk melihat pesanan tugas Anda.</p>
           <button className="mt-5 w-full rounded bg-forest px-4 py-3 font-black text-white" onClick={() => navigate("/login")}>
-            Login
+            Masuk
           </button>
         </div>
       </main>
@@ -323,8 +323,8 @@ const handleRejectChangedProduct = async () => {
       <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black">Task Orders</h1>
-            <p className="text-sm text-slate-500">Track assigned order tasks and submit completed work.</p>
+          <h1 className="text-2xl font-black">Pesanan Tugas</h1>
+            <p className="text-sm text-slate-500">Pantau tugas pesanan yang diberikan dan serahkan pekerjaan yang telah selesai.</p>
           </div>
           {/* <button className="rounded bg-forest px-4 py-2 text-sm font-black text-white" onClick={() => navigate("/")}>
             Take Order
@@ -369,7 +369,7 @@ const handleRejectChangedProduct = async () => {
               memberBalance={currentMember.balance}
               member={currentMember}
               onAcceptTask={() => {
-                setMessage("You already have an active task. Complete it before taking another task.");
+                setMessage("Anda sudah memiliki tugas yang sedang berjalan. Selesaikan tugas tersebut sebelum mengambil tugas lain.");
               }}
               onStartShipment={handleStartShipment}
               onSubmitOrder={handleSubmitAssignmentOrder}
@@ -377,7 +377,7 @@ const handleRejectChangedProduct = async () => {
               onAcceptChangedProduct={handleAcceptChangedProduct}
               onRejectChangedProduct={handleRejectChangedProduct}
               onTopUp={() => {
-                setMessage("Please top up your balance from the home page.");
+                setMessage("Silakan isi ulang saldo Anda dari halaman utama.");
                 navigate("/");
               }}
               isLoading={isSubmitting}
@@ -405,9 +405,9 @@ const handleRejectChangedProduct = async () => {
             ))
           ) : !shouldShowAssignmentPanel ? (
             <div className="rounded bg-white p-10 text-center shadow-panel">
-              <p className="font-black text-slate-700">No orders found</p>
+              <p className="font-black text-slate-700">Tidak ada pesanan yang ditemukan</p>
               <p className="mt-1 text-sm text-slate-500">
-                Accepted tasks will appear here after they are created.
+                Tugas yang diterima akan muncul di sini setelah dibuat.
               </p>
             </div>
           ) : null}
@@ -490,22 +490,22 @@ function OrderCard({
             <h2 className="font-black">{primaryProduct.name}</h2>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-bold text-slate-500">Order Price</dt>
+                <dt className="text-xs font-bold text-slate-500">Harga Pesanan</dt>
                 <dd className="font-black">{formatRupiah(order.value ?? 0)}</dd>
               </div>
               <div>
-                <dt className="text-xs font-bold text-slate-500">Commission</dt>
+                <dt className="text-xs font-bold text-slate-500">Komisi</dt>
                 <dd className="font-black text-coral">{formatRupiah(order.commission ?? 0)}</dd>
               </div>
             </dl>
-            <p className="mt-3 text-xs font-semibold text-slate-500">Created: {shortDate(order.createdAt)}</p>
+            <p className="mt-3 text-xs font-semibold text-slate-500">Dibuat: {shortDate(order.createdAt)}</p>
             {canSendOrder && (
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white" onClick={onOpenConfirm}>
-                  Send Order
+                  Kirim Pesanan
                 </button>
                 <button className="rounded bg-forest px-4 py-3 text-sm font-black text-white/95" onClick={onOpenDetails}>
-                  Order Details
+                  Rincian Pesanan
                 </button>
               </div>
             )}
@@ -533,10 +533,10 @@ function OrderCard({
             className="mt-3 min-h-20 w-full rounded border border-slate-200 px-3 py-2 text-sm outline-none focus:border-forest"
             value={review}
             onChange={(event) => onReviewChange(event.target.value)}
-            placeholder="Write your comment or review here..."
+            placeholder="Tulis komentar atau ulasan Anda di sini..."
           />
           <button className="mt-3 w-full rounded bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:bg-slate-400" disabled={isSubmitting} onClick={onSubmitReview}>
-            Send Comment & Rating
+            Kirim Komentar & Penilaian
           </button>
         </div>
       )}
@@ -573,7 +573,7 @@ function OrderDetailsModal({
             <h2 className="mt-1 break-words text-xl font-black text-slate-900">{getOrderCode(order)}</h2>
           </div>
           <button className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600 hover:bg-slate-200" onClick={onClose}>
-            Close
+           Menutup
           </button>
         </div>
 
@@ -615,7 +615,7 @@ function OrderDetailsModal({
           </div>
 
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-black text-slate-900">Transaction summary</p>
+            <p className="text-sm font-black text-slate-900">Ringkasan transaksi</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <DetailRow label="Transaction No." value={getOrderCode(order)} />
               <DetailRow label="Current status" value={statusLabel} />
@@ -626,7 +626,7 @@ function OrderDetailsModal({
             </div>
             {order.review && (
               <div className="mt-3 rounded-xl bg-white p-3">
-                <p className="text-xs font-black uppercase text-slate-500">Review</p>
+                <p className="text-xs font-black uppercase text-slate-500">Ulasan</p>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">{order.review}</p>
               </div>
             )}
@@ -662,12 +662,12 @@ function ConfirmOrderModal({ order, products, isSubmitting, onCancel, onConfirm 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 px-4">
       <div className="w-full max-w-sm rounded bg-white p-5 shadow-panel">
-        <h2 className="text-center text-lg font-black">Confirm Order Delivery</h2>
+        <h2 className="text-center text-lg font-black">Konfirmasi Pengiriman Pesanan</h2>
         {primaryProduct && <img className="mx-auto mt-5 h-40 w-40 rounded object-cover" src={image || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=300&q=80"} alt={primaryProduct.name} />}
-        <p className="mt-4 text-center text-sm font-semibold text-slate-600">Are you sure you want to send this order?</p>
+        <p className="mt-4 text-center text-sm font-semibold text-slate-600">Apakah Anda yakin ingin mengirim pesanan ini?</p>
         <div className="mt-4 divide-y divide-slate-200 rounded border border-slate-200 text-sm">
           <div className="flex justify-between px-4 py-3">
-            <span className="font-bold text-slate-500">Order ID</span>
+            <span className="font-bold text-slate-500">ID Pesanan</span>
             <span className="font-black">{getOrderCode(order)}</span>
           </div>
           <div className="flex justify-between px-4 py-3">
@@ -675,16 +675,16 @@ function ConfirmOrderModal({ order, products, isSubmitting, onCancel, onConfirm 
             <span className="font-black">{formatRupiah(0)}</span>
           </div>
           <div className="flex justify-between px-4 py-3">
-            <span className="font-bold text-slate-500">Commission</span>
+            <span className="font-bold text-slate-500">Komisi</span>
             <span className="font-black">{formatRupiah(order.commission ?? 0)}</span>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button className="rounded bg-slate-200 px-4 py-3 font-black text-slate-700" onClick={onCancel}>
-            Cancel
+            Membatalkan
           </button>
           <button className="rounded bg-forest px-4 py-3 font-black text-white disabled:bg-slate-400" disabled={isSubmitting} onClick={onConfirm}>
-            Yes, Send
+            Ya, Kirim
           </button>
         </div>
       </div>

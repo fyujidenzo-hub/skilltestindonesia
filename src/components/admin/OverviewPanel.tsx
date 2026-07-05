@@ -113,8 +113,8 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
           <div className="mb-6 rounded bg-gradient-to-br from-slate-50 to-white p-4 ring-1 ring-slate-100">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Daily deposits vs releases</p>
-                <p className="mt-1 text-sm text-slate-500">Compare today’s money in and money out per admin.</p>
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Setoran harian vs. pencairan</p>
+                <p className="mt-1 text-sm text-slate-500">Bandingkan arus masuk dan keluar uang hari ini per admin.</p>
               </div>
               <div className="flex gap-3 text-xs font-black">
                 <span className="inline-flex items-center gap-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Deposit</span>
@@ -146,19 +146,19 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                 </div>
               ))
             ) : (
-              <EmptyChart text="No daily finance data yet." />
+              <EmptyChart text="Belum ada data keuangan harian." />
             )}
           </div>
 
           <div className="mb-6 rounded bg-gradient-to-br from-[#05251f] via-[#083a30] to-[#0b5d45] p-4 text-white shadow-sm ring-1 ring-emerald-300/20">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Responsive finance chart</p>
-                <p className="mt-1 text-sm text-white/65">7-day top-up and withdrawal movement from request records.</p>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Grafik keuangan</p>
+                <p className="mt-1 text-sm text-white/65">Pergerakan isi ulang dan penarikan selama 7 hari berdasarkan catatan permintaan.</p>
               </div>
               <div className="flex gap-3 text-xs font-black">
-                <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Top-up</span>
-                <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2.5 w-2.5 rounded-full bg-lime-300" /> Withdrawal</span>
+                <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Isi ulang</span>
+                <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2.5 w-2.5 rounded-full bg-lime-300" /> Penarikan</span>
               </div>
             </div>
             <FinanceTrendChart data={financeTrend} />
@@ -166,8 +166,8 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
 
           <div className="mb-6 rounded bg-white p-4 ring-1 ring-slate-100">
             <div className="mb-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Monthly finance comparison</p>
-              <p className="mt-1 text-sm text-slate-500">Deposits and releases across admin scopes.</p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Perbandingan keuangan bulanan</p>
+              <p className="mt-1 text-sm text-slate-500">Penyetoran dan pelepasan lintas cakupan administratif.</p>
             </div>
             <div className="space-y-3">
               {state.admins.length ? (
@@ -185,12 +185,12 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
               <thead className="text-xs uppercase text-slate-500">
                 <tr>
                   <PerformanceTh>Admin</PerformanceTh>
-                  <PerformanceTh>Agency code</PerformanceTh>
-                  <PerformanceTh>Invite code</PerformanceTh>
-                  <PerformanceTh>Reg. bonus</PerformanceTh>
-                  <PerformanceTh>Registrations</PerformanceTh>
-                  <PerformanceTh>Today deposit</PerformanceTh>
-                  <PerformanceTh>Today release</PerformanceTh>
+                  <PerformanceTh>Kode agensi</PerformanceTh>
+                  <PerformanceTh>Kode undangan</PerformanceTh>
+                  <PerformanceTh>Bonus pendaftaran</PerformanceTh>
+                  <PerformanceTh>Pendaftaran</PerformanceTh>
+                  <PerformanceTh>Deposit hari ini</PerformanceTh>
+                  <PerformanceTh>Pencairan hari ini</PerformanceTh>
                 </tr>
               </thead>
               <tbody>
@@ -224,7 +224,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                   setShowBankForm(!showBankForm);
                 }}
               >
-                <Plus size={16} /> Add
+                <Plus size={16} /> AMenambahkan
               </button>
             }
           >
@@ -246,11 +246,11 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                         <p className="break-words text-sm text-slate-500">{bank.accountName}</p>
                       </div>
                       <span className={`rounded px-2 py-1 text-xs font-bold ${bank.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                        {bank.active ? "Active" : "Paused"}
+                        {bank.active ? "Aktif" : "Dijeda"}
                       </span>
                     </div>
                     <p className="mt-3 break-all rounded-xl bg-slate-50 px-3 py-2 text-base font-black text-slate-900 sm:text-lg">{bank.accountNumber}</p>
-                    <p className="mt-1 text-xs text-slate-500">Minimum deposit {formatRupiah(bank.minDeposit)}</p>
+                    <p className="mt-1 text-xs text-slate-500">Setoran minimum {formatRupiah(bank.minDeposit)}</p>
 
                     <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
                       <button
@@ -262,7 +262,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                         }}
                       >
                         <Pencil size={13} />
-                        Edit
+                        Sunting
                       </button>
 
                       <button
@@ -286,7 +286,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                   </div>
                 ))
               ) : (
-                <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No bank placements yet. Add one to show deposit instructions on the customer store.</p>
+                <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">Belum ada penempatan bank. Tambahkan satu untuk menampilkan instruksi deposit di toko pelanggan.</p>
               )}
             </div>
           </Panel>
@@ -329,10 +329,10 @@ function DeleteBankDialog({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-wide text-rose-600">Delete bank account</p>
-              <h3 className="mt-1 text-lg font-black leading-tight text-slate-900 sm:text-xl">Are you sure?</h3>
+              <p className="text-xs font-black uppercase tracking-wide text-rose-600">Hapus rekening bank</p>
+              <h3 className="mt-1 text-lg font-black leading-tight text-slate-900 sm:text-xl">Apa kamu yakin?</h3>
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                This bank account will be removed from customer top-up instructions immediately.
+                Rekening bank ini akan segera dihapus dari instruksi isi ulang pelanggan.
               </p>
             </div>
 
@@ -350,15 +350,15 @@ function DeleteBankDialog({
 
         <div className="p-4 sm:p-5">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-black uppercase text-slate-500">Bank account</p>
+            <p className="text-xs font-black uppercase text-slate-500">Rekening bank</p>
             <p className="mt-1 break-words text-lg font-black text-slate-900">{bank.bank}</p>
             <p className="mt-1 break-words text-sm font-semibold text-slate-600">{bank.accountName}</p>
             <p className="mt-2 break-all rounded-xl bg-white px-3 py-2 text-sm font-black text-forest">{bank.accountNumber}</p>
-            <p className="mt-2 text-xs font-semibold text-slate-500">Minimum deposit {formatRupiah(bank.minDeposit)}</p>
+            <p className="mt-2 text-xs font-semibold text-slate-500">Setoran minimum {formatRupiah(bank.minDeposit)}</p>
           </div>
 
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-800">
-            This action cannot be undone from the admin panel.
+            Tindakan ini tidak dapat dibatalkan dari panel admin.
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
@@ -368,7 +368,7 @@ function DeleteBankDialog({
               onClick={onCancel}
               disabled={isDeleting}
             >
-              Cancel
+              Membatalkan
             </button>
             <button
               type="button"
@@ -477,8 +477,8 @@ function FinanceTrendChart({ data }: { data: FinanceTrendPoint[] }) {
       <div className="rounded bg-white/8 p-3 ring-1 ring-white/10 backdrop-blur sm:p-4">
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-black text-white">Top-up and withdrawal flow</p>
-            <p className="text-xs font-semibold text-emerald-100/70">Filled trend view, scaled for desktop and mobile.</p>
+            <p className="text-sm font-black text-white">Alur pengisian saldo dan penarikan</p>
+            <p className="text-xs font-semibold text-emerald-100/70">Tampilan tren berisi (filled), disesuaikan skalanya untuk desktop dan perangkat seluler.</p>
           </div>
           <p className="text-xs font-black text-emerald-100">Peak: {formatRupiah(maxValue)}</p>
         </div>
@@ -504,7 +504,7 @@ function FinanceTrendChart({ data }: { data: FinanceTrendPoint[] }) {
 
       <div className="rounded bg-[#06251f]/85 p-3 ring-1 ring-emerald-300/15 sm:p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-black text-white">Request activity line</p>
+          <p className="text-sm font-black text-white">Baris aktivitas permintaan</p>
           <div className="flex gap-3 text-[11px] font-black uppercase tracking-wide">
             <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2 w-5 rounded-full bg-emerald-400" /> Top-up</span>
             <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2 w-5 rounded-full bg-lime-300" /> Withdrawal</span>

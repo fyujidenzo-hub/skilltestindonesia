@@ -63,60 +63,60 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
       </head>
       <body>
         <div class="header">
-          <h1>RECEIPT</h1>
+          <h1>BUKTI PEMBAYARAN</h1>
           <p>Tokopedia Kari Indonesia</p>
-          <p>Order Confirmation & Transaction Proof</p>
+          <p>Konfirmasi Pesanan & Bukti Transaksi</p>
         </div>
 
         <div class="section">
-          <h3>Order Information</h3>
+          <h3>Informasi Pesanan</h3>
           <div class="row">
-            <span class="label">Order Number:</span>
+            <span class="label">Nomor Pesanan:</span>
             <span class="value">${getOrderCode(order)}</span>
           </div>
           <div class="row">
-            <span class="label">Order Date:</span>
+            <span class="label">Tanggal Pemesanan:</span>
             <span class="value">${order.createdAt}</span>
           </div>
           <div class="row">
-            <span class="label">Submitted Date:</span>
+            <span class="label">Tanggal Pengajuan:</span>
             <span class="value">${order.submittedAt || "Pending"}</span>
           </div>
           <div class="row">
-            <span class="label">Current Status:</span>
+            <span class="label">Status Saat Ini:</span>
             <span class="value"><strong>${order.status}</strong></span>
           </div>
         </div>
 
         <div class="section">
-          <h3>Member Information</h3>
+          <h3>Informasi Anggota</h3>
           <div class="row">
-            <span class="label">Name:</span>
+            <span class="label">Nama:</span>
             <span class="value">${member.username}</span>
           </div>
           <div class="row">
-            <span class="label">Phone:</span>
+            <span class="label">  Telepon:</span>
             <span class="value">${member.phone}</span>
           </div>
           <div class="row">
-            <span class="label">Level:</span>
+            <span class="label">Tingkat:</span>
             <span class="value">${member.level}</span>
           </div>
           <div class="row">
-            <span class="label">Referred By:</span>
+            <span class="label">Dirujuk oleh:</span>
             <span class="value">${member.referredBy}</span>
           </div>
         </div>
 
         <div class="section">
-          <h3>Product Details</h3>
+          <h3>Detail Produk</h3>
           <table>
             <thead>
               <tr>
-                <th>Product Code</th>
-                <th>Product Name</th>
-                <th>Price</th>
-                <th>Commission</th>
+                <th>Kode Produk</th>
+                <th>Nama Produk</th>
+                <th>Harga</th>
+                <th>Komisi</th>
               </tr>
             </thead>
             <tbody>
