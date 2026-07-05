@@ -106,7 +106,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
               Pemberitahuan bagi seluruh pengguna: waktu penyelesaian tugas/pesanan adalah 2 jam.
               Harap selesaikan pesanan dalam batas waktu yang ditentukan. Jika Anda melampaui
               batas waktu tersebut, saldo akun Anda dapat dibekukan. Pengisian saldo (top-up) dan
-              penarikan dana di luar jam 08.00 – 17.00 (UTC +8) memerlukan persetujuan dari
+              penarikan dana di luar jam  09:00-21:00 WIB memerlukan persetujuan dari
               tim Layanan Pelanggan kami. Jika terjadi masalah pada transaksi Anda,
               silakan segera hubungi Layanan Pelanggan.
             </p>
