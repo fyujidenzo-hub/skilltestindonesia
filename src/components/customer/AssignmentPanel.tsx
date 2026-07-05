@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, Clock, Package } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Receipt from "./Receipt";
 import type { Member, Order, Product } from "../../types";
 import { formatRupiah } from "../../utils";
@@ -41,6 +41,8 @@ export default function AssignmentPanel({
 }: AssignmentPanelProps) {
   const [showWalletValidation, setShowWalletValidation] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [balanceToastMessage, setBalanceToastMessage] = useState("");
+  const balanceToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const state = getOrderState(order);
   const hasProducts = hasProductsAssigned(order);
@@ -88,13 +90,39 @@ const assignedCommission = assignedProducts.length
   // The order amount is NOT deducted. It is only an eligibility requirement.
   const hasEnoughBalanceForOrder = currentBalance >= assignedOrderAmount;
   const isZeroBalance = currentBalance <= 0;
-  const cannotSendOrder = isLoading || !hasEnoughBalanceForOrder || isZeroBalance;
+  const cannotSendOrder = isLoading;
+
+  useEffect(() => {
+    return () => {
+      if (balanceToastTimerRef.current) {
+        clearTimeout(balanceToastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showInsufficientBalanceToast = () => {
+    const shortAmount = Math.max(assignedOrderAmount - currentBalance, 0);
+
+    setBalanceToastMessage(
+      `Sorry, your balance is short by ${formatRupiah(shortAmount)} to process this order. Please top up your balance.`,
+    );
+
+    if (balanceToastTimerRef.current) {
+      clearTimeout(balanceToastTimerRef.current);
+    }
+
+    balanceToastTimerRef.current = setTimeout(() => {
+      setBalanceToastMessage("");
+      balanceToastTimerRef.current = null;
+    }, 2000);
+  };
 
   const handleSubmitClick = async () => {
     // SAFETY:
-    // Block submission even if the disabled button is bypassed.
+    // Let the user press Submit Task, then validate balance.
+    // If insufficient, show a 2-second inline toast inside the assigned-products area.
     if (!hasEnoughBalanceForOrder || isZeroBalance) {
-      setShowWalletValidation(true);
+      showInsufficientBalanceToast();
       return;
     }
 
@@ -108,11 +136,11 @@ const assignedCommission = assignedProducts.length
 
   const handleWalletConfirm = () => {
     // SAFETY:
-    // If balance is still not enough, do not submit the order.
-    // Send the user to top-up instead.
+    // If the balance changes before confirmation, do not submit.
+    // Show the same inline toast instead of sending the user to top-up.
     if (!hasEnoughBalanceForOrder || isZeroBalance) {
       setShowWalletValidation(false);
-      onTopUp?.();
+      showInsufficientBalanceToast();
       return;
     }
 
@@ -222,6 +250,16 @@ const assignedCommission = assignedProducts.length
                 {getOrderStateLabel(state)}
               </span>
             </div>
+
+            {balanceToastMessage && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold leading-5 text-emerald-900 shadow-sm"
+              >
+                {balanceToastMessage}
+              </div>
+            )}
 
             <div className="space-y-3">
               {assignedProducts.map((product) => {
@@ -333,15 +371,7 @@ const assignedCommission = assignedProducts.length
                       : "bg-emerald-600 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel"
                   }`}
                 >
-                  {isLoading
-                    ? "Submitting..."
-                    : isZeroBalance
-                      ? "Top Up Required"
-                      : !hasEnoughBalanceForOrder
-                        ? "Insufficient Balance"
-                        : state === "product_assigned"
-                          ? "Send Order"
-                          : "Yes, Send"}
+                  {isLoading ? "Submitting..." : "Submit Task"}
                 </button>
               </>
             ))}

@@ -124,8 +124,10 @@ function reducer(state: AppState, action: Action): AppState {
 
     const shouldApplyFinanceTotals = action.payload.status === "approved";
     const creditedAt = shouldApplyFinanceTotals ? nowStamp() : transaction.creditedAt ?? "";
+    const withdrawalWasDeductedOnSubmit = transaction.type === "withdrawal" && Boolean(transaction.balanceDeductedAt);
 
-    // SAFETY: approval is the only time top-up/withdrawal changes balance, and only once from pending state.
+    // SAFETY: withdrawals are deducted on submit. Approval should not deduct them again;
+    // rejection refunds only if the pending withdrawal was already deducted.
     return {
       ...state,
       transactions: state.transactions.map((item) =>
@@ -147,15 +149,24 @@ function reducer(state: AppState, action: Action): AppState {
                 };
           })
         : state.admins,
-      members:
-        action.payload.status === "approved"
-          ? state.members.map((member) => {
-              if (member.username !== transaction.member) return member;
-              const signedAmount = transaction.type === "topup" ? transaction.amount : -transaction.amount;
-              if (transaction.type === "withdrawal" && transaction.amount > member.balance) return member;
-              return { ...member, balance: Math.max(0, member.balance + signedAmount) };
-            })
-          : state.members,
+      members: state.members.map((member) => {
+        if (member.username !== transaction.member) return member;
+
+        if (action.payload.status === "approved") {
+          if (transaction.type === "topup") return { ...member, balance: member.balance + transaction.amount };
+          if (transaction.type === "withdrawal" && !withdrawalWasDeductedOnSubmit) {
+            if (transaction.amount > member.balance) return member;
+            return { ...member, balance: Math.max(0, member.balance - transaction.amount) };
+          }
+          return member;
+        }
+
+        if (action.payload.status === "rejected" && withdrawalWasDeductedOnSubmit) {
+          return { ...member, balance: member.balance + transaction.amount };
+        }
+
+        return member;
+      }),
     };
   }
 

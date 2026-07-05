@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, CreditCard, Landmark, Send, Upload, UserRound, Wallet, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3, CreditCard, Landmark, LockKeyhole, Send, Upload, UserRound, Wallet, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass } from "../common";
 import { createTransaction, MIN_WITHDRAWAL_AMOUNT, validateWithdrawalRequest } from "../../services/transactionsService";
@@ -22,6 +22,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const [withdrawalBankName, setWithdrawalBankName] = useState("");
   const [withdrawalAccountName, setWithdrawalAccountName] = useState("");
   const [withdrawalAccountNumber, setWithdrawalAccountNumber] = useState("");
+  const [withdrawalPassword, setWithdrawalPassword] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,6 +68,10 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
       setMessage("✗ Bank name, account holder, and account number are required");
       return;
     }
+    if (type === "withdraw" && !withdrawalPassword.trim()) {
+      setMessage("✗ Withdrawal password is required");
+      return;
+    }
 
     if (!member) {
       setMessage("✗ Please login first");
@@ -78,7 +83,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
 
     try {
       const proofDataUrl = type === "topup" && proofFile ? await fileToDataUrl(proofFile) : undefined;
-      const transaction = await createTransaction({
+      const result = await createTransaction({
         member,
         admin,
         type: type === "withdraw" ? "withdrawal" : "topup",
@@ -89,13 +94,17 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
         withdrawalBankName: type === "withdraw" ? withdrawalBankName.trim() : undefined,
         withdrawalAccountName: type === "withdraw" ? withdrawalAccountName.trim() : undefined,
         withdrawalAccountNumber: type === "withdraw" ? withdrawalAccountNumber.trim() : undefined,
+        submittedWithdrawalPassword: type === "withdraw" ? withdrawalPassword.trim() : undefined,
         proofName: type === "topup" ? proofFile?.name : undefined,
         proofType: type === "topup" ? proofFile?.type : undefined,
         proofDataUrl,
       });
-      dispatch({ type: "addTransaction", payload: transaction });
+      dispatch({ type: "addTransaction", payload: result.transaction });
+      if (result.updatedMember) {
+        dispatch({ type: "updateMember", payload: result.updatedMember });
+      }
 
-      setMessage("✓ Request submitted! Awaiting admin approval...");
+      setMessage(type === "withdraw" ? "✓ Withdrawal submitted. Balance deducted while awaiting admin review." : "✓ Request submitted! Awaiting admin approval...");
       setLoading(false);
 
       setTimeout(onClose, 2000);
@@ -140,7 +149,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
             <div className="flex items-start gap-3">
               <Clock3 className="mt-0.5 shrink-0" size={18} />
-              <p className="font-bold">Your request will be reviewed by an admin before the balance changes.</p>
+              <p className="font-bold">{type === "withdraw" ? "Withdrawal amount is deducted immediately while admin reviews the request." : "Your top up request will be reviewed by an admin before the balance changes."}</p>
             </div>
           </div>
 
@@ -223,6 +232,18 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
 
               <IconField icon={<CreditCard size={17} />} label="Account number">
                 <input className={`${inputClass} rounded-xl`} value={withdrawalAccountNumber} onChange={(event) => setWithdrawalAccountNumber(event.target.value)} disabled={loading} inputMode="numeric" placeholder="Bank account number" />
+              </IconField>
+
+              <IconField icon={<LockKeyhole size={17} />} label="Withdrawal password / PIN">
+                <input
+                  className={`${inputClass} rounded-xl`}
+                  value={withdrawalPassword}
+                  onChange={(event) => setWithdrawalPassword(event.target.value)}
+                  disabled={loading}
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Enter your withdrawal password"
+                />
               </IconField>
             </div>
           )}

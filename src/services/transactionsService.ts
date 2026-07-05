@@ -21,6 +21,16 @@ const ACTIVE_ORDER_STATUSES = new Set([
   "frozen",
 ]);
 
+export type CreateTransactionResult = {
+  transaction: Transaction;
+  updatedMember?: Member;
+};
+
+export type CreateTransactionInput = Omit<Transaction, "id"> & {
+  id?: string;
+  submittedWithdrawalPassword?: string;
+};
+
 export function hasActiveTasksForUser(memberUsername: string, orders: Order[]) {
   return orders.some((order) => order.member === memberUsername && ACTIVE_ORDER_STATUSES.has(String(order.status).toLowerCase()));
 }
@@ -39,21 +49,56 @@ export function validateWithdrawalRequest(member: Pick<Member, "username" | "bal
   return "";
 }
 
-async function validateFirebaseWithdrawalBeforeCreate(memberUsername: string, amount: number) {
-  if (!db) return;
+async function getLiveMemberAndOrders(memberUsername: string) {
+  if (!db) throw new Error("Firebase not initialized");
+
   const memberSnapshot = await getDocs(query(collection(db, "members"), where("username", "==", memberUsername)));
   const memberDoc = memberSnapshot.docs[0];
   if (!memberDoc) throw new Error("Member no longer exists.");
 
-  const liveMember = { id: memberDoc.id, ...memberDoc.data() } as Member;
   const ordersSnapshot = await getDocs(query(collection(db, "orders"), where("member", "==", memberUsername)));
   const liveOrders = ordersSnapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Order));
-  const validationMessage = validateWithdrawalRequest(liveMember, liveOrders, amount);
-  if (validationMessage) throw new Error(validationMessage);
+
+  return {
+    memberRef: doc(db, "members", memberDoc.id),
+    member: { id: memberDoc.id, ...memberDoc.data() } as Member,
+    orders: liveOrders,
+  };
 }
 
 function nowStamp() {
   return new Date().toISOString().slice(0, 16).replace("T", " ");
+}
+
+function requestPrefix(type: Transaction["type"]) {
+  if (type === "topup") return "TU";
+  if (type === "withdrawal") return "WD";
+  return "RW";
+}
+
+function buildTransaction(transaction: CreateTransactionInput, forcedId?: string, forcedRequestId?: string): Transaction {
+  const { submittedWithdrawalPassword: _submittedWithdrawalPassword, ...transactionData } = transaction;
+  const id = forcedId || transactionData.id || crypto.randomUUID();
+  const requestId =
+    forcedRequestId ||
+    transactionData.requestId ||
+    `${requestPrefix(transactionData.type)}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+  return {
+    ...transactionData,
+    id,
+    requestId,
+    status: "pending",
+    creditedAt: transactionData.creditedAt ?? "",
+    balanceDeductedAt: transactionData.balanceDeductedAt ?? "",
+    senderName: transactionData.senderName ?? "",
+    withdrawalBankName: transactionData.withdrawalBankName ?? "",
+    withdrawalAccountName: transactionData.withdrawalAccountName ?? "",
+    withdrawalAccountNumber: transactionData.withdrawalAccountNumber ?? "",
+    proofName: transactionData.proofName ?? "",
+    proofType: transactionData.proofType ?? "",
+    proofDataUrl: transactionData.proofDataUrl ?? "",
+  };
 }
 
 export async function getTransactions(): Promise<Transaction[]> {
@@ -75,31 +120,63 @@ export async function getTransactionsByMember(memberUsername: string): Promise<T
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Transaction));
 }
 
-export async function createTransaction(transaction: Omit<Transaction, "id"> & { id?: string }): Promise<Transaction> {
+export async function createTransaction(transaction: CreateTransactionInput): Promise<CreateTransactionResult> {
   if (!db) throw new Error("Firebase not initialized");
-  if (transaction.type === "withdrawal") {
-    await validateFirebaseWithdrawalBeforeCreate(transaction.member, Number(transaction.amount ?? 0));
-  }
+
   const id = transaction.id || crypto.randomUUID();
   const requestId =
     transaction.requestId ||
-    `${transaction.type === "topup" ? "TU" : transaction.type === "withdrawal" ? "WD" : "RW"}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const nextTransaction: Transaction = {
-    ...transaction,
-    id,
-    requestId,
-    status: "pending",
-    creditedAt: transaction.creditedAt ?? "",
-    senderName: transaction.senderName ?? "",
-    withdrawalBankName: transaction.withdrawalBankName ?? "",
-    withdrawalAccountName: transaction.withdrawalAccountName ?? "",
-    withdrawalAccountNumber: transaction.withdrawalAccountNumber ?? "",
-    proofName: transaction.proofName ?? "",
-    proofType: transaction.proofType ?? "",
-    proofDataUrl: transaction.proofDataUrl ?? "",
-  };
-  await setDoc(doc(db, COLLECTION, id), nextTransaction);
-  return nextTransaction;
+    `${requestPrefix(transaction.type)}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const nextTransaction = buildTransaction(transaction, id, requestId);
+
+  if (transaction.type !== "withdrawal") {
+    await setDoc(doc(db, COLLECTION, id), nextTransaction);
+    return { transaction: nextTransaction };
+  }
+
+  const { memberRef, member, orders } = await getLiveMemberAndOrders(transaction.member);
+  const txRef = doc(db, COLLECTION, id);
+  let updatedMember: Member = member;
+
+  await runTransaction(db, async (firestoreTransaction) => {
+    const [memberSnap, txSnap] = await Promise.all([firestoreTransaction.get(memberRef), firestoreTransaction.get(txRef)]);
+
+    if (txSnap.exists()) throw new Error("This request already exists.");
+    if (!memberSnap.exists()) throw new Error("Member no longer exists.");
+
+    const liveMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
+    const currentBalance = Number(liveMember.balance ?? 0);
+    const amount = Number(nextTransaction.amount ?? 0);
+    const validationMessage = validateWithdrawalRequest({ ...liveMember, balance: currentBalance }, orders, amount);
+    if (validationMessage) throw new Error(validationMessage);
+
+    const savedWithdrawalPassword = String(liveMember.withdrawalPassword ?? "").trim();
+    const submittedWithdrawalPassword = String(transaction.submittedWithdrawalPassword ?? "").trim();
+    if (!savedWithdrawalPassword) {
+      throw new Error("Withdrawal password is not set. Please contact Super Admin to reset it.");
+    }
+    if (!submittedWithdrawalPassword) {
+      throw new Error("Withdrawal password is required.");
+    }
+    if (submittedWithdrawalPassword !== savedWithdrawalPassword) {
+      throw new Error("Incorrect withdrawal password.");
+    }
+
+    const balanceDeductedAt = nowStamp();
+    const nextBalance = currentBalance - amount;
+    const withdrawalTransaction: Transaction = {
+      ...nextTransaction,
+      balanceDeductedAt,
+      creditedAt: "",
+    };
+
+    firestoreTransaction.set(txRef, withdrawalTransaction);
+    firestoreTransaction.update(memberRef, { balance: nextBalance });
+    updatedMember = { ...liveMember, balance: nextBalance };
+    Object.assign(nextTransaction, withdrawalTransaction);
+  });
+
+  return { transaction: nextTransaction, updatedMember };
 }
 
 export async function createRewardTransaction({
@@ -129,6 +206,7 @@ export async function createRewardTransaction({
     status: "approved",
     createdAt,
     creditedAt: createdAt,
+    balanceDeductedAt: "",
     senderName: "Super Admin",
     withdrawalBankName: "",
     withdrawalAccountName: "",
@@ -168,25 +246,37 @@ export async function approveTransactionRequest(transactionItem: Transaction, me
 
     const liveTransaction = { id: txSnap.id, ...txSnap.data() } as Transaction;
     const currentBalance = Number(memberSnap.data().balance ?? member.balance);
+    const amount = Number(liveTransaction.amount ?? 0);
+    const wasWithdrawalDeductedOnSubmit = liveTransaction.type === "withdrawal" && Boolean(liveTransaction.balanceDeductedAt);
     nextBalance = currentBalance;
 
-    // SAFETY: rejected requests never change balance. Approved requests affect balance only once.
     if (status === "approved") {
-      if (liveTransaction.creditedAt) throw new Error("This request has already been credited.");
-
       if (liveTransaction.type === "withdrawal") {
-        if (liveTransaction.amount < MIN_WITHDRAWAL_AMOUNT) throw new Error("Minimum Withdrawal Amount is Rp100,000.");
-        if (liveTransaction.amount > currentBalance) throw new Error("Insufficient balance.");
+        if (amount < MIN_WITHDRAWAL_AMOUNT) throw new Error("Minimum Withdrawal Amount is Rp100,000.");
+
+        // New flow: pending withdrawal was already deducted when the request was created.
+        // Backward compatibility: old pending withdrawal requests without balanceDeductedAt still deduct on approval.
+        if (!wasWithdrawalDeductedOnSubmit) {
+          if (amount > currentBalance) throw new Error("Insufficient balance.");
+          nextBalance = Math.max(0, currentBalance - amount);
+          transaction.update(memberRef, { balance: nextBalance });
+        }
+      } else {
+        if (liveTransaction.creditedAt) throw new Error("This request has already been credited.");
+        nextBalance = currentBalance + amount;
+        transaction.update(memberRef, { balance: nextBalance });
       }
 
-      const signedAmount = liveTransaction.type === "withdrawal" ? -liveTransaction.amount : liveTransaction.amount;
-      nextBalance = Math.max(0, currentBalance + signedAmount);
       transaction.update(txRef, { status, creditedAt: nowStamp() });
-      transaction.update(memberRef, { balance: nextBalance });
       return;
     }
 
-    transaction.update(txRef, { status, creditedAt: liveTransaction.creditedAt ?? "" });
+    if (liveTransaction.type === "withdrawal" && wasWithdrawalDeductedOnSubmit) {
+      nextBalance = currentBalance + amount;
+      transaction.update(memberRef, { balance: nextBalance });
+    }
+
+    transaction.update(txRef, { status });
   });
 
   return { ...member, balance: nextBalance };

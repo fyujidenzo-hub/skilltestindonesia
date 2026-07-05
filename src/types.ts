@@ -83,8 +83,10 @@ export interface Transaction {
   proofName?: string;
   proofType?: string;
   proofDataUrl?: string;
-  // SAFETY: set when an approved top-up/withdrawal has already affected balance.
+  // SAFETY: set when an approved top-up has credited or a withdrawal has been finalized.
   creditedAt?: string;
+  // SAFETY: set when a withdrawal amount was deducted immediately on request creation.
+  balanceDeductedAt?: string;
 }
 
 export interface Order {

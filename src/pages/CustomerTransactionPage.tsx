@@ -136,7 +136,7 @@ function WithdrawalNotice() {
           <div className="mt-5 grid gap-4 text-sm font-bold leading-6 text-emerald-50 sm:text-base">
             <NoticeItem text="Gunakan hanya rekening atas nama Anda sendiri untuk pengajuan withdrawal." />
             <NoticeItem text="Pastikan nama bank, nama pemilik rekening, dan nomor rekening sudah benar." />
-            <NoticeItem text="Withdrawal akan diproses setelah admin melakukan verifikasi dan persetujuan." />
+            <NoticeItem text="The withdrawal amount is deducted immediately and will be refunded if Super Admin rejects the request." />
           </div>
 
           <div className="mt-5 border-t border-white/25 pt-4">

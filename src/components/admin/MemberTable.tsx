@@ -20,7 +20,7 @@ const taskTarget = 15;
   const { dispatch } = useAppStore();
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [modalType, setModalType] = useState<"edit" | "balance" | null>(null);
-  const [form, setForm] = useState({ username: "", phone: "", level: "Starter", amount: 0 });
+  const [form, setForm] = useState({ username: "", phone: "", level: "Starter", amount: 0, withdrawalPassword: "" });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(0);
@@ -50,7 +50,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
   setActiveMember(member);
   setModalType(type);
-  setForm({ username: member.username, phone: member.phone, level: member.level, amount: 0 });
+  setForm({ username: member.username, phone: member.phone, level: member.level, amount: 0, withdrawalPassword: "" });
   setMessage("");
 };
 
@@ -70,9 +70,16 @@ const openModal = (member: Member, type: "edit" | "balance") => {
     try {
       const amount = Math.max(0, Number(form.amount) || 0);
       const isDirectBalanceCredit = modalType === "balance";
+      const resetWithdrawalPassword = modalType === "edit" && canManageMemberFinance ? form.withdrawalPassword.trim() : "";
       const nextMember: Member =
         modalType === "edit"
-          ? { ...activeMember, username: form.username.trim(), phone: form.phone.trim(), level: form.level as Member["level"] }
+          ? {
+              ...activeMember,
+              username: form.username.trim(),
+              phone: form.phone.trim(),
+              level: form.level as Member["level"],
+              ...(resetWithdrawalPassword ? { withdrawalPassword: resetWithdrawalPassword } : {}),
+            }
           : { ...activeMember, balance: activeMember.balance + amount };
 
       await updateMember(activeMember.id, nextMember);
@@ -90,7 +97,9 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
       setMessage(
         modalType === "edit"
-          ? "Member updated."
+          ? resetWithdrawalPassword
+            ? "Member updated and withdrawal password reset."
+            : "Member updated."
           : "Balance reward added and recorded."
       );
       setTimeout(closeModal, 600);
@@ -217,6 +226,25 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                     <option>VIP</option>
                   </select>
                 </label>
+
+                {canManageMemberFinance && (
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
+                    <label className="text-xs font-bold text-amber-800">
+                      Reset Withdrawal Password
+                      <input
+                        className="mt-1 w-full rounded border border-amber-200 bg-white px-3 py-2 text-slate-900"
+                        value={form.withdrawalPassword}
+                        onChange={(event) => setForm({ ...form, withdrawalPassword: event.target.value })}
+                        type="password"
+                        autoComplete="off"
+                        placeholder="Enter new withdrawal password / PIN"
+                      />
+                    </label>
+                    <p className="mt-2 text-xs font-semibold leading-5 text-amber-700">
+                      Leave this blank if you do not want to change the member's withdrawal password.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <label className="mt-5 block text-xs font-bold text-slate-600">
