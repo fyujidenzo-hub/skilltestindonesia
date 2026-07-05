@@ -2,19 +2,20 @@ import { Search } from "lucide-react";
 import { Select } from "../common";
 import type { StaffAdmin } from "../../types";
 
-const publicSiteUrl = "https://tokopediakaririndonesia.onrender.com";
-
 interface AdminToolbarProps {
   admins: StaffAdmin[];
   registrationCode: string;
   adminCode: string;
   selectedAdmin: string;
   query: string;
+  siteUrl?: string;
   onSelectedAdminChange: (admin: string) => void;
   onQueryChange: (query: string) => void;
 }
 
-export default function AdminToolbar({ admins, registrationCode, adminCode, selectedAdmin, query, onSelectedAdminChange, onQueryChange }: AdminToolbarProps) {
+export default function AdminToolbar({ admins, registrationCode, adminCode, selectedAdmin, query, siteUrl, onSelectedAdminChange, onQueryChange }: AdminToolbarProps) {
+  const publicSiteUrl = getPublicSiteUrl(siteUrl);
+
   return (
     <div className="mb-5 flex flex-col gap-3 rounded bg-white p-4 shadow-panel md:flex-row md:items-center md:justify-between">
       <div>
@@ -40,4 +41,18 @@ export default function AdminToolbar({ admins, registrationCode, adminCode, sele
       </div>
     </div>
   );
+}
+
+function getPublicSiteUrl(value?: string) {
+  const normalized = normalizeUrl(value);
+  if (!normalized || normalized.includes("tokopediakaririndonesia.onrender.com")) {
+    return "https://skilltestindonesia.com";
+  }
+  return normalized;
+}
+
+function normalizeUrl(value?: string) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed.replace(/\/+$/, "") : `https://${trimmed.replace(/\/+$/, "")}`;
 }

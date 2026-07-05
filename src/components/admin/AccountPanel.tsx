@@ -134,7 +134,7 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
           <div className="flex items-start gap-3">
             <Link2 className="mt-0.5 shrink-0 text-forest" size={18} />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase text-slate-500">Registration link</p>
+              <p className="text-xs font-black uppercase text-slate-500">Register link</p>
               <p className="mt-1 break-all text-sm font-black text-forest">{inviteLink}</p>
             </div>
           </div>

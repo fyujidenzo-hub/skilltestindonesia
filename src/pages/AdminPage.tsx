@@ -147,6 +147,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
             adminCode={selectedAdminDisplayCode}
             selectedAdmin={selectedAdmin}
             query={query}
+            siteUrl={state.account.siteUrl}
             onSelectedAdminChange={setSelectedAdmin}
             onQueryChange={setQuery}
           />
