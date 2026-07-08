@@ -1,4 +1,4 @@
-import { ArrowRight, Banknote, PackageCheck, ReceiptText, ShieldCheck, User, WalletCards, X, Zap } from "lucide-react";
+import { ArrowRight, Banknote, PackageCheck, ReceiptText, ShieldCheck, User, WalletCards, X } from "lucide-react";
 import { useState } from "react";
 import type { Navigate } from "../../App";
 
@@ -16,11 +16,10 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         <StoreShortcut icon={<PackageCheck />} label="Orders" onClick={() => navigate("/orders")} />
         <StoreShortcut icon={<WalletCards />} label="Top Up" onClick={onTopUp} />
         <StoreShortcut icon={<Banknote />} label="Withdraw" onClick={onWithdraw} />
-        <StoreShortcut icon={<Zap fill="currentColor" />} label="Take Order" onClick={() => navigate("/take-order")} />
         <StoreShortcut icon={<ReceiptText />} label="Records" onClick={() => setModal("records")} />
         <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => setModal("security")} />
         <StoreShortcut icon={<User />} label="Account" onClick={() => setModal("account")} />
@@ -83,9 +82,12 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
 
 function StoreShortcut({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button className="group grid min-h-24 place-items-center rounded-3xl border border-white bg-white/95 p-3 text-center text-xs font-black shadow-[0_14px_38px_rgba(15,23,42,0.07)] ring-1 ring-slate-100 hover:-translate-y-1 hover:border-emerald-100 hover:shadow-[0_18px_48px_rgba(22,141,98,0.16)] sm:text-sm" onClick={onClick}>
+    <button
+      className="group grid min-h-24 place-items-center rounded-[1.35rem] border border-white bg-white/95 p-3 text-center text-xs font-black text-slate-950 shadow-[0_16px_42px_rgba(15,23,42,0.08)] ring-1 ring-slate-100 backdrop-blur transition hover:-translate-y-1 hover:border-emerald-100 hover:shadow-[0_22px_56px_rgba(22,141,98,0.18)] sm:min-h-28 sm:text-sm"
+      onClick={onClick}
+    >
       <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mint text-forest transition group-hover:bg-forest group-hover:text-white">{icon}</span>
-      <span className="mt-1">{label}</span>
+      <span className="mt-2 leading-tight">{label}</span>
     </button>
   );
 }

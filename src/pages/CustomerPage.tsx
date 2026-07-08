@@ -323,7 +323,7 @@ if (state.members.length === 0) {
 }
 
 return (
-  <main className="min-h-screen customer-page-bg pb-24 text-ink">
+  <main className="min-h-screen customer-page-bg pb-28 text-ink">
     <CustomerHeader
       query={query}
       activeUsername={currentMember?.username}

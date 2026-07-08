@@ -3,7 +3,7 @@ import type { Navigate } from "../../App";
 
 export default function BottomNavbar({ isLoggedIn, navigate, active = "home" }: { isLoggedIn?: boolean; navigate: Navigate; active?: "home" | "orders" | "claim" | "service" | "profile" }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 rounded-t-[2rem] border-t border-emerald-100 bg-white/95 shadow-[0_-16px_45px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-100 bg-white/95 shadow-[0_-16px_45px_rgba(15,23,42,0.12)] backdrop-blur sm:bottom-5 sm:left-1/2 sm:right-auto sm:w-[min(760px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:rounded-[2rem] sm:border sm:shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
       <div className="grid min-h-[76px] grid-cols-5 text-xs font-semibold text-slate-500">
         <BottomNav icon={<Home />} label="Home" active={active === "home"} onClick={() => navigate("/")} />
         <BottomNav icon={<ReceiptText />} label="Task Orders" active={active === "orders"} onClick={() => navigate("/orders")} />
