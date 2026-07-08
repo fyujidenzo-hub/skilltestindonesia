@@ -1,4 +1,4 @@
-import { Plus, Search } from "lucide-react";
+import { Plus, RefreshCw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
@@ -13,12 +13,14 @@ interface TaskAssignmentTableProps {
   orders: Order[];
   members: Member[];
   products: Product[];
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 const taskTarget = 15;
 const rowPageSize = 10;
 
-export default function TaskAssignmentTable({ orders, members, products }: TaskAssignmentTableProps) {
+export default function TaskAssignmentTable({ orders, members, products, onRefresh, isRefreshing = false }: TaskAssignmentTableProps) {
   const { dispatch } = useAppStore();
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState("");
@@ -146,12 +148,22 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
     <Panel
       title="Task Assignment Dashboard"
       action={
-        <button 
-          onClick={() => (showAssignForm ? setShowAssignForm(false) : openAssignFormForOrder())}
-          className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white"
-        >
-          <Plus size={16} /> Add Task
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:text-slate-400"
+          >
+            <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} /> Refresh
+          </button>
+          <button 
+            onClick={() => (showAssignForm ? setShowAssignForm(false) : openAssignFormForOrder())}
+            className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white"
+          >
+            <Plus size={16} /> Add Task
+          </button>
+        </div>
       }
     >
       {showAssignForm && (

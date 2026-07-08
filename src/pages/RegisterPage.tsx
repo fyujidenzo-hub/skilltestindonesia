@@ -38,7 +38,7 @@ async function verifyInvitationCode(code: string): Promise<{
 }
 
 export default function RegisterPage({ navigate }: { navigate: Navigate }) {
-  const { dispatch } = useAppStore();
+  const { state, dispatch } = useAppStore();
   const code = new URLSearchParams(window.location.search).get("code") ?? "";
 
   const [form, setForm] = useState({
@@ -91,7 +91,9 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       return;
     }
 
-    if (!form.phone.trim()) {
+    const phone = form.phone.trim();
+
+    if (!phone) {
       setMessage("✗ Nomor telepon wajib diisi.");
       return;
     }
@@ -109,12 +111,29 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     setLoading(true);
     setMessage("Membuat akun..");
 
+    try {
+      const localPhoneExists = state.members.some((member) => member.phone.trim() === phone);
+      const { getMemberByPhone } = await import("../services/membersService");
+      const existingMember = localPhoneExists ? true : Boolean(await getMemberByPhone(phone));
+
+      if (existingMember) {
+        setLoading(false);
+        setMessage("✗ Nomor telepon sudah digunakan.");
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to validate phone number:", error);
+      setLoading(false);
+      setMessage("✗ Gagal memvalidasi nomor telepon. Silakan coba lagi.");
+      return;
+    }
+
     const memberId = String(Date.now()).slice(-6);
 
     const memberToSave = {
       id: memberId,
       username: form.username,
-      phone: form.phone,
+      phone,
       invitationCode: form.invitationCode,
       referredBy: verifiedAdmin,
       level: "Starter" as const,
@@ -135,7 +154,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
         payload: {
           id: memberId,
           username: form.username,
-          phone: form.phone,
+          phone,
           invitationCode: form.invitationCode,
           accountPassword: form.accountPassword,
           withdrawalPassword: form.withdrawalPassword,

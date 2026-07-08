@@ -13,16 +13,18 @@ import TaskAssignmentTable from "../components/admin/TaskAssignmentTable";
 import StaffPanel from "../components/admin/StaffPanel";
 import type { AdminTab } from "../constants";
 import { allowedTabsForRole, clearActiveAdminId, getActiveAdmin } from "../services/adminSession";
+import { loadStoredState } from "../services/appStateRepository";
 import { useAppStore } from "../store/AppStore";
 import type { AppState, Member, StaffAdmin, Transaction } from "../types";
 
 export default function AdminPage({ navigate }: { navigate: Navigate }) {
-  const { state, persistence, ready } = useAppStore();
+  const { state, persistence, ready, dispatch } = useAppStore();
   const activeAdmin = getActiveAdmin(state.admins);
   const allowedTabs = useMemo<readonly AdminTab[]>(() => allowedTabsForRole(activeAdmin?.role), [activeAdmin?.role]);
   const [activeTab, setActiveTab] = useState<AdminTab>("Overview");
   const [query, setQuery] = useState("");
   const [selectedAdmin, setSelectedAdmin] = useState("All admins");
+  const [refreshingModule, setRefreshingModule] = useState("");
 
   useEffect(() => {
     if (!ready) return;
@@ -115,6 +117,16 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
       ? activeAdmin?.adminCode ?? activeAdmin?.code ?? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? ""
       : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.adminCode ?? visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? "";
 
+  const refreshAdminData = async (module: string) => {
+    setRefreshingModule(module);
+    try {
+      const latestState = await loadStoredState();
+      dispatch({ type: "hydrate", payload: latestState });
+    } finally {
+      setRefreshingModule("");
+    }
+  };
+
   if (!ready) {
     return (
       <main className="grid min-h-screen place-items-center bg-cloud text-ink">
@@ -158,9 +170,9 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
                 canManageMemberFinance={activeAdmin.role === "super_admin"}
               />
             )}
-          {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
-          {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
-          {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} />}
+          {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} onRefresh={() => refreshAdminData("sequence")} isRefreshing={refreshingModule === "sequence"} />}
+          {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} onRefresh={() => refreshAdminData("orders")} isRefreshing={refreshingModule === "orders"} />}
+          {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} onRefresh={(module) => refreshAdminData(module)} refreshingModule={refreshingModule} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
           {activeTab === "Account" && <AccountPanel activeAdmin={activeAdmin} />}

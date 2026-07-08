@@ -106,7 +106,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
               Pemberitahuan bagi seluruh pengguna: waktu penyelesaian tugas/pesanan adalah 2 jam.
               Harap selesaikan pesanan dalam batas waktu yang ditentukan. Jika Anda melampaui
               batas waktu tersebut, saldo akun Anda dapat dibekukan. Pengisian saldo (top-up) dan
-              penarikan dana di luar jam  09:00-21:00 WIB memerlukan persetujuan dari
+              penarikan dana di luar jam 09:00 - 21:00 WIB memerlukan persetujuan dari
               tim Layanan Pelanggan kami. Jika terjadi masalah pada transaksi Anda,
               silakan segera hubungi Layanan Pelanggan.
             </p>
@@ -128,7 +128,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
              Pelayanan pelanggan
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              09:00 AM - 21:00 PM
+              09:00 - 21:00 WIB
             </p>
             <a
               className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-sm transition sm:w-auto ${

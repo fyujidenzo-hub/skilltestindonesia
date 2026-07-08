@@ -30,6 +30,13 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
   return snapshot.empty ? null : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Member);
 }
 
+export async function getMemberByPhone(phone: string): Promise<Member | null> {
+  if (!db) return null;
+  const q = query(collection(db, COLLECTION), where("phone", "==", phone));
+  const snapshot = await getDocs(q);
+  return snapshot.empty ? null : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Member);
+}
+
 export async function createMember(member: Omit<Member, "id"> & { id?: string }): Promise<Member> {
   if (!db) throw new Error("Firebase not initialized");
   const id = member.id || crypto.randomUUID();

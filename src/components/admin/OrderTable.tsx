@@ -1,4 +1,4 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, Filter, PackagePlus, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Filter, PackagePlus, RefreshCw, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Panel } from "../common";
 import { assignOrderProduct, assignOrderProducts, updateOrderStatus } from "../../services/ordersService";
@@ -16,7 +16,19 @@ const taskTarget = 15;
 
 type ProductSort = "none" | "price-high" | "price-low";
 
-export default function OrderTable({ orders, members, products }: { orders: Order[]; members: Member[]; products: Product[] }) {
+export default function OrderTable({
+  orders,
+  members,
+  products,
+  onRefresh,
+  isRefreshing = false,
+}: {
+  orders: Order[];
+  members: Member[];
+  products: Product[];
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}) {
   const { dispatch } = useAppStore();
   const [targetOrder, setTargetOrder] = useState<Order | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -165,14 +177,24 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
       <Panel
         title="Order Intake Records"
         action={
-          <button
-            className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-semibold transition ${
-              showFilters ? "border-forest bg-mint text-forest" : "border-slate-200 bg-white text-slate-700 hover:border-forest/40 hover:text-forest"
-            }`}
-            onClick={() => setShowFilters((current) => !current)}
-          >
-            <Filter size={16} /> Filter
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-forest/40 hover:text-forest disabled:text-slate-400"
+            >
+              <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} /> Refresh
+            </button>
+            <button
+              className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-semibold transition ${
+                showFilters ? "border-forest bg-mint text-forest" : "border-slate-200 bg-white text-slate-700 hover:border-forest/40 hover:text-forest"
+              }`}
+              onClick={() => setShowFilters((current) => !current)}
+            >
+              <Filter size={16} /> Filter
+            </button>
+          </div>
         }
       >
         {message && (

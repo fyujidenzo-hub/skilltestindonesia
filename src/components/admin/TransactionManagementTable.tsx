@@ -1,4 +1,4 @@
-import { CheckCircle2, Download, Eye, ReceiptText, X, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Eye, ReceiptText, RefreshCw, X, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
@@ -11,10 +11,14 @@ export default function TransactionManagementTable({
   transactions,
   members,
   canApprove,
+  onRefresh,
+  refreshingModule = "",
 }: {
   transactions: Transaction[];
   members: Member[];
   canApprove: boolean;
+  onRefresh?: (module: "deposit" | "withdrawal") => void;
+  refreshingModule?: string;
 }) {
   const { dispatch } = useAppStore();
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
@@ -74,6 +78,8 @@ export default function TransactionManagementTable({
           amountSort={topUpSort}
           onAmountSortChange={setTopUpSort}
           onViewDetails={setDetailTransaction}
+          onRefresh={() => onRefresh?.("deposit")}
+          isRefreshing={refreshingModule === "deposit"}
           onApprove={(transaction) => handleStatusChange(transaction, "approved")}
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
         />
@@ -88,6 +94,8 @@ export default function TransactionManagementTable({
           amountSort={withdrawalSort}
           onAmountSortChange={setWithdrawalSort}
           onViewDetails={setDetailTransaction}
+          onRefresh={() => onRefresh?.("withdrawal")}
+          isRefreshing={refreshingModule === "withdrawal"}
           onApprove={(transaction) => handleStatusChange(transaction, "approved")}
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
         />
@@ -122,6 +130,8 @@ function RequestTable({
   amountSort,
   onAmountSortChange,
   onViewDetails,
+  onRefresh,
+  isRefreshing,
   onApprove,
   onReject,
 }: {
@@ -135,6 +145,8 @@ function RequestTable({
   amountSort: AmountSort;
   onAmountSortChange: (value: AmountSort) => void;
   onViewDetails: (transaction: Transaction) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   onApprove: (transaction: Transaction) => void;
   onReject: (transaction: Transaction) => void;
 }) {
@@ -150,6 +162,15 @@ function RequestTable({
           <p className="text-sm text-slate-500">Tinjau detail permintaan, bukti, dan status persetujuan.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:text-slate-400"
+          >
+            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+            Refresh
+          </button>
           <AmountSortControls value={amountSort} onChange={onAmountSortChange} label="amount" />
           <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
             {transactions.length} catatan
