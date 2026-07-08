@@ -1,4 +1,4 @@
-import { ArrowRight, Banknote, PackageCheck, ReceiptText, ShieldCheck, User, WalletCards, X } from "lucide-react";
+import { ArrowRight, Banknote, PackageCheck, ReceiptText, ShieldCheck, User, WalletCards, X, Zap } from "lucide-react";
 import { useState } from "react";
 import type { Navigate } from "../../App";
 
@@ -16,10 +16,11 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
+      <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
         <StoreShortcut icon={<PackageCheck />} label="Orders" onClick={() => navigate("/orders")} />
         <StoreShortcut icon={<WalletCards />} label="Top Up" onClick={onTopUp} />
         <StoreShortcut icon={<Banknote />} label="Withdraw" onClick={onWithdraw} />
+        <StoreShortcut icon={<Zap fill="currentColor" />} label="Take Order" onClick={() => navigate("/take-order")} />
         <StoreShortcut icon={<ReceiptText />} label="Records" onClick={() => setModal("records")} />
         <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => setModal("security")} />
         <StoreShortcut icon={<User />} label="Account" onClick={() => setModal("account")} />
