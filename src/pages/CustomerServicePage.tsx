@@ -128,7 +128,7 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
              Pelayanan pelanggan
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              08:00 AM - 5:00 PM
+              09:00 AM - 21:00 PM
             </p>
             <a
               className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-sm transition sm:w-auto ${
