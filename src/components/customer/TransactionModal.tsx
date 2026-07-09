@@ -18,6 +18,7 @@ interface TransactionModalProps {
 export default function TransactionModal({ type, member, admin, banks, onClose, variant = "modal" }: TransactionModalProps) {
   const { state, dispatch } = useAppStore();
   const [amount, setAmount] = useState(type === "topup" ? 100000 : MIN_WITHDRAWAL_AMOUNT);
+  const [amountInput, setAmountInput] = useState(String(type === "topup" ? 100000 : MIN_WITHDRAWAL_AMOUNT));
   const [senderName, setSenderName] = useState("");
   const [withdrawalBankName, setWithdrawalBankName] = useState("");
   const [withdrawalAccountName, setWithdrawalAccountName] = useState("");
@@ -33,6 +34,12 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const withdrawalBlockMessage =
     type === "withdraw" && currentMember ? validateWithdrawalRequest(currentMember, state.orders, amount) : "";
   const isPageVariant = variant === "page";
+
+  const handleAmountChange = (value: string) => {
+    setAmountInput(value);
+    setAmount(parseIdrAmount(value));
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -180,18 +187,19 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
             <Field label="Amount (Rp)">
               <input
                 className={`${inputClass} rounded-xl bg-white`}
-                type="number"
-                min={type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT}
-                step={1000}
-                value={amount}
-                onChange={(event) => setAmount(Number(event.target.value))}
+                type="text"
+                inputMode="numeric"
+                value={amountInput}
+                onChange={(event) => handleAmountChange(event.target.value)}
+                onBlur={() => setAmountInput(amount ? String(amount) : "")}
+                placeholder="Example: 212,987"
                 disabled={loading}
               />
             </Field>
 
             <div className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-500">
               Minimum: {formatRupiah(type === "topup" ? minTopUp : MIN_WITHDRAWAL_AMOUNT)}
-              {type === "topup" ? ` | Maximum: ${formatRupiah(maxTopUp)}` : ""} | Jumlah:<span className="font-bold text-slate-700">{formatRupiah(amount)}</span>
+              {type === "topup" ? ` | Maximum: ${formatRupiah(maxTopUp)}` : ""}
             </div>
           </div>
 
@@ -327,4 +335,9 @@ function fileToDataUrl(file: File) {
     reader.onerror = () => reject(new Error("Unable to read payment proof image."));
     reader.readAsDataURL(file);
   });
+}
+
+function parseIdrAmount(value: string) {
+  const digitsOnly = value.replace(/\D/g, "");
+  return digitsOnly ? Number(digitsOnly) : 0;
 }
