@@ -1,6 +1,7 @@
 import { CheckCircle2, Clock3, CreditCard, Landmark, LockKeyhole, Send, Upload, UserRound, Wallet, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Field, inputClass } from "../common";
+import { MAX_PAYMENT_PROOF_BYTES, uploadPaymentProof, validatePaymentProofFile } from "../../services/proofStorageService";
 import { createTransaction, MIN_WITHDRAWAL_AMOUNT, validateWithdrawalRequest } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
 import type { BankPlacement } from "../../types";
@@ -67,9 +68,16 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
       setMessage("✗Nama pengirim wajib diisi.");
       return;
     }
-    if (type === "topup" && (!proofFile || !proofFile.type.startsWith("image/"))) {
+    if (type === "topup" && !proofFile) {
       setMessage("✗ Unggah bukti gambar yang valid");
       return;
+    }
+    if (type === "topup" && proofFile) {
+      const proofValidationMessage = validatePaymentProofFile(proofFile);
+      if (proofValidationMessage) {
+        setMessage(`✗ ${proofValidationMessage}`);
+        return;
+      }
     }
     if (type === "withdraw" && (!withdrawalBankName.trim() || !withdrawalAccountName.trim() || !withdrawalAccountNumber.trim())) {
       setMessage("✗ Nama bank, pemilik rekening, dan nomor rekening wajib diisi");
@@ -89,8 +97,10 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
     setMessage("Mengirimkan permintaan...");
 
     try {
-      const proofDataUrl = type === "topup" && proofFile ? await fileToDataUrl(proofFile) : undefined;
+      const transactionId = crypto.randomUUID();
+      const uploadedProof = type === "topup" && proofFile ? await uploadPaymentProof(proofFile, transactionId) : undefined;
       const result = await createTransaction({
+        id: transactionId,
         member,
         admin,
         type: type === "withdraw" ? "withdrawal" : "topup",
@@ -104,7 +114,9 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
         submittedWithdrawalPassword: type === "withdraw" ? withdrawalPassword.trim() : undefined,
         proofName: type === "topup" ? proofFile?.name : undefined,
         proofType: type === "topup" ? proofFile?.type : undefined,
-        proofDataUrl,
+        proofUrl: uploadedProof?.proofUrl,
+        proofPath: uploadedProof?.proofPath,
+        proofSize: uploadedProof?.proofSize,
       });
       dispatch({ type: "addTransaction", payload: result.transaction });
       if (result.updatedMember) {
@@ -218,8 +230,28 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
                 <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm font-bold text-slate-600 hover:border-forest hover:bg-mint">
                   <Upload size={18} className="text-forest" />
                   <span className="min-w-0 flex-1 truncate">{proofFile ? proofFile.name : "Upload image proof"}</span>
-                  <input className="sr-only" type="file" accept="image/*" onChange={(event) => setProofFile(event.target.files?.[0] ?? null)} disabled={loading} />
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      if (file) {
+                        const proofValidationMessage = validatePaymentProofFile(file);
+                        if (proofValidationMessage) {
+                          setProofFile(null);
+                          setMessage(`✗ ${proofValidationMessage}`);
+                          event.target.value = "";
+                          return;
+                        }
+                      }
+                      setMessage("");
+                      setProofFile(file);
+                    }}
+                    disabled={loading}
+                  />
                 </label>
+                <p className="mt-2 text-xs font-semibold text-slate-500">Maximum image size: {formatFileSize(MAX_PAYMENT_PROOF_BYTES)}</p>
               </Field>
             </div>
           )}
@@ -328,16 +360,11 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Unable to read payment proof image."));
-    reader.readAsDataURL(file);
-  });
-}
-
 function parseIdrAmount(value: string) {
   const digitsOnly = value.replace(/\D/g, "");
   return digitsOnly ? Number(digitsOnly) : 0;
+}
+
+function formatFileSize(bytes: number) {
+  return `${Math.round(bytes / (1024 * 1024))} MB`;
 }

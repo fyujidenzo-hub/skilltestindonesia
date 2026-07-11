@@ -98,6 +98,9 @@ function buildTransaction(transaction: CreateTransactionInput, forcedId?: string
     proofName: transactionData.proofName ?? "",
     proofType: transactionData.proofType ?? "",
     proofDataUrl: transactionData.proofDataUrl ?? "",
+    proofUrl: transactionData.proofUrl ?? "",
+    proofPath: transactionData.proofPath ?? "",
+    proofSize: transactionData.proofSize ?? 0,
   };
 }
 
@@ -214,6 +217,9 @@ export async function createRewardTransaction({
     proofName: "",
     proofType: "",
     proofDataUrl: "",
+    proofUrl: "",
+    proofPath: "",
+    proofSize: 0,
   };
 
   await setDoc(doc(db, COLLECTION, id), rewardTransaction);

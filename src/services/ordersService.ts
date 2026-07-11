@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction, limit } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction, limit, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import type { AssignedOrderProduct, Member, Order, OrderStatus, Product } from "../types";
 import { generateOrderCode } from "./orderCode";
@@ -37,6 +37,25 @@ export async function getOrdersByMember(memberUsername: string): Promise<Order[]
   const q = query(collection(db, COLLECTION), where("member", "==", memberUsername));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Order));
+}
+
+export function subscribeToOrdersByMember(
+  memberUsername: string,
+  onOrders: (orders: Order[]) => void,
+  onError?: (error: Error) => void,
+) {
+  if (!db) return () => {};
+
+  const q = query(collection(db, COLLECTION), where("member", "==", memberUsername));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      onOrders(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Order)));
+    },
+    (error) => {
+      onError?.(error);
+    },
+  );
 }
 
 export async function getOrdersByStatus(status: Order["status"]): Promise<Order[]> {

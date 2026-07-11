@@ -25,6 +25,7 @@ type Action =
   | { type: "createOrder"; payload: { member: string; productId?: string } }
   | { type: "addOrder"; payload: Order }
   | { type: "updateOrder"; payload: Order }
+  | { type: "replaceMemberOrders"; payload: { member: string; orders: Order[] } }
   | { type: "completeOrder"; payload: { orderId: string } }
   | { type: "completeOrderWithMember"; payload: { order: Order; member: Member } }
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
@@ -260,6 +261,15 @@ function reducer(state: AppState, action: Action): AppState {
             return { ...product, quantity: Math.max(0, product.quantity - assignedProduct.quantity) };
           })
         : state.products,
+    };
+  }
+
+  if (action.type === "replaceMemberOrders") {
+    const mergedOrders = [...state.orders.filter((order) => order.member !== action.payload.member), ...action.payload.orders];
+
+    return {
+      ...state,
+      orders: mergedOrders.sort((left, right) => new Date(right.createdAt.replace(" ", "T")).getTime() - new Date(left.createdAt.replace(" ", "T")).getTime()),
     };
   }
 

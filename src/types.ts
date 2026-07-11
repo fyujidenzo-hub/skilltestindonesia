@@ -83,6 +83,9 @@ export interface Transaction {
   proofName?: string;
   proofType?: string;
   proofDataUrl?: string;
+  proofUrl?: string;
+  proofPath?: string;
+  proofSize?: number;
   // SAFETY: set when an approved top-up has credited or a withdrawal has been finalized.
   creditedAt?: string;
   // SAFETY: set when a withdrawal amount was deducted immediately on request creation.

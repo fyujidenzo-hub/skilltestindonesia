@@ -301,7 +301,7 @@ function statusStickyClass(status: Transaction["status"]) {
 }
 
 function ProofCell({ transaction, onViewDetails }: { transaction: Transaction; onViewDetails: (transaction: Transaction) => void }) {
-  if (transaction.proofDataUrl) {
+  if (getProofSource(transaction)) {
     return (
       <button className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
         <Eye size={14} />
@@ -321,6 +321,7 @@ function PaymentMethodCell({ transaction }: { transaction: Transaction }) {
   return (
     <span className="block max-w-[260px] whitespace-pre-line leading-5 text-slate-800">
       {transaction.proofName ? `Proof file: ${transaction.proofName}` : "Pending bank transfer verification"}
+      {transaction.proofSize ? <span className="block text-xs text-slate-500">Size: {formatBytes(transaction.proofSize)}</span> : null}
       <span className="block text-xs text-slate-500">Created: {shortDate(transaction.createdAt)}</span>
     </span>
   );
@@ -349,6 +350,7 @@ function StatusBadge({ status }: { status: Transaction["status"] }) {
 
 function TransactionReceiptModal({ transaction, member, onClose }: { transaction: Transaction; member?: Member; onClose: () => void }) {
   const proofDownloadName = transaction.proofName || `${transaction.requestId ?? transaction.id}-proof.png`;
+  const proofSource = getProofSource(transaction);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
@@ -387,22 +389,23 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
               <ReceiptRow label="Amount" value={formatRupiah(transaction.amount)} strong />
               <ReceiptRow label="Created date" value={shortDate(transaction.createdAt)} />
               <ReceiptRow label="Proof file" value={transaction.proofName || "No proof filename"} />
+              {transaction.proofSize ? <ReceiptRow label="Proof size" value={formatBytes(transaction.proofSize)} /> : null}
             </div>
           </div>
 
           <div className="rounded border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm font-black text-slate-800">Payment proof image/link</p>
-              {transaction.proofDataUrl && (
-                <a className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white" href={transaction.proofDataUrl} download={proofDownloadName}>
+              {proofSource && (
+                <a className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white" href={proofSource} download={proofDownloadName} target="_blank" rel="noreferrer">
                   <Download size={14} />
                   Simpan bukti
                 </a>
               )}
             </div>
-            {transaction.proofDataUrl ? (
-              <a href={transaction.proofDataUrl} target="_blank" rel="noreferrer">
-                <img className="max-h-[520px] w-full rounded border border-slate-100 object-contain" src={transaction.proofDataUrl} alt="Payment proof uploaded by member" />
+            {proofSource ? (
+              <a href={proofSource} target="_blank" rel="noreferrer">
+                <img className="max-h-[520px] w-full rounded border border-slate-100 object-contain" src={proofSource} alt="Payment proof uploaded by member" />
               </a>
             ) : (
               <div className="grid min-h-72 place-items-center rounded bg-slate-50 text-center text-sm text-slate-500">
@@ -435,4 +438,14 @@ function Th({ children, className = "" }: { children: React.ReactNode; className
 
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-3 py-4 ${className}`}>{children}</td>;
+}
+
+function getProofSource(transaction: Transaction) {
+  return transaction.proofUrl || transaction.proofDataUrl || "";
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "-";
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.ceil(bytes / 1024)} KB`;
 }

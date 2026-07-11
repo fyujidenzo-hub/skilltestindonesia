@@ -1,11 +1,11 @@
 import { PackageOpen, Search, Star } from "lucide-react";
 import AssignmentPanel from "../components/customer/AssignmentPanel";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
-import { completeWorkflowOrder, submitWorkflowOrder, updateOrderStatus } from "../services/ordersService";
+import { completeWorkflowOrder, getOrdersByMember, submitWorkflowOrder, subscribeToOrdersByMember, updateOrderStatus } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
@@ -25,6 +25,8 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   const [review, setReview] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasTrackedAssignmentsRef = useRef(false);
+  const lastAssignedOrderIdsRef = useRef<Set<string>>(new Set());
 
   const activeCustomerId = getActiveCustomerId();
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
@@ -42,6 +44,79 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   }, [currentMember, state.orders]);
 
   const shouldShowAssignmentPanel = Boolean(activeOrder) && activeTab !== "Completed";
+
+  useEffect(() => {
+    if (!currentMember?.username) return;
+
+    const memberUsername = currentMember.username;
+    let cancelled = false;
+    let realtimeActive = false;
+    let pollTimer: ReturnType<typeof window.setInterval> | null = null;
+
+    const syncOrders = (nextOrders: Order[]) => {
+      if (cancelled) return;
+      dispatch({ type: "replaceMemberOrders", payload: { member: memberUsername, orders: nextOrders } });
+    };
+
+    const pollOrders = async () => {
+      try {
+        syncOrders(await getOrdersByMember(memberUsername));
+      } catch (error) {
+        console.warn("Unable to refresh task orders:", error);
+      }
+    };
+
+    const stopRealtime = subscribeToOrdersByMember(
+      memberUsername,
+      (nextOrders) => {
+        realtimeActive = true;
+        syncOrders(nextOrders);
+      },
+      (error) => {
+        console.warn("Realtime task order listener failed; using 10-second polling.", error);
+        if (!pollTimer) {
+          pollOrders();
+          pollTimer = window.setInterval(pollOrders, 10000);
+        }
+      },
+    );
+
+    const fallbackTimer = window.setTimeout(() => {
+      if (!realtimeActive && !pollTimer) {
+        pollOrders();
+        pollTimer = window.setInterval(pollOrders, 10000);
+      }
+    }, 10000);
+
+    return () => {
+      cancelled = true;
+      stopRealtime();
+      window.clearTimeout(fallbackTimer);
+      if (pollTimer) window.clearInterval(pollTimer);
+    };
+  }, [currentMember?.username, dispatch]);
+
+  useEffect(() => {
+    if (!currentMember) return;
+
+    const assignedOrders = state.orders.filter((order) => {
+      const orderState = getOrderState(order);
+      return order.member === currentMember.username && (orderState === "product_assigned" || orderState === "waiting_shipment");
+    });
+
+    const previousAssignedOrderIds = lastAssignedOrderIdsRef.current;
+    const newAssignedOrder = assignedOrders.find((order) => !previousAssignedOrderIds.has(order.id));
+    lastAssignedOrderIdsRef.current = new Set(assignedOrders.map((order) => order.id));
+
+    if (!hasTrackedAssignmentsRef.current) {
+      hasTrackedAssignmentsRef.current = true;
+      return;
+    }
+
+    if (newAssignedOrder) {
+      setMessage(`Produk tugas baru telah ditetapkan: ${newAssignedOrder.productName || getOrderCode(newAssignedOrder)}.`);
+    }
+  }, [currentMember, state.orders]);
 
   const orders = useMemo(() => {
     if (!currentMember) return [];
