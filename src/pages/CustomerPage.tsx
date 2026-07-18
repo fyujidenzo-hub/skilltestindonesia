@@ -380,7 +380,7 @@ return (
 
       <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} active="home" />
       {activeModal && currentMember && (
-        <TransactionModal type={activeModal} member={currentMember.username} admin={currentMember.referredBy} banks={state.banks} onClose={() => setActiveModal(null)} />
+        <TransactionModal type={activeModal} member={currentMember.username} memberId={currentMember.id} admin={currentMember.referredBy} banks={state.banks} onClose={() => setActiveModal(null)} />
       )}
       {showTaskStatus && currentMember && (
         <TaskStatusModal

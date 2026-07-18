@@ -110,6 +110,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
           <TransactionModal
             type={type}
             member={member.username}
+            memberId={member.id}
             admin={member.referredBy}
             banks={state.banks}
             onClose={() => navigate("/profile")}

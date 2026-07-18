@@ -1,8 +1,9 @@
 import { CheckCircle2, Clock3, CreditCard, Landmark, LockKeyhole, Send, Upload, UserRound, Wallet, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Field, inputClass } from "../common";
 import { MAX_PAYMENT_PROOF_BYTES, uploadPaymentProof, validatePaymentProofFile } from "../../services/proofStorageService";
 import { createTransaction, MIN_WITHDRAWAL_AMOUNT, validateWithdrawalRequest } from "../../services/transactionsService";
+import { getMemberById } from "../../services/membersService";
 import { useAppStore } from "../../store/AppStore";
 import type { BankPlacement } from "../../types";
 import { formatRupiah } from "../../utils";
@@ -10,13 +11,14 @@ import { formatRupiah } from "../../utils";
 interface TransactionModalProps {
   type: "topup" | "withdraw";
   member: string;
+  memberId?: string;
   admin: string;
   banks: BankPlacement[];
   onClose: () => void;
   variant?: "modal" | "page";
 }
 
-export default function TransactionModal({ type, member, admin, banks, onClose, variant = "modal" }: TransactionModalProps) {
+export default function TransactionModal({ type, member, memberId, admin, banks, onClose, variant = "modal" }: TransactionModalProps) {
   const { state, dispatch } = useAppStore();
   const [amount, setAmount] = useState(type === "topup" ? 100000 : MIN_WITHDRAWAL_AMOUNT);
   const [amountInput, setAmountInput] = useState(String(type === "topup" ? 100000 : MIN_WITHDRAWAL_AMOUNT));
@@ -28,13 +30,32 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingWithdrawalAccess, setCheckingWithdrawalAccess] = useState(type === "withdraw" && Boolean(memberId));
   const activeBanks = banks.filter((bank) => bank.active);
   const minTopUp = activeBanks[0]?.minDeposit ?? 100000;
   const maxTopUp = 100000000;
-  const currentMember = state.members.find((item) => item.username === member);
+  const currentMember = state.members.find((item) => item.id === memberId) ?? state.members.find((item) => item.username === member);
   const withdrawalBlockMessage =
     type === "withdraw" && currentMember ? validateWithdrawalRequest(currentMember, state.orders, amount) : "";
   const isPageVariant = variant === "page";
+
+  useEffect(() => {
+    if (type !== "withdraw" || !memberId) return;
+
+    let active = true;
+    getMemberById(memberId)
+      .then((liveMember) => {
+        if (active && liveMember) dispatch({ type: "updateMember", payload: liveMember });
+      })
+      .catch((error) => console.error("Unable to refresh withdrawal access:", error))
+      .finally(() => {
+        if (active) setCheckingWithdrawalAccess(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [dispatch, memberId, type]);
 
   const handleAmountChange = (value: string) => {
     setAmountInput(value);
@@ -102,6 +123,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
       const result = await createTransaction({
         id: transactionId,
         member,
+        memberId,
         admin,
         type: type === "withdraw" ? "withdrawal" : "topup",
         amount,
@@ -166,6 +188,15 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
           }`}
         >
         <div className="grid gap-4">
+          {type === "withdraw" && withdrawalBlockMessage && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+              <div className="flex items-start gap-3">
+                <LockKeyhole className="mt-0.5 shrink-0" size={18} />
+                <p>{withdrawalBlockMessage}</p>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
             <div className="flex items-start gap-3">
               <Clock3 className="mt-0.5 shrink-0" size={18} />
@@ -316,9 +347,11 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
         <button className="rounded-2xl border border-slate-200 px-3 py-3 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50" type="button" onClick={onClose} disabled={loading}>
           Membatalkan
         </button>
-        <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || Boolean(withdrawalBlockMessage)}>
+        <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || checkingWithdrawalAccess || Boolean(withdrawalBlockMessage)}>
           {loading ? (
             "Submitting..."
+          ) : checkingWithdrawalAccess ? (
+            "Checking withdrawal access..."
           ) : withdrawalBlockMessage ? (
             "Withdrawal unavailable"
           ) : (

@@ -3,7 +3,7 @@ import type { Member } from "../../types";
 import { formatRupiah } from "../../utils";
 import Filters from "./Filters";
 import { useEffect, useMemo, useState } from "react";
-import { updateMember } from "../../services/membersService";
+import { getMemberById, updateMember } from "../../services/membersService";
 import { createRewardTransaction } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
 
@@ -85,17 +85,16 @@ const openModal = (member: Member, type: "edit" | "balance") => {
     if (!activeMember || !modalType) return;
 
     setSaving(true);
-    setMessage("Saving...");
+    setMessage("Menyimpan...");
 
     try {
       const amount = Math.max(0, Number(form.amount) || 0);
       const isDirectBalanceCredit = modalType === "balance";
       const resetAccountPassword = modalType === "edit" && canManageMemberFinance ? form.accountPassword.trim() : "";
       const resetWithdrawalPassword = modalType === "edit" && canManageMemberFinance ? form.withdrawalPassword.trim() : "";
-      const nextMember: Member =
+      const memberChanges: Partial<Member> =
         modalType === "edit"
           ? {
-              ...activeMember,
               username: form.username.trim(),
               phone: form.phone.trim(),
               level: form.level as Member["level"],
@@ -108,10 +107,24 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                   }
                 : {}),
             }
-          : { ...activeMember, balance: activeMember.balance + amount };
+          : { balance: activeMember.balance + amount };
 
-      await updateMember(activeMember.id, nextMember);
-      dispatch({ type: "updateMember", payload: nextMember });
+      await updateMember(activeMember.id, memberChanges);
+      const savedMember = await getMemberById(activeMember.id);
+      if (!savedMember) throw new Error("Data anggota tidak dapat dimuat ulang setelah disimpan.");
+
+      if (resetAccountPassword && savedMember.accountPassword !== resetAccountPassword) {
+        throw new Error("Kata sandi akun tidak berhasil disimpan.");
+      }
+      if (resetWithdrawalPassword && savedMember.withdrawalPassword !== resetWithdrawalPassword) {
+        throw new Error("PIN penarikan tidak berhasil disimpan.");
+      }
+      if (canManageWithdrawalLock && Boolean(savedMember.withdrawalLocked) !== form.withdrawalLocked) {
+        throw new Error("Pengaturan penarikan tidak berhasil disimpan.");
+      }
+
+      dispatch({ type: "updateMember", payload: savedMember });
+      setActiveMember(savedMember);
 
       if (isDirectBalanceCredit && amount > 0) {
         const rewardTransaction = await createRewardTransaction({
@@ -123,17 +136,20 @@ const openModal = (member: Member, type: "edit" | "balance") => {
         dispatch({ type: "addTransaction", payload: rewardTransaction });
       }
 
+      const savedItems = [
+        resetAccountPassword ? "kata sandi akun diatur ulang" : "",
+        resetWithdrawalPassword ? "PIN penarikan diatur ulang" : "",
+        canManageWithdrawalLock ? `penarikan ${form.withdrawalLocked ? "dinonaktifkan" : "diaktifkan"}` : "",
+      ].filter(Boolean);
       setMessage(
         modalType === "edit"
-          ? resetAccountPassword || resetWithdrawalPassword
-            ? "Data anggota telah diperbarui dan kata sandi telah diatur ulang."
-            : "Anggota telah diperbarui."
-          : "Imbalan saldo telah ditambahkan dan dicatat."
+          ? `Berhasil disimpan${savedItems.length ? `: ${savedItems.join(", ")}.` : "."}`
+          : "Saldo berhasil ditambahkan."
       );
-      setTimeout(closeModal, 600);
+      setForm((current) => ({ ...current, accountPassword: "", withdrawalPassword: "" }));
     } catch (error) {
       console.error("Failed to update member:", error);
-      setMessage("Firebase update failed. Check Firestore member/transaction rules.");
+      setMessage(error instanceof Error ? `Gagal menyimpan: ${error.message}` : "Gagal menyimpan. Silakan coba lagi.");
     } finally {
       setSaving(false);
     }
@@ -295,10 +311,10 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-black uppercase tracking-wide text-slate-600">
-                          Withdrawals On / Off
+                          Pengaturan Penarikan
                         </p>
                         <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                          Turn withdrawals on or off for this member account.
+                          Aktifkan atau nonaktifkan penarikan untuk akun anggota ini.
                         </p>
                       </div>
                       <button
@@ -308,16 +324,16 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                         }`}
                         onClick={() => setForm({ ...form, withdrawalLocked: !form.withdrawalLocked })}
                       >
-                        {form.withdrawalLocked ? "Off" : "On"}
+                        {form.withdrawalLocked ? "Nonaktif" : "Aktif"}
                       </button>
                     </div>
                     <label className="mt-3 block text-xs font-bold text-slate-600">
-                      Remarks
+                      Keterangan
                       <textarea
                         className="mt-1 min-h-20 w-full rounded border border-slate-200 bg-white px-3 py-2 text-slate-900"
                         value={form.withdrawalRemarks}
                         onChange={(event) => setForm({ ...form, withdrawalRemarks: event.target.value })}
-                        placeholder="Reason shown when withdrawals are off"
+                        placeholder="Alasan yang ditampilkan saat penarikan dinonaktifkan"
                       />
                     </label>
                   </div>
@@ -330,14 +346,26 @@ Jumlah saldo
               </label>
             )}
 
-            {message && <p className="mt-4 rounded bg-slate-50 p-3 text-sm font-bold text-slate-600">{message}</p>}
+            {message && (
+              <p
+                className={`mt-4 rounded p-3 text-sm font-bold ${
+                  message.startsWith("Berhasil") || message.includes("berhasil")
+                    ? "bg-emerald-50 text-emerald-700"
+                    : message.startsWith("Gagal menyimpan")
+                      ? "bg-red-50 text-red-700"
+                      : "bg-slate-50 text-slate-600"
+                }`}
+              >
+                {message}
+              </p>
+            )}
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button type="button" className="rounded border border-slate-200 px-3 py-2 font-bold" onClick={closeModal} disabled={saving}>
-                Membatalkan
+                Batal
               </button>
               <button className="rounded bg-forest px-3 py-2 font-bold text-white disabled:bg-slate-400" disabled={saving}>
-                {saving ? "Saving..." : "Submit"}
+                {saving ? "Menyimpan..." : "Simpan"}
               </button>
             </div>
           </form>

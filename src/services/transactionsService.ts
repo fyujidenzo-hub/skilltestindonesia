@@ -28,6 +28,7 @@ export type CreateTransactionResult = {
 
 export type CreateTransactionInput = Omit<Transaction, "id"> & {
   id?: string;
+  memberId?: string;
   submittedWithdrawalPassword?: string;
 };
 
@@ -52,12 +53,13 @@ export function validateWithdrawalRequest(member: Pick<Member, "username" | "bal
   return "";
 }
 
-async function getLiveMemberAndOrders(memberUsername: string) {
+async function getLiveMemberAndOrders(memberUsername: string, memberId?: string) {
   if (!db) throw new Error("Firebase not initialized");
 
-  const memberSnapshot = await getDocs(query(collection(db, "members"), where("username", "==", memberUsername)));
-  const memberDoc = memberSnapshot.docs[0];
-  if (!memberDoc) throw new Error("Member no longer exists.");
+  const memberDoc = memberId
+    ? await getDoc(doc(db, "members", memberId))
+    : (await getDocs(query(collection(db, "members"), where("username", "==", memberUsername)))).docs[0];
+  if (!memberDoc?.exists()) throw new Error("Member no longer exists.");
 
   const ordersSnapshot = await getDocs(query(collection(db, "orders"), where("member", "==", memberUsername)));
   const liveOrders = ordersSnapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Order));
@@ -80,7 +82,11 @@ function requestPrefix(type: Transaction["type"]) {
 }
 
 function buildTransaction(transaction: CreateTransactionInput, forcedId?: string, forcedRequestId?: string): Transaction {
-  const { submittedWithdrawalPassword: _submittedWithdrawalPassword, ...transactionData } = transaction;
+  const {
+    submittedWithdrawalPassword: _submittedWithdrawalPassword,
+    memberId: _memberId,
+    ...transactionData
+  } = transaction;
   const id = forcedId || transactionData.id || crypto.randomUUID();
   const requestId =
     forcedRequestId ||
@@ -140,7 +146,7 @@ export async function createTransaction(transaction: CreateTransactionInput): Pr
     return { transaction: nextTransaction };
   }
 
-  const { memberRef, member, orders } = await getLiveMemberAndOrders(transaction.member);
+  const { memberRef, member, orders } = await getLiveMemberAndOrders(transaction.member, transaction.memberId);
   const txRef = doc(db, COLLECTION, id);
   let updatedMember: Member = member;
 
