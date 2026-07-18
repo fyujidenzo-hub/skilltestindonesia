@@ -3,6 +3,7 @@ import type { Member } from "../../types";
 import { formatRupiah } from "../../utils";
 import Filters from "./Filters";
 import { useEffect, useMemo, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { getMemberById, updateMember } from "../../services/membersService";
 import { createRewardTransaction } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
@@ -34,6 +35,8 @@ const taskTarget = 15;
   });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [showWithdrawalPassword, setShowWithdrawalPassword] = useState(false);
   const [page, setPage] = useState(0);
 
   const sortedMembers = useMemo(
@@ -72,6 +75,8 @@ const openModal = (member: Member, type: "edit" | "balance") => {
     withdrawalRemarks: member.withdrawalRemarks ?? "",
   });
   setMessage("");
+  setShowAccountPassword(false);
+  setShowWithdrawalPassword(false);
 };
 
   const closeModal = () => {
@@ -278,28 +283,34 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
                 {canManageMemberFinance && (
                   <div className="grid gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3">
-                    <label className="text-xs font-bold text-amber-800">
-                      Atur Ulang Kata Sandi Akun
-                      <input
-                        className="mt-1 w-full rounded border border-amber-200 bg-white px-3 py-2 text-slate-900"
+                    <div className="text-xs font-bold text-amber-800">
+                      <span>Atur Ulang Kata Sandi Akun</span>
+                      <div className="relative mt-1">
+                        <input
+                        className="w-full rounded border border-amber-200 bg-white py-2 pl-3 pr-11 text-slate-900"
                         value={form.accountPassword}
                         onChange={(event) => setForm({ ...form, accountPassword: event.target.value })}
-                        type="password"
+                        type={showAccountPassword ? "text" : "password"}
                         autoComplete="off"
                         placeholder="Enter new account password"
                       />
-                    </label>
-                    <label className="text-xs font-bold text-amber-800">
-                      Atur Ulang Kata Sandi Penarikan
-                      <input
-                        className="mt-1 w-full rounded border border-amber-200 bg-white px-3 py-2 text-slate-900"
+                        <PasswordVisibilityButton visible={showAccountPassword} onToggle={() => setShowAccountPassword((visible) => !visible)} />
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-amber-800">
+                      <span>Atur Ulang Kata Sandi Penarikan</span>
+                      <div className="relative mt-1">
+                        <input
+                        className="w-full rounded border border-amber-200 bg-white py-2 pl-3 pr-11 text-slate-900"
                         value={form.withdrawalPassword}
                         onChange={(event) => setForm({ ...form, withdrawalPassword: event.target.value })}
-                        type="password"
+                        type={showWithdrawalPassword ? "text" : "password"}
                         autoComplete="off"
                         placeholder="Enter new withdrawal password / PIN"
                       />
-                    </label>
+                        <PasswordVisibilityButton visible={showWithdrawalPassword} onToggle={() => setShowWithdrawalPassword((visible) => !visible)} />
+                      </div>
+                    </div>
                     <p className="text-xs font-semibold leading-5 text-amber-700">
                      Biarkan kosong jika Anda tidak ingin mengubah kata sandi anggota.
                     </p>
@@ -438,4 +449,20 @@ function MemberTh({ children }: { children: React.ReactNode }) {
 
 function MemberTd({ children }: { children: React.ReactNode }) {
   return <td className="border-b border-slate-200 border-r border-slate-100 px-3 py-3 align-middle last:border-r-0">{children}</td>;
+}
+
+function PasswordVisibilityButton({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
+  const label = visible ? "Sembunyikan kata sandi" : "Tampilkan kata sandi";
+
+  return (
+    <button
+      type="button"
+      className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded text-slate-500 transition hover:bg-emerald-50 hover:text-forest focus:outline-none focus:ring-2 focus:ring-emerald-200"
+      onClick={onToggle}
+      aria-label={label}
+      title={label}
+    >
+      {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  );
 }
