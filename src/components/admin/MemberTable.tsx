@@ -13,14 +13,25 @@ const taskTarget = 15;
     export default function MemberTable({
       members,
       canManageMemberFinance = false,
+      canManageWithdrawalLock = false,
     }: {
       members: Member[];
       canManageMemberFinance?: boolean;
+      canManageWithdrawalLock?: boolean;
     }) {
   const { dispatch } = useAppStore();
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [modalType, setModalType] = useState<"edit" | "balance" | null>(null);
-  const [form, setForm] = useState({ username: "", phone: "", level: "Starter", amount: 0, withdrawalPassword: "" });
+  const [form, setForm] = useState({
+    username: "",
+    phone: "",
+    level: "Starter",
+    amount: 0,
+    accountPassword: "",
+    withdrawalPassword: "",
+    withdrawalLocked: false,
+    withdrawalRemarks: "",
+  });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(0);
@@ -50,7 +61,16 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
   setActiveMember(member);
   setModalType(type);
-  setForm({ username: member.username, phone: member.phone, level: member.level, amount: 0, withdrawalPassword: "" });
+  setForm({
+    username: member.username,
+    phone: member.phone,
+    level: member.level,
+    amount: 0,
+    accountPassword: "",
+    withdrawalPassword: "",
+    withdrawalLocked: Boolean(member.withdrawalLocked),
+    withdrawalRemarks: member.withdrawalRemarks ?? "",
+  });
   setMessage("");
 };
 
@@ -70,6 +90,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
     try {
       const amount = Math.max(0, Number(form.amount) || 0);
       const isDirectBalanceCredit = modalType === "balance";
+      const resetAccountPassword = modalType === "edit" && canManageMemberFinance ? form.accountPassword.trim() : "";
       const resetWithdrawalPassword = modalType === "edit" && canManageMemberFinance ? form.withdrawalPassword.trim() : "";
       const nextMember: Member =
         modalType === "edit"
@@ -78,7 +99,14 @@ const openModal = (member: Member, type: "edit" | "balance") => {
               username: form.username.trim(),
               phone: form.phone.trim(),
               level: form.level as Member["level"],
+              ...(resetAccountPassword ? { accountPassword: resetAccountPassword } : {}),
               ...(resetWithdrawalPassword ? { withdrawalPassword: resetWithdrawalPassword } : {}),
+              ...(canManageWithdrawalLock
+                ? {
+                    withdrawalLocked: form.withdrawalLocked,
+                    withdrawalRemarks: form.withdrawalRemarks.trim(),
+                  }
+                : {}),
             }
           : { ...activeMember, balance: activeMember.balance + amount };
 
@@ -97,8 +125,8 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
       setMessage(
         modalType === "edit"
-          ? resetWithdrawalPassword
-            ? "Data anggota telah diperbarui dan kata sandi penarikan telah diatur ulang."
+          ? resetAccountPassword || resetWithdrawalPassword
+            ? "Data anggota telah diperbarui dan kata sandi telah diatur ulang."
             : "Anggota telah diperbarui."
           : "Imbalan saldo telah ditambahkan dan dicatat."
       );
@@ -172,6 +200,11 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                     </MemberTd>
                     <MemberTd>
                       <span className="inline-block rounded bg-amber-100 px-2 py-1 text-xs font-black text-amber-700">{member.level}</span>
+                      {member.withdrawalLocked && (
+                        <span className="mt-1 block w-fit rounded bg-rose-100 px-2 py-1 text-xs font-black text-rose-700">
+                          Withdrawals Off
+                        </span>
+                      )}
                     </MemberTd>
                     <MemberTd>
                       <span className="text-sm font-semibold text-slate-700">{member.lastLogin}</span>
@@ -228,7 +261,18 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                 </label>
 
                 {canManageMemberFinance && (
-                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
+                  <div className="grid gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3">
+                    <label className="text-xs font-bold text-amber-800">
+                      Atur Ulang Kata Sandi Akun
+                      <input
+                        className="mt-1 w-full rounded border border-amber-200 bg-white px-3 py-2 text-slate-900"
+                        value={form.accountPassword}
+                        onChange={(event) => setForm({ ...form, accountPassword: event.target.value })}
+                        type="password"
+                        autoComplete="off"
+                        placeholder="Enter new account password"
+                      />
+                    </label>
                     <label className="text-xs font-bold text-amber-800">
                       Atur Ulang Kata Sandi Penarikan
                       <input
@@ -240,9 +284,42 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                         placeholder="Enter new withdrawal password / PIN"
                       />
                     </label>
-                    <p className="mt-2 text-xs font-semibold leading-5 text-amber-700">
-                     Biarkan kosong jika Anda tidak ingin mengubah kata sandi penarikan anggota.
+                    <p className="text-xs font-semibold leading-5 text-amber-700">
+                     Biarkan kosong jika Anda tidak ingin mengubah kata sandi anggota.
                     </p>
+                  </div>
+                )}
+
+                {canManageWithdrawalLock && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+                          Withdrawals On / Off
+                        </p>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                          Turn withdrawals on or off for this member account.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className={`shrink-0 rounded px-3 py-2 text-xs font-black text-white ${
+                          form.withdrawalLocked ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"
+                        }`}
+                        onClick={() => setForm({ ...form, withdrawalLocked: !form.withdrawalLocked })}
+                      >
+                        {form.withdrawalLocked ? "Off" : "On"}
+                      </button>
+                    </div>
+                    <label className="mt-3 block text-xs font-bold text-slate-600">
+                      Remarks
+                      <textarea
+                        className="mt-1 min-h-20 w-full rounded border border-slate-200 bg-white px-3 py-2 text-slate-900"
+                        value={form.withdrawalRemarks}
+                        onChange={(event) => setForm({ ...form, withdrawalRemarks: event.target.value })}
+                        placeholder="Reason shown when withdrawals are off"
+                      />
+                    </label>
                   </div>
                 )}
               </div>

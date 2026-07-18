@@ -26,7 +26,12 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
         <button className="flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-white px-1.5 pr-3 shadow-sm ring-1 ring-emerald-100 hover:shadow-panel" onClick={() => navigate("/")} aria-label="Go to customer store">
           <span className="grid h-8 w-8 overflow-hidden rounded-xl">
-            <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
+            <img
+              className="h-full w-full object-cover"
+              src={customerLogo}
+              alt="Tokopedia work account"
+              decoding="async"
+            />
           </span>
           <span className="hidden text-sm font-black tracking-tight text-forest sm:inline">tokopedia</span>
         </button>

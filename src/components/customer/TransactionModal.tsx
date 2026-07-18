@@ -319,6 +319,8 @@ export default function TransactionModal({ type, member, admin, banks, onClose, 
         <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || Boolean(withdrawalBlockMessage)}>
           {loading ? (
             "Submitting..."
+          ) : withdrawalBlockMessage ? (
+            "Withdrawal unavailable"
           ) : (
             <>
               {type === "withdraw" ? <Send size={17} /> : <CheckCircle2 size={17} />}

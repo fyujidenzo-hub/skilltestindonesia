@@ -277,6 +277,8 @@ const assignedCommission = assignedProducts.length
                           className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-cover"
                           src={catalogProduct.image}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                         />
                       )}
 

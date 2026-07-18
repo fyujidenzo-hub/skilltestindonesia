@@ -9,7 +9,13 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <article className="group overflow-hidden rounded-3xl border border-white bg-white shadow-[0_14px_38px_rgba(15,23,42,0.07)] ring-1 ring-slate-100 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
       <div className="overflow-hidden bg-slate-100">
-        <img className="h-40 w-full object-cover transition duration-300 group-hover:scale-[1.03]" src={product.image} alt={product.name} />
+        <img
+          className="h-40 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          decoding="async"
+        />
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">

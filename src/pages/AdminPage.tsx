@@ -168,6 +168,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
               <MemberTable
                 members={filteredMembers}
                 canManageMemberFinance={activeAdmin.role === "super_admin"}
+                canManageWithdrawalLock={activeAdmin.role === "super_admin"}
               />
             )}
           {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} onRefresh={() => refreshAdminData("sequence")} isRefreshing={refreshingModule === "sequence"} />}

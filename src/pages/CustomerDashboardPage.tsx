@@ -173,7 +173,13 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
 
       <section className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
         <div className="overflow-hidden rounded-[2rem] bg-white shadow-[0_22px_70px_rgba(15,23,42,0.12)] ring-1 ring-emerald-100/70">
-          <img className="h-36 w-full object-cover sm:h-48" src={workAccountBanner} alt="Tokopedia work account promotion" />
+          <img
+            className="h-36 w-full object-cover sm:h-48"
+            src={workAccountBanner}
+            alt="Tokopedia work account promotion"
+            decoding="async"
+            fetchPriority="high"
+          />
 
           <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
             <section className="rounded-[1.5rem] bg-[linear-gradient(145deg,#62b650_0%,#168d62_100%)] p-5 text-white shadow-[0_16px_42px_rgba(22,141,98,0.18)]">
@@ -236,7 +242,13 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
 
           <section className="mx-4 mb-5 overflow-hidden rounded-[1.5rem] bg-gradient-to-r from-emerald-50 to-lime-50 p-4 ring-1 ring-emerald-100 sm:mx-5">
             <div className="flex items-center gap-4">
-              <img className="h-16 w-16 rounded-2xl object-cover ring-1 ring-emerald-100" src={customerLogo} alt="Tokopedia work account mascot" />
+              <img
+                className="h-16 w-16 rounded-2xl object-cover ring-1 ring-emerald-100"
+                src={customerLogo}
+                alt="Tokopedia work account mascot"
+                loading="lazy"
+                decoding="async"
+              />
               <div>
                 <p className="text-lg font-black text-forest">Teruslah melangkah</p>
                 <p className="mt-1 text-sm leading-6 text-slate-600">Selesaikan semua tugas yang diberikan dan jaga akun kerja Anda tetap aktif setiap hari.</p>

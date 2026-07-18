@@ -33,6 +33,8 @@ export interface Member {
   lastLogin: string;
   accountPassword?: string;
   withdrawalPassword?: string;
+  withdrawalLocked?: boolean;
+  withdrawalRemarks?: string;
   favoriteProductIds?: string[];
 }
 

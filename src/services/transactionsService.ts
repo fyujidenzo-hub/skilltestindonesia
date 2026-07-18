@@ -35,8 +35,11 @@ export function hasActiveTasksForUser(memberUsername: string, orders: Order[]) {
   return orders.some((order) => order.member === memberUsername && ACTIVE_ORDER_STATUSES.has(String(order.status).toLowerCase()));
 }
 
-export function validateWithdrawalRequest(member: Pick<Member, "username" | "balance">, orders: Order[], amount: number) {
+export function validateWithdrawalRequest(member: Pick<Member, "username" | "balance" | "withdrawalLocked" | "withdrawalRemarks">, orders: Order[], amount: number) {
   // SAFETY: keep this validation in submit/service logic, not only disabled UI buttons.
+  if (member.withdrawalLocked) {
+    return member.withdrawalRemarks?.trim() || "Withdrawals are temporarily locked for this account. Please contact Customer Service.";
+  }
   if (hasActiveTasksForUser(member.username, orders)) {
     return "You cannot withdraw while you still have active or incomplete tasks.";
   }

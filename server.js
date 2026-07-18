@@ -71,7 +71,18 @@ app.post("/api/send-email", async (req, res) => {
 
 // ==================== SERVE REACT ====================
 
-app.use(express.static(path.join(__dirname, "dist")));
+app.use(
+  express.static(path.join(__dirname, "dist"), {
+    etag: true,
+    maxAge: "1y",
+    immutable: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache");
+      }
+    },
+  }),
+);
 
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));

@@ -19,6 +19,8 @@ export default function CustomerHero({ balance, username, phone, onTopUp, onWith
             className="h-32 w-full object-cover sm:h-44 lg:h-56"
             src={workAccountBanner}
             alt="Tokopedia work account promotion"
+            decoding="async"
+            fetchPriority="high"
           />
 
           <div className="relative overflow-hidden bg-[linear-gradient(135deg,#047857_0%,#15945f_48%,#84cc16_100%)] px-5 py-7 text-white sm:px-7 lg:px-9">

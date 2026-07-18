@@ -4,8 +4,6 @@ import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import CustomerHero from "../components/customer/CustomerHero";
-import DepositDestination from "../components/customer/DepositDestination";
-import PremiumBanner from "../components/customer/PremiumBanner";
 import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";

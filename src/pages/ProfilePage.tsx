@@ -174,6 +174,8 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             className="h-32 w-full object-cover sm:h-44 lg:h-52"
             src={workAccountBanner}
             alt="Tokopedia work account promotion"
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
 
@@ -184,7 +186,12 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-4">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-3xl border-4 border-white/40 bg-white shadow-panel sm:h-24 sm:w-24">
-                  <img className="h-full w-full object-cover" src={customerLogo} alt="Customer avatar" />
+                  <img
+                    className="h-full w-full object-cover"
+                    src={customerLogo}
+                    alt="Customer avatar"
+                    decoding="async"
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">Akun anggota</p>

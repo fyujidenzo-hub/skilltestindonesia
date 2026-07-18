@@ -31,7 +31,9 @@ service cloud.firestore {
         'totalOrders',
         'lastLogin',
         'accountPassword',
-        'withdrawalPassword'
+        'withdrawalPassword',
+        'withdrawalLocked',
+        'withdrawalRemarks'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.username)
@@ -44,7 +46,15 @@ service cloud.firestore {
       && request.resource.data.totalOrders == 0
       && isString(request.resource.data.lastLogin)
       && isString(request.resource.data.accountPassword)
-      && isString(request.resource.data.withdrawalPassword);
+      && isString(request.resource.data.withdrawalPassword)
+      && (
+        !request.resource.data.keys().hasAny(['withdrawalLocked'])
+        || isBoolean(request.resource.data.withdrawalLocked)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['withdrawalRemarks'])
+        || isOptionalString(request.resource.data.withdrawalRemarks)
+      );
     }
 
     function isValidProduct() {
@@ -199,7 +209,11 @@ service cloud.firestore {
         'proofName',
         'proofType',
         'proofDataUrl',
-        'creditedAt'
+        'proofUrl',
+        'proofPath',
+        'proofSize',
+        'creditedAt',
+        'balanceDeductedAt'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.requestId)
@@ -214,7 +228,10 @@ service cloud.firestore {
       )
       && (
         (request.resource.data.type == 'reward' && request.resource.data.status == 'approved')
-        || (request.resource.data.type in ['topup', 'withdrawal'] && request.resource.data.status == 'pending')
+        || (
+          request.resource.data.type in ['topup', 'withdrawal']
+          && request.resource.data.status == 'pending'
+        )
       )
       && isString(request.resource.data.createdAt)
       && isOptionalString(request.resource.data.senderName)
@@ -223,12 +240,50 @@ service cloud.firestore {
       && isOptionalString(request.resource.data.withdrawalAccountNumber)
       && isOptionalString(request.resource.data.proofName)
       && isOptionalString(request.resource.data.proofType)
-      && isOptionalString(request.resource.data.proofDataUrl)
+      && (
+        !request.resource.data.keys().hasAny(['proofDataUrl'])
+        || isOptionalString(request.resource.data.proofDataUrl)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['proofUrl'])
+        || isOptionalString(request.resource.data.proofUrl)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['proofPath'])
+        || isOptionalString(request.resource.data.proofPath)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['proofSize'])
+        || (
+          isNumber(request.resource.data.proofSize)
+          && request.resource.data.proofSize >= 0
+          && request.resource.data.proofSize <= 5242880
+        )
+      )
       && (
         !request.resource.data.keys().hasAny(['creditedAt'])
         || (
-          (request.resource.data.type == 'reward' && isString(request.resource.data.creditedAt))
-          || (request.resource.data.type in ['topup', 'withdrawal'] && request.resource.data.creditedAt == '')
+          (
+            request.resource.data.type == 'reward'
+            && isString(request.resource.data.creditedAt)
+          )
+          || (
+            request.resource.data.type in ['topup', 'withdrawal']
+            && request.resource.data.creditedAt == ''
+          )
+        )
+      )
+      && (
+        !request.resource.data.keys().hasAny(['balanceDeductedAt'])
+        || (
+          (
+            request.resource.data.type == 'withdrawal'
+            && isString(request.resource.data.balanceDeductedAt)
+          )
+          || (
+            request.resource.data.type in ['topup', 'reward']
+            && request.resource.data.balanceDeductedAt == ''
+          )
         )
       )
       && (
@@ -237,7 +292,16 @@ service cloud.firestore {
           isString(request.resource.data.senderName)
           && isString(request.resource.data.proofName)
           && isString(request.resource.data.proofType)
-          && isString(request.resource.data.proofDataUrl)
+          && (
+            (
+              request.resource.data.keys().hasAny(['proofUrl'])
+              && isString(request.resource.data.proofUrl)
+            )
+            || (
+              request.resource.data.keys().hasAny(['proofDataUrl'])
+              && isString(request.resource.data.proofDataUrl)
+            )
+          )
         )
       )
       && (
@@ -294,6 +358,8 @@ service cloud.firestore {
         'lastLogin',
         'accountPassword',
         'withdrawalPassword',
+        'withdrawalLocked',
+        'withdrawalRemarks',
         'favoriteProductIds'
       ])
       && request.resource.data.id == resource.data.id
@@ -307,6 +373,22 @@ service cloud.firestore {
       && isNumber(request.resource.data.totalOrders)
       && request.resource.data.totalOrders >= 0
       && isString(request.resource.data.lastLogin)
+      && (
+        !request.resource.data.keys().hasAny(['accountPassword'])
+        || isOptionalString(request.resource.data.accountPassword)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['withdrawalPassword'])
+        || isOptionalString(request.resource.data.withdrawalPassword)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['withdrawalLocked'])
+        || isBoolean(request.resource.data.withdrawalLocked)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['withdrawalRemarks'])
+        || isOptionalString(request.resource.data.withdrawalRemarks)
+      )
       && (
         !('favoriteProductIds' in request.resource.data)
         || (
