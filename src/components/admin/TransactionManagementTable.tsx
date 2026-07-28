@@ -33,13 +33,13 @@ export default function TransactionManagementTable({
   const handleStatusChange = async (transactionItem: Transaction, status: "approved" | "rejected") => {
     if (!canApprove) return;
     if (transactionItem.status !== "pending") {
-      setMessage("This request has already been reviewed.");
+      setMessage("Permintaan ini sudah ditinjau.");
       return;
     }
 
     const member = members.find((item) => item.username === transactionItem.member);
     if (!member) {
-      setMessage("Unable to find the customer for this request.");
+      setMessage("Pelanggan untuk permintaan ini tidak ditemukan.");
       return;
     }
 
@@ -49,28 +49,28 @@ export default function TransactionManagementTable({
       const updatedMember = await approveTransactionRequest(transactionItem, member, status);
       dispatch({ type: "updateTransaction", payload: { id: transactionItem.id, status } });
       dispatch({ type: "updateMember", payload: updatedMember });
-      setMessage(`${transactionItem.type === "topup" ? "Top Up" : "Withdrawal"} request ${status}.`);
+      setMessage(`Permintaan ${transactionItem.type === "topup" ? "isi saldo" : "penarikan"} ${status === "approved" ? "disetujui" : "ditolak"}.`);
     } catch (error) {
       console.error("Failed to update transaction:", error);
-      setMessage(error instanceof Error ? error.message : "Unable to update request. Check Firestore rules.");
+      setMessage(error instanceof Error ? error.message : "Permintaan tidak dapat diperbarui.");
     } finally {
       setIsProcessingId(null);
     }
   };
 
   return (
-    <Panel title="Finance Request Management">
+    <Panel title="Pengelolaan Permintaan Keuangan">
       {message && (
-        <p className={`mb-4 rounded px-3 py-2 text-sm font-semibold ${message.includes("Unable") || message.includes("already") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+        <p className={`mb-4 rounded px-3 py-2 text-sm font-semibold ${message.includes("tidak dapat") || message.includes("sudah ditinjau") || message.includes("tidak ditemukan") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
           {message}
         </p>
       )}
 
       <div className="grid gap-6">
         <RequestTable
-          title="Top Up History (Deposit)"
+          title="Riwayat Isi Saldo (Deposit)"
           tone="topup"
-          emptyText="No top-up requests found."
+          emptyText="Tidak ada permintaan isi saldo."
           transactions={topUps}
           members={members}
           canApprove={canApprove}
@@ -84,9 +84,9 @@ export default function TransactionManagementTable({
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
         />
         <RequestTable
-          title="Withdrawal History"
+          title="Riwayat Penarikan"
           tone="withdrawal"
-          emptyText="No withdrawal requests found."
+          emptyText="Tidak ada permintaan penarikan."
           transactions={withdrawals}
           members={members}
           canApprove={canApprove}
@@ -169,9 +169,9 @@ function RequestTable({
             className="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:text-slate-400"
           >
             <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
-            Refresh
+            Segarkan
           </button>
-          <AmountSortControls value={amountSort} onChange={onAmountSortChange} label="amount" />
+          <AmountSortControls value={amountSort} onChange={onAmountSortChange} label="jumlah" />
           <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
             {transactions.length} catatan
           </span>
@@ -217,7 +217,7 @@ function RequestTable({
                     </Td>
                     <Td className="border-t border-slate-200">
                       <p className="max-w-[160px] break-words font-black text-slate-900">{transaction.member}</p>
-                      <p className="max-w-[160px] break-words text-xs text-slate-500">{member?.phone ?? "No phone"} · {transaction.admin}</p>
+                      <p className="max-w-[160px] break-words text-xs text-slate-500">{member?.phone ?? "Tanpa nomor telepon"} · {transaction.admin}</p>
                     </Td>
                     {tone === "topup" ? (
                       <>
@@ -268,7 +268,7 @@ function RequestTable({
                             </button>
                           </>
                         )}
-                        {isPending && !canApprove && <span className="rounded bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Super Admin only</span>}
+                        {isPending && !canApprove && <span className="rounded bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Khusus Super Admin</span>}
                       </div>
                     </Td>
                   </tr>
@@ -320,9 +320,9 @@ function ProofCell({ transaction, onViewDetails }: { transaction: Transaction; o
 function PaymentMethodCell({ transaction }: { transaction: Transaction }) {
   return (
     <span className="block max-w-[260px] whitespace-pre-line leading-5 text-slate-800">
-      {transaction.proofName ? `Proof file: ${transaction.proofName}` : "Pending bank transfer verification"}
-      {transaction.proofSize ? <span className="block text-xs text-slate-500">Size: {formatBytes(transaction.proofSize)}</span> : null}
-      <span className="block text-xs text-slate-500">Created: {shortDate(transaction.createdAt)}</span>
+      {transaction.proofName ? `Berkas bukti: ${transaction.proofName}` : "Menunggu verifikasi transfer bank"}
+      {transaction.proofSize ? <span className="block text-xs text-slate-500">Ukuran: {formatBytes(transaction.proofSize)}</span> : null}
+      <span className="block text-xs text-slate-500">Dibuat: {shortDate(transaction.createdAt)}</span>
     </span>
   );
 }
@@ -330,10 +330,10 @@ function PaymentMethodCell({ transaction }: { transaction: Transaction }) {
 function WithdrawalInfoCell({ transaction }: { transaction: Transaction }) {
   return (
     <span className="block max-w-[330px] whitespace-pre-line leading-5">
-      Recipient: {transaction.withdrawalAccountName || "-"}
+      Penerima: {transaction.withdrawalAccountName || "-"}
       {"\n"}Bank: {transaction.withdrawalBankName || "-"}
-      {"\n"}Account No: {transaction.withdrawalAccountNumber || "-"}
-      {"\n"}Created: {shortDate(transaction.createdAt)}
+      {"\n"}Nomor Rekening: {transaction.withdrawalAccountNumber || "-"}
+      {"\n"}Dibuat: {shortDate(transaction.createdAt)}
     </span>
   );
 }
@@ -344,7 +344,7 @@ function StatusBadge({ status }: { status: Transaction["status"] }) {
     approved: "bg-emerald-100 text-emerald-700",
     rejected: "bg-rose-100 text-rose-700",
   };
-  const label = status === "pending" ? "Pending Confirmation" : status === "approved" ? "Approved" : "Rejected";
+  const label = status === "pending" ? "Menunggu Konfirmasi" : status === "approved" ? "Disetujui" : "Ditolak";
   return <span className={`rounded px-2 py-1 text-xs font-black ${styles[status]}`}>{label}</span>;
 }
 
@@ -361,41 +361,41 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
               <ReceiptText size={22} />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-forest">{transaction.type === "topup" ? "Top Up request" : "Withdrawal request"}</p>
+              <p className="text-xs font-black uppercase tracking-wide text-forest">{transaction.type === "topup" ? "Permintaan isi saldo" : "Permintaan penarikan"}</p>
               <h2 className="text-xl font-black text-slate-900">{transaction.requestId ?? transaction.id}</h2>
             </div>
           </div>
-          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close request details">
+          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Tutup rincian permintaan">
             <X size={18} />
           </button>
         </div>
 
         <div className="grid gap-5 p-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded bg-slate-50 p-4">
-            <p className="text-sm font-black text-slate-800">Request details</p>
+            <p className="text-sm font-black text-slate-800">Rincian permintaan</p>
             <div className="mt-4 grid gap-3">
-              <ReceiptRow label="Status" value={transaction.status === "pending" ? "Pending Confirmation" : transaction.status} />
-              <ReceiptRow label="Customer/User" value={transaction.member} />
-              <ReceiptRow label="Phone" value={member?.phone ?? "-"} />
-              <ReceiptRow label="Admin scope" value={transaction.admin} />
-              <ReceiptRow label="Sender name" value={transaction.senderName || "-"} />
+              <ReceiptRow label="Status" value={transaction.status === "pending" ? "Menunggu Konfirmasi" : transaction.status === "approved" ? "Disetujui" : "Ditolak"} />
+              <ReceiptRow label="Pelanggan/Pengguna" value={transaction.member} />
+              <ReceiptRow label="Telepon" value={member?.phone ?? "-"} />
+              <ReceiptRow label="Cakupan admin" value={transaction.admin} />
+              <ReceiptRow label="Nama pengirim" value={transaction.senderName || "-"} />
               {transaction.type === "withdrawal" && (
                 <>
-                  <ReceiptRow label="Bank name" value={transaction.withdrawalBankName || "-"} />
-                  <ReceiptRow label="Account holder" value={transaction.withdrawalAccountName || "-"} />
-                  <ReceiptRow label="Account number" value={transaction.withdrawalAccountNumber || "-"} />
+                  <ReceiptRow label="Nama bank" value={transaction.withdrawalBankName || "-"} />
+                  <ReceiptRow label="Pemilik rekening" value={transaction.withdrawalAccountName || "-"} />
+                  <ReceiptRow label="Nomor rekening" value={transaction.withdrawalAccountNumber || "-"} />
                 </>
               )}
-              <ReceiptRow label="Amount" value={formatRupiah(transaction.amount)} strong />
-              <ReceiptRow label="Created date" value={shortDate(transaction.createdAt)} />
-              <ReceiptRow label="Proof file" value={transaction.proofName || "No proof filename"} />
-              {transaction.proofSize ? <ReceiptRow label="Proof size" value={formatBytes(transaction.proofSize)} /> : null}
+              <ReceiptRow label="Jumlah" value={formatRupiah(transaction.amount)} strong />
+              <ReceiptRow label="Tanggal dibuat" value={shortDate(transaction.createdAt)} />
+              <ReceiptRow label="Berkas bukti" value={transaction.proofName || "Tidak ada nama berkas bukti"} />
+              {transaction.proofSize ? <ReceiptRow label="Ukuran bukti" value={formatBytes(transaction.proofSize)} /> : null}
             </div>
           </div>
 
           <div className="rounded border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-black text-slate-800">Payment proof image/link</p>
+              <p className="text-sm font-black text-slate-800">Gambar/tautan bukti pembayaran</p>
               {proofSource && (
                 <a className="inline-flex items-center gap-1 rounded bg-forest px-3 py-2 text-xs font-black text-white" href={proofSource} download={proofDownloadName} target="_blank" rel="noreferrer">
                   <Download size={14} />
@@ -405,7 +405,7 @@ function TransactionReceiptModal({ transaction, member, onClose }: { transaction
             </div>
             {proofSource ? (
               <a href={proofSource} target="_blank" rel="noreferrer">
-                <img className="max-h-[520px] w-full rounded border border-slate-100 object-contain" src={proofSource} alt="Payment proof uploaded by member" />
+                <img className="max-h-[520px] w-full rounded border border-slate-100 object-contain" src={proofSource} alt="Bukti pembayaran yang diunggah anggota" />
               </a>
             ) : (
               <div className="grid min-h-72 place-items-center rounded bg-slate-50 text-center text-sm text-slate-500">

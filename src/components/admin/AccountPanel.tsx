@@ -2,10 +2,11 @@ import { BadgeCheck, Copy, KeyRound, Link2, Send, ShieldCheck, UserRound } from 
 import { useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { roleLabel } from "../../services/adminSession";
-import { updateAdmin } from "../../services/adminsService";
+import { updateAdminProfile } from "../../services/adminsService";
 import { updateSettings } from "../../services/settingsService";
 import { useAppStore } from "../../store/AppStore";
 import type { StaffAdmin } from "../../types";
+import { updateCurrentAccountPassword } from "../../services/authService";
 
 export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin }) {
   const { state, dispatch } = useAppStore();
@@ -30,42 +31,32 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
 
   const saveProfile = async () => {
     if (!form.name.trim() || !form.username.trim()) {
-      setMessage("Name and username are required.");
+      setMessage("Nama dan nama pengguna wajib diisi.");
       return;
     }
 
     if (form.password || form.confirmPassword) {
-      if (form.password.length < 4) {
-        setMessage("Password must be at least 4 characters.");
+      if (form.password.length < 6) {
+        setMessage("Kata sandi harus memiliki minimal 6 karakter.");
         return;
       }
       if (form.password !== form.confirmPassword) {
-        setMessage("Password confirmation does not match.");
+        setMessage("Konfirmasi kata sandi tidak cocok.");
         return;
       }
     }
 
     setSaving(true);
-    setMessage("Saving account...");
+    setMessage("Menyimpan akun...");
     try {
-      const updatedAdmin: StaffAdmin = {
-        ...activeAdmin,
-        name: form.name.trim(),
-        username: form.username.trim(),
-        password: form.password ? form.password : activeAdmin.password,
-      };
-      const updatePayload: Partial<StaffAdmin> = {
-        name: updatedAdmin.name,
-        username: updatedAdmin.username,
-      };
-      if (form.password) updatePayload.password = form.password;
-      await updateAdmin(activeAdmin.id, updatePayload);
+      const updatedAdmin = await updateAdminProfile(activeAdmin, form.name.trim(), form.username.trim());
+      if (form.password) await updateCurrentAccountPassword(form.password);
       dispatch({ type: "updateAdmin", payload: updatedAdmin });
       setForm((current) => ({ ...current, password: "", confirmPassword: "" }));
-      setMessage("Admin account updated. Use the new username/password on your next login.");
+      setMessage("Akun admin berhasil diperbarui. Gunakan nama pengguna atau kata sandi baru saat masuk berikutnya.");
     } catch (error) {
       console.error("Failed to update admin account:", error);
-      setMessage("Firebase save failed. Check Firestore admin update rules.");
+      setMessage("Gagal menyimpan perubahan akun admin.");
     } finally {
       setSaving(false);
     }
@@ -76,12 +67,12 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
     const nextTelegramUrl = normalizeUrl(settingsForm.customerServiceTelegramUrl);
 
     if (!nextSiteUrl) {
-      setSettingsMessage("Website link is required.");
+      setSettingsMessage("Tautan situs web wajib diisi.");
       return;
     }
 
     setSavingSettings(true);
-    setSettingsMessage("Saving settings...");
+    setSettingsMessage("Menyimpan pengaturan...");
     try {
       const nextAccount = {
         ...state.account,
@@ -97,10 +88,10 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
         siteUrl: nextSiteUrl,
         customerServiceTelegramUrl: nextTelegramUrl,
       });
-      setSettingsMessage("Website and customer service links updated.");
+      setSettingsMessage("Tautan situs web dan layanan pelanggan berhasil diperbarui.");
     } catch (error) {
       console.error("Failed to update settings:", error);
-      setSettingsMessage("Firebase save failed. Check Firestore settings rules.");
+      setSettingsMessage("Gagal menyimpan pengaturan.");
     } finally {
       setSavingSettings(false);
     }
@@ -108,12 +99,12 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
 
   const copyInviteLink = async () => {
     await navigator.clipboard.writeText(inviteLink);
-    setMessage("Invitation link copied.");
+    setMessage("Tautan undangan berhasil disalin.");
   };
 
   return (
     <div className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
-      <Panel title="Logged-in Admin Account">
+      <Panel title="Akun Admin yang Sedang Masuk">
         <div className="rounded bg-gradient-to-br from-slate-900 to-emerald-800 p-5 text-white">
           <div className="flex items-start gap-4">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded bg-white/15">
@@ -125,8 +116,8 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
             </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <InfoPill label="Admin code" value={adminCode} />
-            <InfoPill label="Invite code" value={inviteCode} />
+            <InfoPill label="Kode admin" value={adminCode} />
+            <InfoPill label="Kode undangan" value={inviteCode} />
           </div>
         </div>
 
@@ -145,16 +136,16 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
         </div>
       </Panel>
 
-      <Panel title="Login Credentials">
+      <Panel title="Kredensial Masuk">
         <div className="grid gap-4">
-          <Field label="Display name">
+          <Field label="Nama tampilan">
             <div className="relative">
               <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
               <input className={`${inputClass} w-full pl-10`} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
             </div>
           </Field>
 
-          <Field label="Admin login username">
+          <Field label="Nama pengguna admin">
             <div className="relative">
               <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
               <input className={`${inputClass} w-full pl-10`} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} />
@@ -162,40 +153,40 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="New password">
+            <Field label="Kata sandi baru">
               <div className="relative">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                <input className={`${inputClass} w-full pl-10`} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Leave blank to keep current" />
+                <input className={`${inputClass} w-full pl-10`} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Kosongkan untuk mempertahankan kata sandi saat ini" />
               </div>
             </Field>
-            <Field label="Confirm password">
-              <input className={`${inputClass} w-full`} type="password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} placeholder="Repeat new password" />
+            <Field label="Konfirmasi kata sandi">
+              <input className={`${inputClass} w-full`} type="password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} placeholder="Ulangi kata sandi baru" />
             </Field>
           </div>
         </div>
 
         <button className="mt-5 rounded bg-forest px-4 py-3 text-sm font-black text-white disabled:bg-slate-400" disabled={saving} onClick={saveProfile}>
-          {saving ? "Saving..." : "Save admin account"}
+          {saving ? "Menyimpan..." : "Simpan akun admin"}
         </button>
 
         {message && (
-          <p className={`mt-4 rounded px-3 py-2 text-sm font-bold ${message.includes("failed") || message.includes("required") || message.includes("match") || message.includes("Password must") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+          <p className={`mt-4 rounded px-3 py-2 text-sm font-bold ${message.includes("Gagal") || message.includes("wajib") || message.includes("tidak cocok") || message.includes("minimal") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
             {message}
           </p>
         )}
       </Panel>
 
       {activeAdmin.role === "super_admin" && (
-        <Panel title="White Label Settings">
+        <Panel title="Pengaturan Merek Situs">
           <div className="grid gap-4">
-            <Field label="Website link">
+            <Field label="Tautan situs web">
               <div className="relative">
                 <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
                 <input className={`${inputClass} w-full pl-10`} value={settingsForm.siteUrl} onChange={(event) => setSettingsForm({ ...settingsForm, siteUrl: event.target.value })} placeholder="https://your-domain.com" />
               </div>
             </Field>
 
-            <Field label="Customer service Telegram link">
+            <Field label="Tautan Telegram layanan pelanggan">
               <div className="relative">
                 <Send className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
                 <input className={`${inputClass} w-full pl-10`} value={settingsForm.customerServiceTelegramUrl} onChange={(event) => setSettingsForm({ ...settingsForm, customerServiceTelegramUrl: event.target.value })} placeholder="https://t.me/your_support" />
@@ -204,11 +195,11 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
           </div>
 
           <button className="mt-5 w-full rounded bg-forest px-4 py-3 text-sm font-black text-white disabled:bg-slate-400 sm:w-auto" disabled={savingSettings} onClick={saveWhiteLabelSettings}>
-            {savingSettings ? "Saving..." : "Save settings"}
+            {savingSettings ? "Menyimpan..." : "Simpan pengaturan"}
           </button>
 
           {settingsMessage && (
-            <p className={`mt-4 rounded px-3 py-2 text-sm font-bold ${settingsMessage.includes("failed") || settingsMessage.includes("required") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+            <p className={`mt-4 rounded px-3 py-2 text-sm font-bold ${settingsMessage.includes("Gagal") || settingsMessage.includes("wajib") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
               {settingsMessage}
             </p>
           )}

@@ -21,11 +21,11 @@ export function validatePaymentProofFile(file: File) {
   return "";
 }
 
-export async function uploadPaymentProof(file: File, transactionId: string): Promise<UploadedPaymentProof> {
+export async function uploadPaymentProof(file: File, memberId: string, transactionId: string): Promise<UploadedPaymentProof> {
   if (!storage) throw new Error("Firebase Storage is not initialized.");
 
   const extension = file.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg";
-  const proofPath = `payment-proofs/${transactionId}/${Date.now()}.${extension}`;
+  const proofPath = `payment-proofs/${memberId}/${transactionId}/${Date.now()}.${extension}`;
   const proofRef = ref(storage, proofPath);
 
   await uploadBytes(proofRef, file, {

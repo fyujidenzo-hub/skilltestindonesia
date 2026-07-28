@@ -8,6 +8,7 @@ import { assignOrderProducts } from "../../services/ordersService";
 import { getOrderCode } from "../../services/orderCode";
 import { getOrderState, getOrderStateLabel, type OrderState } from "../../services/orderStateService";
 import AmountSortControls, { type AmountSort } from "./AmountSortControls";
+import { getActiveAdmin } from "../../services/adminSession";
 
 interface TaskAssignmentTableProps {
   orders: Order[];
@@ -21,7 +22,8 @@ const taskTarget = 15;
 const rowPageSize = 10;
 
 export default function TaskAssignmentTable({ orders, members, products, onRefresh, isRefreshing = false }: TaskAssignmentTableProps) {
-  const { dispatch } = useAppStore();
+  const { state, dispatch } = useAppStore();
+  const activeAdmin = getActiveAdmin(state.admins);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
@@ -98,7 +100,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
 
     const order = orders.find((o) => o.id === selectedOrderId);
     if (!order) {
-      setMessage("Order not found");
+      setMessage("Pesanan tidak ditemukan");
       return;
     }
 
@@ -108,20 +110,23 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
     try {
       const selectedItems = selectedProductIds.map((productId) => {
         const product = products.find((p) => p.id === productId);
-        if (!product) throw new Error("Product not found");
+        if (!product) throw new Error("Produk tidak ditemukan");
         return { product, quantity: selectedQuantities[productId] ?? 1 };
       });
 
-      const updatedOrder = await assignOrderProducts(order, selectedItems);
+      const updatedOrder = await assignOrderProducts(order, selectedItems, {
+        assignedByAdminId: activeAdmin?.id,
+        assignedByName: activeAdmin?.name,
+      });
 
       dispatch({ type: "updateOrder", payload: updatedOrder });
       
-      setMessage("Products assigned successfully!");
+      setMessage("Produk berhasil ditugaskan!");
       setSelectedOrderId("");
       setSelectedQuantities({});
       setShowAssignForm(false);
     } catch (error) {
-      setMessage(`Error: ${error instanceof Error ? error.message : "Failed to assign products"}`);
+      setMessage(`Kesalahan: ${error instanceof Error ? error.message : "Gagal menugaskan produk"}`);
     } finally {
       setIsAssigning(false);
     }
@@ -146,7 +151,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
 
   return (
     <Panel
-      title="Task Assignment Dashboard"
+      title="Dasbor Penugasan"
       action={
         <div className="flex flex-wrap gap-2">
           <button
@@ -176,7 +181,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
                 value={selectedOrderId}
                 onChange={(e) => setSelectedOrderId(e.target.value)}
               >
-                <option value="">Choose a task...</option>
+                <option value="">Pilih tugas...</option>
                 {waitingAssignmentOrders.map((order) => {
                   const member = members.find((m) => m.username === order.member);
                   return (
@@ -188,7 +193,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
               </select>
             </Field>
 
-            <Field label="Select Products">
+            <Field label="Pilih Produk">
               <div className="space-y-2 border rounded p-2 bg-white max-h-52 overflow-y-auto">
                 {products.length === 0 ? (
                   <p className="text-sm text-slate-500">Tidak ada produk yang tersedia</p>
@@ -228,7 +233,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
                           <div className="min-w-0">
                             <p className="truncate font-semibold">{product.code} - {product.name}</p>
                             <p className={`text-xs ${isAvailable ? "text-slate-500" : "font-bold text-rose-600"}`}>
-                              {formatRupiah(product.price)} · {isAvailable ? "Available" : "Unavailable"}
+                              {formatRupiah(product.price)} · {isAvailable ? "Tersedia" : "Tidak tersedia"}
                             </p>
                           </div>
                         </div>
@@ -287,7 +292,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
               className="h-10 w-full rounded border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-forest"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search task, member, product"
+              placeholder="Cari tugas, anggota, atau produk"
             />
           </div>
         </div>
@@ -376,7 +381,7 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
                 </TaskTd>
                 <TaskTd>
                   <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${getStatusColor(order.status)}`}>
-                    {state === "diserahkan" ? "Completed" : state === "rejected" ? "Rejected" : "Pending"}
+                    {state === "diserahkan" ? "Selesai" : state === "rejected" ? "Ditolak" : "Menunggu"}
                   </span>
                 </TaskTd>
                 <TaskTd>
@@ -397,9 +402,9 @@ export default function TaskAssignmentTable({ orders, members, products, onRefre
                       Menunggu persetujuan
                     </span>
                   ) : state === "diserahkan" ? (
-                    <span className="inline-flex w-full items-center justify-center rounded bg-emerald-100 px-3 py-2 text-center text-xs font-black leading-4 text-emerald-700">Product Selected</span>
+                    <span className="inline-flex w-full items-center justify-center rounded bg-emerald-100 px-3 py-2 text-center text-xs font-black leading-4 text-emerald-700">Produk Dipilih</span>
                   ) : state === "rejected" ? (
-                    <span className="inline-flex w-full items-center justify-center rounded bg-rose-100 px-3 py-2 text-center text-xs font-black text-rose-700">Rejected</span>
+                    <span className="inline-flex w-full items-center justify-center rounded bg-rose-100 px-3 py-2 text-center text-xs font-black text-rose-700">Ditolak</span>
                   ) : (
                     <span className="inline-flex w-full items-center justify-center rounded bg-amber-100 px-3 py-2 text-center text-xs font-black leading-4 text-amber-700">
                       Produk telah dipilih, menunggu penyelesaian

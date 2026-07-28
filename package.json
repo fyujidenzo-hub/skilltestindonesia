@@ -7,6 +7,10 @@
     "dev": "vite --host 127.0.0.1",
     "server": "node server.js",
     "start": "node server.js",
+    "backup:production": "node scripts/backup-production-firestore.mjs",
+    "migrate:ownership": "node scripts/migrate-member-ownership.mjs",
+    "migrate:auth": "node scripts/migrate-firebase-auth.mjs",
+    "test:rules": "npx --yes firebase-tools@15.24.0 emulators:exec --only firestore,storage --project demo-skilltest \"node scripts/test-security-rules.mjs\"",
     "seed:superadmin": "node scripts/seed-superadmin.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1"
@@ -26,6 +30,7 @@
     "vite": "^7.0.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
     "@types/node": "^26.0.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

@@ -28,7 +28,7 @@ export default class ErrorBoundary extends React.Component<React.PropsWithChildr
     return (
       <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-900">
         <div className="mx-auto max-w-md rounded-3xl bg-white p-6 shadow-panel">
-          <h1 className="text-xl font-black">Unable to load app</h1>
+          <h1 className="text-xl font-black">Aplikasi tidak dapat dimuat</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Silakan segarkan halaman ini. Jika Anda membukanya di dalam WhatsApp atau browser dalam aplikasi lainnya, ketuk menu lalu buka di Safari/Chrome.
           </p>

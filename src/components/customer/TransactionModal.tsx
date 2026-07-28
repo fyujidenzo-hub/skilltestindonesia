@@ -11,7 +11,7 @@ import { formatRupiah } from "../../utils";
 interface TransactionModalProps {
   type: "topup" | "withdraw";
   member: string;
-  memberId?: string;
+  memberId: string;
   admin: string;
   banks: BankPlacement[];
   onClose: () => void;
@@ -119,7 +119,7 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
 
     try {
       const transactionId = crypto.randomUUID();
-      const uploadedProof = type === "topup" && proofFile ? await uploadPaymentProof(proofFile, transactionId) : undefined;
+      const uploadedProof = type === "topup" && proofFile ? await uploadPaymentProof(proofFile, memberId, transactionId) : undefined;
       const result = await createTransaction({
         id: transactionId,
         member,
@@ -151,7 +151,7 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
       setTimeout(onClose, 2000);
     } catch (error) {
       setLoading(false);
-      const errorMessage = error instanceof Error ? error.message : "Request failed";
+      const errorMessage = error instanceof Error ? error.message : "Permintaan gagal";
       setMessage(`✗ ${errorMessage}`);
       console.error("Request error:", error);
     }
@@ -172,8 +172,8 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
             {type === "topup" ? <CreditCard size={23} /> : <Wallet size={23} />}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wide text-forest">{type === "topup" ? "Top Up" : "Withdrawal"}</p>
-              <h2 className="mt-1 text-xl font-black leading-tight text-slate-900 sm:text-2xl">{type === "topup" ? "Create Top Up Request" : "Create Withdrawal Request"}</h2>
+            <p className="text-xs font-black uppercase tracking-wide text-forest">{type === "topup" ? "Isi Saldo" : "Penarikan"}</p>
+              <h2 className="mt-1 text-xl font-black leading-tight text-slate-900 sm:text-2xl">{type === "topup" ? "Buat Permintaan Isi Saldo" : "Buat Permintaan Penarikan"}</h2>
             <p className="mt-1 text-sm leading-6 text-slate-500">Kirimkan permintaan Anda untuk ditinjau oleh administrator. Permintaan yang sedang diproses akan muncul di riwayat akun Anda.</p>
 
           </div>
@@ -227,7 +227,7 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
           )}
 
           <div className="rounded-2xl bg-slate-50 p-4">
-            <Field label="Amount (Rp)">
+            <Field label="Jumlah (Rp)">
               <input
                 className={`${inputClass} rounded-xl bg-white`}
                 type="text"
@@ -235,7 +235,7 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
                 value={amountInput}
                 onChange={(event) => handleAmountChange(event.target.value)}
                 onBlur={() => setAmountInput(amount ? String(amount) : "")}
-                placeholder="Example: 212,987"
+                placeholder="Contoh: 212.987"
                 disabled={loading}
               />
             </Field>
@@ -254,13 +254,13 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
 
           {type === "topup" && (
             <div className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4">
-              <Field label="Sender name">
+              <Field label="Nama pengirim">
                 <input className={`${inputClass} rounded-xl`} value={senderName} onChange={(event) => setSenderName(event.target.value)} disabled={loading} />
               </Field>
-              <Field label="Payment proof image">
+              <Field label="Gambar bukti pembayaran">
                 <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm font-bold text-slate-600 hover:border-forest hover:bg-mint">
                   <Upload size={18} className="text-forest" />
-                  <span className="min-w-0 flex-1 truncate">{proofFile ? proofFile.name : "Upload image proof"}</span>
+                  <span className="min-w-0 flex-1 truncate">{proofFile ? proofFile.name : "Unggah bukti gambar"}</span>
                   <input
                     className="sr-only"
                     type="file"
@@ -295,15 +295,15 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
               </div>
 
               <IconField icon={<Landmark size={17} />} label="Nama bank">
-                <input className={`${inputClass} rounded-xl`} value={withdrawalBankName} onChange={(event) => setWithdrawalBankName(event.target.value)} disabled={loading} placeholder="Example: BCA, BRI, Mandiri" />
+                <input className={`${inputClass} rounded-xl`} value={withdrawalBankName} onChange={(event) => setWithdrawalBankName(event.target.value)} disabled={loading} placeholder="Contoh: BCA, BRI, Mandiri" />
               </IconField>
 
               <IconField icon={<UserRound size={17} />} label="Nama pemegang rekening">
-                <input className={`${inputClass} rounded-xl`} value={withdrawalAccountName} onChange={(event) => setWithdrawalAccountName(event.target.value)} disabled={loading} placeholder="Name on the bank account" />
+                <input className={`${inputClass} rounded-xl`} value={withdrawalAccountName} onChange={(event) => setWithdrawalAccountName(event.target.value)} disabled={loading} placeholder="Nama pada rekening bank" />
               </IconField>
 
               <IconField icon={<CreditCard size={17} />} label="Nomor rekening">
-                <input className={`${inputClass} rounded-xl`} value={withdrawalAccountNumber} onChange={(event) => setWithdrawalAccountNumber(event.target.value)} disabled={loading} inputMode="numeric" placeholder="Bank account number" />
+                <input className={`${inputClass} rounded-xl`} value={withdrawalAccountNumber} onChange={(event) => setWithdrawalAccountNumber(event.target.value)} disabled={loading} inputMode="numeric" placeholder="Nomor rekening bank" />
               </IconField>
 
               <IconField icon={<LockKeyhole size={17} />} label="Kata sandi / PIN penarikan">
@@ -335,10 +335,10 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
           <p className="text-xs font-black uppercase tracking-wide text-white/70">Jumlah permintaan</p>
           <p className="mt-2 break-words text-3xl font-black">{formatRupiah(amount)}</p>
           <div className="mt-5 space-y-3 text-sm">
-            <SummaryItem label="Status" value={type === "withdraw" ? "Pending Withdrawal" : "Pending Top Up"} />
-            <SummaryItem label="Member" value={member} />
-            <SummaryItem label="Admin scope" value={admin} />
-            {type === "withdraw" && withdrawalBankName && <SummaryItem label="Withdrawal bank" value={withdrawalBankName} />}
+            <SummaryItem label="Status" value={type === "withdraw" ? "Penarikan Menunggu" : "Isi Saldo Menunggu"} />
+            <SummaryItem label="Anggota" value={member} />
+            <SummaryItem label="Cakupan admin" value={admin} />
+            {type === "withdraw" && withdrawalBankName && <SummaryItem label="Bank penarikan" value={withdrawalBankName} />}
           </div>
         </aside>
       </div>
@@ -349,11 +349,11 @@ export default function TransactionModal({ type, member, memberId, admin, banks,
         </button>
         <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-3 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400" type="submit" disabled={loading || checkingWithdrawalAccess || Boolean(withdrawalBlockMessage)}>
           {loading ? (
-            "Submitting..."
+            "Mengirim..."
           ) : checkingWithdrawalAccess ? (
             "Checking withdrawal access..."
           ) : withdrawalBlockMessage ? (
-            "Withdrawal unavailable"
+            "Penarikan tidak tersedia"
           ) : (
             <>
               {type === "withdraw" ? <Send size={17} /> : <CheckCircle2 size={17} />}

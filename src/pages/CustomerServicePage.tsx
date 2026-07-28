@@ -6,6 +6,7 @@ import CustomerHeader, { type CustomerNotification } from "../components/custome
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
+import { belongsToMember } from "../services/memberOwnership";
 import { useAppStore } from "../store/AppStore";
 
 export default function CustomerServicePage({ navigate }: { navigate: Navigate }) {
@@ -22,14 +23,14 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
     const rejectedOrderNotifications = state.orders
       .filter(
         (order) =>
-          order.member === currentMember.username &&
+          belongsToMember(order, currentMember) &&
           getOrderState(order) === "rejected"
       )
       .slice(0, 3)
       .map((order) => ({
         id: `order-rejected-${order.id}`,
-        title: "Product request rejected",
-        text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+        title: "Permintaan produk ditolak",
+        text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
         tone: "danger" as const,
         targetPath: "/orders",
       }));
@@ -37,27 +38,27 @@ export default function CustomerServicePage({ navigate }: { navigate: Navigate }
     const orderNotifications = state.orders
       .filter(
         (order) =>
-          order.member === currentMember.username &&
+          belongsToMember(order, currentMember) &&
           !["completed", "diserahkan", "rejected"].includes(order.status)
       )
       .slice(0, 3)
       .map((order) => ({
         id: `order-${order.id}`,
         title: `Order ${order.status}`,
-        text: `${order.productName || "Pending assignment"} · ${getOrderCode(order)}`,
+        text: `${order.productName || "Menunggu penugasan"} · ${getOrderCode(order)}`,
         tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
         targetPath: "/orders",
       }));
 
     const transactionNotifications = state.transactions
-      .filter((transaction) => transaction.member === currentMember.username)
+      .filter((transaction) => belongsToMember(transaction, currentMember))
       .slice(0, 4)
       .map((transaction) => ({
         id: `transaction-${transaction.id}`,
         title:
           transaction.status === "pending"
-            ? `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} pending`
-            : `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} ${transaction.status}`,
+            ? `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} menunggu`
+            : `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} ${transaction.status === "approved" ? "disetujui" : "ditolak"}`,
         text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
         tone:
           transaction.status === "approved"

@@ -1,6 +1,8 @@
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from "firebase/firestore";
 import { db } from "../firebase";
 import type { StaffAdmin } from "../types";
+import { identityKey } from "./identityKey";
+import { normalizeUsername } from "./memberOwnership";
 
 const COLLECTION = "admins";
 
@@ -41,4 +43,43 @@ export async function updateAdmin(id: string, data: Partial<StaffAdmin>): Promis
 export async function deleteAdmin(id: string): Promise<void> {
   if (!db) throw new Error("Firebase not initialized");
   await deleteDoc(doc(db, COLLECTION, id));
+}
+
+export async function updateAdminProfile(admin: StaffAdmin, name: string, username: string): Promise<StaffAdmin> {
+  if (!db) throw new Error("Firebase not initialized");
+  const firestore = db;
+  const usernameNormalized = normalizeUsername(username);
+  const oldUsernameNormalized = admin.usernameNormalized || normalizeUsername(admin.username ?? "");
+  const [newLoginId, oldLoginId] = await Promise.all([
+    identityKey("adminUsername", usernameNormalized),
+    identityKey("adminUsername", oldUsernameNormalized),
+  ]);
+  const nextAdmin = { ...admin, name, username, usernameNormalized };
+
+  await runTransaction(firestore, async (transaction) => {
+    const adminRef = doc(firestore, COLLECTION, admin.id);
+    const newLoginRef = doc(firestore, "loginIdentifiers", newLoginId);
+    const oldLoginRef = doc(firestore, "loginIdentifiers", oldLoginId);
+    const [newLoginSnapshot, oldLoginSnapshot] = await Promise.all([
+      transaction.get(newLoginRef),
+      transaction.get(oldLoginRef),
+    ]);
+    if (usernameNormalized !== oldUsernameNormalized && newLoginSnapshot.exists()) {
+      throw new Error("Username admin sudah digunakan.");
+    }
+    transaction.update(adminRef, { name, username, usernameNormalized });
+    if (usernameNormalized !== oldUsernameNormalized) {
+      transaction.set(newLoginRef, {
+        scope: "admin",
+        subjectId: admin.id,
+        authEmail: admin.authEmail ?? "",
+        authUid: admin.authUid ?? "",
+        conflict: false,
+        updatedAt: new Date().toISOString(),
+      });
+      if (oldLoginSnapshot.data()?.subjectId === admin.id) transaction.delete(oldLoginRef);
+    }
+  });
+
+  return nextAdmin;
 }

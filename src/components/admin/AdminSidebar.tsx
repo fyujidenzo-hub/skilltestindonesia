@@ -64,10 +64,24 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
             }`}
           >
             {adminTabIcon(tab)}
-            {tab}
+            {adminTabLabel(tab)}
           </button>
         ))}
       </nav>
     </aside>
   );
+}
+
+function adminTabLabel(tab: AdminTab) {
+  const labels: Record<AdminTab, string> = {
+    Overview: "Ringkasan",
+    Members: "Anggota",
+    Tasks: "Tugas",
+    Orders: "Pesanan",
+    Finance: "Keuangan",
+    Catalog: "Katalog",
+    Staff: "Staf",
+    Account: "Akun",
+  };
+  return labels[tab];
 }

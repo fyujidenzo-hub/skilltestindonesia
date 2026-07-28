@@ -1,4 +1,5 @@
 import { clearCookieSession, getCookieSession, setCookieSession } from "./browserSession";
+import { clearAuthenticatedSession } from "./authService";
 
 const activeCustomerKey = "orderops-member-session";
 
@@ -16,6 +17,7 @@ export function setActiveCustomerId(memberId: string) {
 
 export function clearActiveCustomerId() {
   clearCookieSession(activeCustomerKey);
+  void clearAuthenticatedSession();
 }
 
 export function getActiveCustomer<T extends CustomerLike>(customers: T[]) {

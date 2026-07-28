@@ -1,23 +1,15 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
-import { firebaseReady } from "../firebase";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
+import { auth, firebaseReady } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { initialState } from "../data";
 import { loadStoredState, saveLocalState } from "../services/appStateRepository";
 import { generateOrderCode } from "../services/orderCode";
 import type { AppState, BankPlacement, Member, Order, Product, StaffAdmin, Transaction } from "../types";
-
-type RegisterMemberPayload = {
-  id?: string;
-  username: string;
-  email?: string;
-  phone: string;
-  invitationCode: string;
-  accountPassword: string;
-  withdrawalPassword: string;
-};
+import { subscribeToMember } from "../services/membersService";
+import { getAuthContext } from "../services/authService";
 
 type Action =
   | { type: "hydrate"; payload: AppState }
-  | { type: "registerMember"; payload: RegisterMemberPayload }
   | { type: "createTransaction"; payload: Pick<Transaction, "member" | "type" | "amount"> }
   | { type: "addTransaction"; payload: Transaction }
   | { type: "updateTransaction"; payload: { id: string; status: "approved" | "rejected" } }
@@ -25,7 +17,7 @@ type Action =
   | { type: "createOrder"; payload: { member: string; productId?: string } }
   | { type: "addOrder"; payload: Order }
   | { type: "updateOrder"; payload: Order }
-  | { type: "replaceMemberOrders"; payload: { member: string; orders: Order[] } }
+  | { type: "replaceMemberOrders"; payload: { memberId: string; orders: Order[] } }
   | { type: "completeOrder"; payload: { orderId: string } }
   | { type: "completeOrderWithMember"; payload: { order: Order; member: Member } }
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
@@ -44,6 +36,8 @@ interface AppStoreValue {
   ready: boolean;
   persistence: "firebase" | "local";
   dispatch: React.Dispatch<Action>;
+  primeMemberSession: (member: Member) => void;
+  primeAdminSession: (admin: StaffAdmin) => void;
 }
 
 const AppStoreContext = createContext<AppStoreValue | null>(null);
@@ -78,31 +72,6 @@ function createLocalOrderCode(orders: Order[]) {
 
 function reducer(state: AppState, action: Action): AppState {
   if (action.type === "hydrate") return action.payload;
-
-  if (action.type === "registerMember") {
-    const admin = state.admins.find((item) => (item.invitationCode ?? item.code) === action.payload.invitationCode);
-    if (!admin) return state;
-    const member: Member = {
-      id: action.payload.id ?? String(Date.now()).slice(-6),
-      username: action.payload.username,
-      email: action.payload.email,
-      phone: action.payload.phone,
-      invitationCode: action.payload.invitationCode,
-      referredBy: admin.name,
-      level: "Starter",
-      balance: admin.registrationBonus ?? 0,
-      totalOrders: 0,
-      lastLogin: nowStamp(),
-      accountPassword: action.payload.accountPassword,
-      withdrawalPassword: action.payload.withdrawalPassword,
-    };
-
-    return {
-      ...state,
-      members: [member, ...state.members],
-      admins: state.admins.map((item) => (item.id === admin.id ? { ...item, registrations: item.registrations + 1 } : item)),
-    };
-  }
 
   if (action.type === "createTransaction") {
     const member = state.members.find((item) => item.username === action.payload.member) ?? state.members[0];
@@ -231,7 +200,9 @@ function reducer(state: AppState, action: Action): AppState {
         item.id === order.id ? { ...item, status: "completed", completedAt, commissionCreditedAt } : item,
       ),
       members: state.members.map((member) =>
-        member.username === order.member ? { ...member, balance: member.balance + commission, totalOrders: member.totalOrders + 1 } : member,
+        member.id === order.memberId
+          ? { ...member, balance: member.balance + commission, totalOrders: member.totalOrders + 1 }
+          : member,
       ),
     };
   }
@@ -265,7 +236,13 @@ function reducer(state: AppState, action: Action): AppState {
   }
 
   if (action.type === "replaceMemberOrders") {
-    const mergedOrders = [...state.orders.filter((order) => order.member !== action.payload.member), ...action.payload.orders];
+    const mergedOrders = [
+      ...state.orders.filter(
+        (order) =>
+          order.memberId !== action.payload.memberId,
+      ),
+      ...action.payload.orders,
+    ];
 
     return {
       ...state,
@@ -284,7 +261,9 @@ function reducer(state: AppState, action: Action): AppState {
   if (action.type === "updateMember") {
     return {
       ...state,
-      members: state.members.map((member) => (member.id === action.payload.id ? action.payload : member)),
+      members: state.members.some((member) => member.id === action.payload.id)
+        ? state.members.map((member) => (member.id === action.payload.id ? action.payload : member))
+        : [action.payload, ...state.members],
     };
   }
 
@@ -295,7 +274,14 @@ function reducer(state: AppState, action: Action): AppState {
   if (action.type === "updateBank") return { ...state, banks: state.banks.map((bank) => (bank.id === action.payload.id ? action.payload : bank)) };
   if (action.type === "deleteBank") return { ...state, banks: state.banks.filter((bank) => bank.id !== action.payload.id) };
   if (action.type === "addAdmin") return { ...state, admins: [action.payload, ...state.admins] };
-  if (action.type === "updateAdmin") return { ...state, admins: state.admins.map((admin) => (admin.id === action.payload.id ? action.payload : admin)) };
+  if (action.type === "updateAdmin") {
+    return {
+      ...state,
+      admins: state.admins.some((admin) => admin.id === action.payload.id)
+        ? state.admins.map((admin) => (admin.id === action.payload.id ? action.payload : admin))
+        : [action.payload, ...state.admins],
+    };
+  }
   if (action.type === "deleteAdmin") return { ...state, admins: state.admins.filter((admin) => admin.id !== action.payload.id) };
   if (action.type === "updateAccount") return { ...state, account: action.payload };
 
@@ -313,22 +299,52 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     orders: [],
   });
   const [ready, setReady] = useState(false);
+  const [authenticatedMemberId, setAuthenticatedMemberId] = useState("");
+  const primeMemberSession = useCallback((member: Member) => {
+    dispatch({ type: "updateMember", payload: member });
+    setAuthenticatedMemberId(member.id);
+    setReady(true);
+  }, []);
+  const primeAdminSession = useCallback((admin: StaffAdmin) => {
+    dispatch({ type: "updateAdmin", payload: admin });
+    setAuthenticatedMemberId("");
+    setReady(true);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
+    let authSequence = 0;
 
-    loadStoredState()
-      .then((stored) => {
-        if (!mounted) return;
-        dispatch({ type: "hydrate", payload: stored });
-        setReady(true);
-      })
-      .catch(() => {
-        if (mounted) setReady(true);
-      });
+    const reload = (authContext?: Awaited<ReturnType<typeof getAuthContext>>) => {
+      return loadStoredState(authContext)
+        .then((stored) => {
+          if (!mounted) return;
+          dispatch({ type: "hydrate", payload: stored });
+          setReady(true);
+        })
+        .catch(() => {
+          if (mounted) setReady(true);
+        });
+    };
+    const unsubscribe = auth
+      ? onAuthStateChanged(auth, async (user) => {
+          const sequence = ++authSequence;
+          if (!user) {
+            setAuthenticatedMemberId("");
+            await reload(null);
+            return;
+          }
+          const context = await getAuthContext().catch(() => null);
+          if (!mounted || sequence !== authSequence) return;
+          setAuthenticatedMemberId(context?.role === "member" ? context.subjectId : "");
+          await reload(context);
+        })
+      : undefined;
+    if (!auth) reload();
 
     return () => {
       mounted = false;
+      unsubscribe?.();
     };
   }, []);
 
@@ -336,14 +352,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     if (ready) saveLocalState(state);
   }, [ready, state]);
 
+  useEffect(() => {
+    if (!ready) return;
+    const memberId = authenticatedMemberId;
+    if (!memberId) return;
+
+    return subscribeToMember(
+      memberId,
+      (member) => {
+        if (member) dispatch({ type: "updateMember", payload: member });
+      },
+      (error) => console.warn("Unable to synchronize member record:", error),
+    );
+  }, [authenticatedMemberId, ready]);
+
   const value = useMemo(
     () => ({
       state,
       ready,
       persistence: firebaseReady ? ("firebase" as const) : ("local" as const),
       dispatch,
+      primeMemberSession,
+      primeAdminSession,
     }),
-    [ready, state],
+    [primeAdminSession, primeMemberSession, ready, state],
   );
 
   return <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>;

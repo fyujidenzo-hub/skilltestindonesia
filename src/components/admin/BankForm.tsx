@@ -30,37 +30,37 @@ export default function BankForm({ bank, onDone }: { bank?: BankPlacement; onDon
             const updatedBank = { ...bank, ...form };
             await updateBank(bank.id, form);
             dispatch({ type: "updateBank", payload: updatedBank });
-            setMessage("Bank settings updated in Firebase.");
+            setMessage("Pengaturan bank berhasil diperbarui.");
             onDone?.();
           } else {
             const savedBank = await createBank(form);
             dispatch({ type: "addBank", payload: savedBank });
             setForm({ bank: "", accountName: "", accountNumber: "", minDeposit: 100000, active: true });
-            setMessage("Bank placement saved to Firebase.");
+            setMessage("Rekening bank berhasil disimpan.");
           }
         } catch (error) {
           console.error("Failed to save bank placement:", error);
-          setMessage("Firebase save failed. Check Firestore bank rules.");
+          setMessage("Gagal menyimpan rekening bank.");
         } finally {
           setSaving(false);
         }
       }}
     >
-      <input className={inputClass} placeholder="Bank name" required value={form.bank} onChange={(event) => setForm({ ...form, bank: event.target.value })} />
-      <input className={inputClass} placeholder="Account owner name" required value={form.accountName} onChange={(event) => setForm({ ...form, accountName: event.target.value })} />
-      <input className={inputClass} placeholder="Account number" required value={form.accountNumber} onChange={(event) => setForm({ ...form, accountNumber: event.target.value })} />
-      <input className={inputClass} type="number" placeholder="Minimum deposit" required value={form.minDeposit} onChange={(event) => setForm({ ...form, minDeposit: Number(event.target.value) })} />
+      <input className={inputClass} placeholder="Nama bank" required value={form.bank} onChange={(event) => setForm({ ...form, bank: event.target.value })} />
+      <input className={inputClass} placeholder="Nama pemilik rekening" required value={form.accountName} onChange={(event) => setForm({ ...form, accountName: event.target.value })} />
+      <input className={inputClass} placeholder="Nomor rekening" required value={form.accountNumber} onChange={(event) => setForm({ ...form, accountNumber: event.target.value })} />
+      <input className={inputClass} type="number" placeholder="Setoran minimum" required value={form.minDeposit} onChange={(event) => setForm({ ...form, minDeposit: Number(event.target.value) })} />
       <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
         <input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} />
         Detail rekening aktif
       </label>
       {message && (
-        <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+        <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("Gagal") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
           {message}
         </p>
       )}
       <button disabled={saving} className="rounded bg-forest px-4 py-2 font-bold text-white disabled:bg-slate-400">
-        {saving ? "Penghematan..." : isEditing ? "Perbarui pengaturan bank" : "Simpan bank"}
+        {saving ? "Menyimpan..." : isEditing ? "Perbarui pengaturan bank" : "Simpan bank"}
       </button>
     </form>
   );

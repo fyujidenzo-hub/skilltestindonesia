@@ -15,7 +15,8 @@ export function getCookieSession(key: string) {
 
 export function setCookieSession(key: string, value: string) {
   try {
-    document.cookie = `${key}=${encodeURIComponent(value)}; max-age=${sessionMaxAgeSeconds}; path=/; SameSite=Lax`;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${key}=${encodeURIComponent(value)}; max-age=${sessionMaxAgeSeconds}; path=/; SameSite=Lax${secure}`;
   } catch (error) {
     console.warn("Unable to save browser session:", error);
   }

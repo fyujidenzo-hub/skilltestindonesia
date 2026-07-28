@@ -57,14 +57,14 @@ export default function WalletValidation({
             disabled={isLoading}
             className="rounded border border-slate-200 px-4 py-2 font-bold hover:bg-slate-50 disabled:opacity-50"
           >
-           Membatalkan
+           Batal
           </button>
           <button
             onClick={onConfirm}
             disabled={isLoading}
             className="rounded bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
           >
-            {isLoading ? "Submitting..." : "Confirm"}
+            {isLoading ? "Mengirim..." : "Konfirmasi"}
           </button>
         </div>
       </div>

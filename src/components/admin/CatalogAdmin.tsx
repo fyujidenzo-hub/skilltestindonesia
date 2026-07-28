@@ -1,11 +1,23 @@
-import { AlertTriangle, BadgeCheck, Boxes, Eye, Package, Pencil, Plus, Tag, Trash2, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Boxes, Eye, ImageIcon, Package, Pencil, Plus, Save, Tag, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { Panel } from "../common";
+import { inputClass, Panel } from "../common";
 import type { Product } from "../../types";
 import { formatRupiah } from "../../utils";
 import ProductForm from "./ProductForm";
 import { deleteProduct, updateProduct } from "../../services/productsService";
 import { useAppStore } from "../../store/AppStore";
+import ProductImage, { normalizeProductImage } from "../ProductImage";
+
+const PRODUCT_CATEGORIES = [
+  "Electronics",
+  "Health",
+  "Home",
+  "Lifestyle",
+  "Fashion",
+  "Beauty",
+  "Sports",
+  "Books",
+];
 
 export default function CatalogAdmin({ products }: { products: Product[] }) {
   const { dispatch } = useAppStore();
@@ -13,40 +25,31 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [isSavingStatus, setIsSavingStatus] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const handleSaveStatus = async (product: Product, available: boolean) => {
-    setIsSavingStatus(true);
+  const handleUpdateProduct = async (updatedProduct: Product) => {
+    setIsSavingProduct(true);
     setStatusMessage("");
 
-    const nextQuantity = available ? Math.max(1, Number(product.quantity || 1)) : 0;
-    const updatedProduct: Product = {
-      ...product,
-      quantity: nextQuantity,
-    };
-
     try {
-      await updateProduct(product.id, {
-        quantity: nextQuantity,
-      });
+      const { id, ...changes } = updatedProduct;
+      await updateProduct(id, changes);
 
       dispatch({ type: "updateProduct", payload: updatedProduct });
 
       setSelectedProduct((current) =>
-        current?.id === product.id ? updatedProduct : current
+        current?.id === updatedProduct.id ? updatedProduct : current
       );
 
       setEditingProduct(null);
-      setStatusMessage(
-        `${product.name} is now ${available ? "Tersedia" : "Tidak tersedia"}.`
-      );
+      setStatusMessage(`${updatedProduct.name} berhasil diperbarui.`);
     } catch (error) {
-      console.error("Failed to update product status:", error);
-      setStatusMessage("Unable to update product status. Check Firestore product rules.");
+      console.error("Failed to update product:", error);
+      setStatusMessage("Tidak dapat memperbarui produk. Periksa izin sistem.");
     } finally {
-      setIsSavingStatus(false);
+      setIsSavingProduct(false);
     }
   };
 
@@ -64,7 +67,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
       setProductToDelete(null);
     } catch (error) {
       console.error("Failed to delete product:", error);
-      setStatusMessage("Unable to delete product. Check Firestore product rules.");
+      setStatusMessage("Produk tidak dapat dihapus.");
     } finally {
       setIsDeletingProduct(false);
     }
@@ -111,7 +114,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                 onClick={() => setSelectedProduct(product)}
               >
                 <div className="relative overflow-hidden bg-slate-100">
-                  <img
+                  <ProductImage
                     className="h-36 w-full object-cover transition duration-300 group-hover:scale-[1.04]"
                     src={product.image}
                     alt={product.name}
@@ -124,7 +127,7 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
                         : "bg-rose-50 text-rose-700"
                     }`}
                   >
-                    {isAvailable ? "Available" : "Unavailable"}
+                    {isAvailable ? "Tersedia" : "Tidak tersedia"}
                   </span>
 
                   <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-forest shadow-sm opacity-0 transition group-hover:opacity-100">
@@ -207,11 +210,11 @@ export default function CatalogAdmin({ products }: { products: Product[] }) {
       )}
 
       {editingProduct && (
-        <ProductStatusModal
+        <ProductEditModal
           product={editingProduct}
-          isSaving={isSavingStatus}
+          isSaving={isSavingProduct}
           onClose={() => setEditingProduct(null)}
-          onSave={(available) => handleSaveStatus(editingProduct, available)}
+          onSave={handleUpdateProduct}
         />
       )}
 
@@ -284,7 +287,7 @@ function ProductDetailsModal({
       <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-panel">
         <div className="grid md:grid-cols-[280px_1fr]">
           <div className="relative min-h-64 bg-slate-100">
-            <img
+            <ProductImage
               className="h-full min-h-64 w-full object-cover"
               src={product.image}
               alt={product.name}
@@ -327,7 +330,7 @@ function ProductDetailsModal({
                 <button
                   className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
                   onClick={onClose}
-                  aria-label="Close product details"
+                  aria-label="Tutup rincian produk"
                 >
                   <X size={18} />
                 </button>
@@ -335,10 +338,10 @@ function ProductDetailsModal({
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <DetailTile icon={<Tag size={17} />} label="Price" value={formatRupiah(product.price)} />
-              <DetailTile icon={<BadgeCheck size={17} />} label="Commission" value={formatRupiah(product.commission)} tone="green" />
-              <DetailTile icon={<Package size={17} />} label="Required Balance" value={formatRupiah(product.requiredBalance ?? 0)} />
-              <DetailTile icon={<Boxes size={17} />} label="Category" value={product.category} />
+              <DetailTile icon={<Tag size={17} />} label="Harga" value={formatRupiah(product.price)} />
+              <DetailTile icon={<BadgeCheck size={17} />} label="Komisi" value={formatRupiah(product.commission)} tone="green" />
+              <DetailTile icon={<Package size={17} />} label="Saldo yang Diperlukan" value={formatRupiah(product.requiredBalance ?? 0)} />
+              <DetailTile icon={<Boxes size={17} />} label="Kategori" value={product.category} />
             </div>
 
             <div
@@ -374,7 +377,7 @@ function ProductDetailsModal({
   );
 }
 
-function ProductStatusModal({
+function ProductEditModal({
   product,
   isSaving,
   onClose,
@@ -383,101 +386,288 @@ function ProductStatusModal({
   product: Product;
   isSaving: boolean;
   onClose: () => void;
-  onSave: (available: boolean) => void;
+  onSave: (product: Product) => void;
 }) {
-  const [available, setAvailable] = useState(product.quantity > 0);
-  const currentAvailable = product.quantity > 0;
+  const [form, setForm] = useState<Product>({ ...product });
+  const [message, setMessage] = useState("");
+  const isAvailable = form.quantity > 0;
+
+  const setNumberField = (
+    field: "price" | "commission" | "requiredBalance" | "quantity",
+    value: string
+  ) => {
+    const parsed = Math.max(0, Number(value) || 0);
+    setForm((current) => ({
+      ...current,
+      [field]: field === "quantity" ? Math.floor(parsed) : parsed,
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const code = form.code.trim().toUpperCase();
+    const name = form.name.trim();
+    const image = normalizeProductImage(form.image);
+
+    if (!code || !name) {
+      setMessage("Kode dan nama produk wajib diisi.");
+      return;
+    }
+
+    onSave({
+      ...form,
+      code,
+      name,
+      image,
+      price: Math.max(0, Number(form.price) || 0),
+      commission: Math.max(0, Number(form.commission) || 0),
+      requiredBalance: Math.max(0, Number(form.requiredBalance) || 0),
+      quantity: Math.max(0, Math.floor(Number(form.quantity) || 0)),
+    });
+  };
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/60 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-panel">
-        <div className="flex items-start justify-between gap-4">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-6 sm:py-8">
+      <form
+        className="mx-auto w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-panel"
+        onSubmit={handleSubmit}
+      >
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-forest">
-              Ubah status produk
-            </p>
-            <h2 className="mt-2 text-xl font-black text-slate-900">
-              {product.name}
+            <p className="text-xs font-black uppercase text-forest">Katalog Produk</p>
+            <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+              Perbarui produk
             </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              {product.code}
+            <p className="mt-1 text-sm text-slate-500">
+              Ubah informasi, harga, gambar, dan ketersediaan produk.
             </p>
           </div>
 
           <button
-            className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
+            type="button"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
             onClick={onClose}
-            aria-label="Close status editor"
+            aria-label="Tutup editor produk"
+            disabled={isSaving}
           >
             <X size={18} />
           </button>
+        </header>
+
+        <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[260px_1fr]">
+          <aside>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="relative aspect-square">
+                <ProductImage
+                  className="h-full w-full object-cover"
+                  src={form.image}
+                  alt={form.name || "Pratinjau produk"}
+                />
+                <span
+                  className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-black ${
+                    isAvailable
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-rose-50 text-rose-700"
+                  }`}
+                >
+                  {isAvailable ? "Tersedia" : "Tidak tersedia"}
+                </span>
+              </div>
+              <div className="border-t border-slate-200 p-4">
+                <div className="flex items-center gap-2 text-xs font-black uppercase text-slate-500">
+                  <ImageIcon size={15} className="text-forest" />
+                  Pratinjau gambar
+                </div>
+                <p className="mt-2 break-words text-sm font-bold text-slate-900">
+                  {form.name || "Nama produk"}
+                </p>
+              </div>
+            </div>
+          </aside>
+
+          <div className="grid content-start gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Kode produk *">
+                <input
+                  className={inputClass}
+                  value={form.code}
+                  maxLength={24}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, code: event.target.value }))
+                  }
+                />
+              </Field>
+
+              <Field label="Kategori *">
+                <select
+                  className={inputClass}
+                  value={form.category}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, category: event.target.value }))
+                  }
+                >
+                  {!PRODUCT_CATEGORIES.includes(form.category) && (
+                    <option value={form.category}>{form.category}</option>
+                  )}
+                  {PRODUCT_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Nama produk *">
+              <input
+                className={inputClass}
+                value={form.name}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, name: event.target.value }))
+                }
+              />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Harga (IDR)">
+                <input
+                  className={inputClass}
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  value={form.price}
+                  onChange={(event) => setNumberField("price", event.target.value)}
+                />
+              </Field>
+
+              <Field label="Komisi (IDR)">
+                <input
+                  className={inputClass}
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  value={form.commission}
+                  onChange={(event) => setNumberField("commission", event.target.value)}
+                />
+              </Field>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Saldo minimum (IDR)">
+                <input
+                  className={inputClass}
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  value={form.requiredBalance ?? 0}
+                  onChange={(event) => setNumberField("requiredBalance", event.target.value)}
+                />
+              </Field>
+
+              <Field label="Jumlah stok">
+                <input
+                  className={inputClass}
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={form.quantity}
+                  onChange={(event) => setNumberField("quantity", event.target.value)}
+                />
+              </Field>
+            </div>
+
+            <Field label="URL gambar">
+              <input
+                className={inputClass}
+                type="text"
+                placeholder="https://..."
+                value={form.image}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, image: event.target.value }))
+                }
+              />
+            </Field>
+
+            <div>
+              <p className="mb-2 text-xs font-bold text-slate-600">Status produk</p>
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  className={`rounded-lg px-3 py-2.5 text-sm font-black transition ${
+                    isAvailable
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      quantity: Math.max(1, current.quantity || 1),
+                    }))
+                  }
+                >
+                  Tersedia
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-lg px-3 py-2.5 text-sm font-black transition ${
+                    !isAvailable
+                      ? "bg-white text-rose-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                  onClick={() =>
+                    setForm((current) => ({ ...current, quantity: 0 }))
+                  }
+                >
+                  Tidak tersedia
+                </button>
+              </div>
+            </div>
+
+            {message && (
+              <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+                {message}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="mt-5 rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase text-slate-500">
-            Status saat ini
-          </p>
-          <p
-            className={`mt-1 font-black ${
-              currentAvailable ? "text-emerald-700" : "text-rose-700"
-            }`}
-          >
-            {currentAvailable ? "Available" : "Unavailable"}
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3">
+        <footer className="sticky bottom-0 grid grid-cols-2 gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex sm:justify-end sm:px-6">
           <button
             type="button"
-            className={`rounded-2xl border px-4 py-3 text-left transition ${
-              available
-                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200"
-            }`}
-            onClick={() => setAvailable(true)}
-          >
-            <span className="block font-black">Tersedia</span>
-            <span className="mt-1 block text-xs font-semibold">
-              Pelanggan/admin dapat menggunakan item ini untuk berbagai tugas.
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={`rounded-2xl border px-4 py-3 text-left transition ${
-              !available
-                ? "border-rose-300 bg-rose-50 text-rose-800"
-                : "border-slate-200 bg-white text-slate-700 hover:border-rose-200"
-            }`}
-            onClick={() => setAvailable(false)}
-          >
-            <span className="block font-black">Tidak tersedia</span>
-            <span className="mt-1 block text-xs font-semibold">
-           Item ini akan ditampilkan sebagai tidak tersedia dan tidak dapat ditetapkan.
-            </span>
-          </button>
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            className="rounded-xl border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50"
+            className="min-h-11 rounded-xl border border-slate-200 px-5 py-2.5 font-black text-slate-700 hover:bg-slate-50"
             onClick={onClose}
-          >
-           Membatalkan
-          </button>
-
-          <button
-            type="button"
             disabled={isSaving}
-            className="rounded-xl bg-forest px-4 py-3 font-black text-white disabled:bg-slate-400"
-            onClick={() => onSave(available)}
           >
-            {isSaving ? "Saving..." : "Save status"}
+            Batal
           </button>
-        </div>
-      </div>
+          <button
+            type="submit"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-forest px-5 py-2.5 font-black text-white hover:bg-forest/90 disabled:bg-slate-400"
+            disabled={isSaving}
+          >
+            <Save size={17} />
+            {isSaving ? "Menyimpan..." : "Simpan perubahan"}
+          </button>
+        </footer>
+      </form>
     </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-bold text-slate-600">{label}</span>
+      {children}
+    </label>
   );
 }
 

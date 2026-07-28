@@ -1,5 +1,11 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getApps, initializeApp } from "firebase/app";
+import {
+  browserLocalPersistence,
+  getAuth,
+  onAuthStateChanged,
+  setPersistence,
+  type User,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -13,9 +19,35 @@ const firebaseConfig = {
 };
 
 const hasFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
+const firebaseAppName = window.location.pathname.startsWith("/admin")
+  ? "admin-session"
+  : "[DEFAULT]";
+const existingApp = getApps().find((app) => app.name === firebaseAppName);
 
-export const firebaseApp = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
+export const firebaseApp = hasFirebaseConfig
+  ? existingApp ??
+    (firebaseAppName === "[DEFAULT]"
+      ? initializeApp(firebaseConfig)
+      : initializeApp(firebaseConfig, firebaseAppName))
+  : null;
 export const auth = firebaseApp ? getAuth(firebaseApp) : null;
 export const db = firebaseApp ? getFirestore(firebaseApp) : null;
 export const storage = firebaseApp ? getStorage(firebaseApp) : null;
 export const firebaseReady = Boolean(firebaseApp);
+export const authPersistenceReady = auth
+  ? setPersistence(auth, browserLocalPersistence).catch((error) => {
+      console.warn("Unable to initialize persistent authentication:", error);
+    })
+  : Promise.resolve();
+
+export function waitForAuthReady(): Promise<User | null> {
+  if (!auth) return Promise.resolve(null);
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}

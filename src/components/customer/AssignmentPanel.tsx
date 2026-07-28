@@ -9,6 +9,7 @@ import {
   hasProductsAssigned,
 } from "../../services/orderStateService";
 import WalletValidationModal from "./WalletValidationModal";
+import ProductImage from "../ProductImage";
 
 interface AssignmentPanelProps {
   order: Order | null;
@@ -195,7 +196,7 @@ const assignedCommission = assignedProducts.length
             disabled={cannotAcceptTask}
             className="hidden w-full rounded-2xl bg-forest px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:cursor-not-allowed disabled:bg-slate-400 disabled:opacity-70"
           >
-            {isLoading ? "Accepting..." : isZeroBalance ? "Top Up Required" : "Take Order"}
+            {isLoading ? "Menerima..." : isZeroBalance ? "Isi Saldo Diperlukan" : "Ambil Pesanan"}
           </button>
         </div>
       </div>
@@ -227,7 +228,7 @@ const assignedCommission = assignedProducts.length
             <div className="text-xs text-slate-500">
               Status:{" "}
               <span className="font-semibold text-amber-700">
-                {requestedProductName ? "Pending approval" : "Not delivered"}
+                {requestedProductName ? "Menunggu persetujuan" : "Belum dikirim"}
               </span>
             </div>
           </div>
@@ -273,7 +274,7 @@ const assignedCommission = assignedProducts.length
                   >
                     <div className="grid gap-4 sm:grid-cols-[88px_1fr_1fr]">
                       {catalogProduct?.image && (
-                        <img
+                        <ProductImage
                           className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-cover"
                           src={catalogProduct.image}
                           alt={product.name}
@@ -372,7 +373,7 @@ const assignedCommission = assignedProducts.length
                       : "bg-emerald-600 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel"
                   }`}
                 >
-                  {isLoading ? "Submitting..." : "Submit Task"}
+                  {isLoading ? "Mengirim..." : "Kirim Tugas"}
                 </button>
               </>
             ))}
@@ -384,7 +385,7 @@ const assignedCommission = assignedProducts.length
 
                 <div>
                   <p className="mb-1 text-sm font-bold">
-                    {state === "diserahkan" ? "Order Completed" : "Awaiting Delivery"}
+                    {state === "diserahkan" ? "Pesanan Selesai" : "Menunggu Pengiriman"}
                   </p>
 
                   <p className="text-xs text-slate-600">

@@ -39,10 +39,10 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
       dispatch({ type: "deleteBank", payload: { id: bankToDelete.id } });
       if (editingBankId === bankToDelete.id) setEditingBankId("");
       setBankToDelete(null);
-      setBankMessage("Bank account deleted successfully.");
+      setBankMessage("Rekening bank berhasil dihapus.");
     } catch (error) {
       console.error("Failed to delete bank account:", error);
-      setBankMessage("Unable to delete bank account. Check Firestore bank rules.");
+      setBankMessage("Rekening bank tidak dapat dihapus.");
     } finally {
       setDeletingBankId("");
     }
@@ -59,19 +59,19 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard icon={<UserPlus />} label="New registrations" value={`${totals.registrations} people`} />
-        <StatCard icon={<BadgeDollarSign />} label="Today deposits" value={formatRupiah(totals.todayDeposits)} />
-        <StatCard icon={<WalletCards />} label="Monthly deposits" value={formatRupiah(totals.monthDeposits)} />
-        <StatCard icon={<Banknote />} label="Today withdrawals" value={formatRupiah(totals.todayWithdrawals)} />
-        <StatCard icon={<ShieldCheck />} label="Monthly releases" value={formatRupiah(totals.monthWithdrawals)} />
+        <StatCard icon={<UserPlus />} label="Pendaftaran baru" value={`${totals.registrations} orang`} />
+        <StatCard icon={<BadgeDollarSign />} label="Deposit hari ini" value={formatRupiah(totals.todayDeposits)} />
+        <StatCard icon={<WalletCards />} label="Deposit bulanan" value={formatRupiah(totals.monthDeposits)} />
+        <StatCard icon={<Banknote />} label="Penarikan hari ini" value={formatRupiah(totals.todayWithdrawals)} />
+        <StatCard icon={<ShieldCheck />} label="Pencairan bulanan" value={formatRupiah(totals.monthWithdrawals)} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <Panel title="Registration Analytics">
+        <Panel title="Analitik Pendaftaran">
           <div className="mb-5 grid gap-3 sm:grid-cols-3">
-            <AnalyticsPill label="Total registrations" value={String(totals.registrations)} />
-            <AnalyticsPill label="Top performer" value={getTopAdmin(state.admins)?.name ?? "-"} />
-            <AnalyticsPill label="Active admins" value={String(state.admins.length)} />
+            <AnalyticsPill label="Total pendaftaran" value={String(totals.registrations)} />
+            <AnalyticsPill label="Kinerja terbaik" value={getTopAdmin(state.admins)?.name ?? "-"} />
+            <AnalyticsPill label="Admin aktif" value={String(state.admins.length)} />
           </div>
           <div className="space-y-4">
             {state.admins.length ? (
@@ -79,35 +79,35 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                 <RegistrationBar
                   key={admin.id}
                   label={admin.name}
-                  sublabel={`Code ${admin.adminCode ?? admin.code}`}
-                  value={`${admin.registrations} people`}
+                  sublabel={`Kode ${admin.adminCode ?? admin.code}`}
+                  value={`${admin.registrations} orang`}
                   percent={(admin.registrations / maxRegistrations) * 100}
                 />
               ))
             ) : (
-              <EmptyChart text="No admin registration data yet." />
+              <EmptyChart text="Belum ada data pendaftaran admin." />
             )}
           </div>
         </Panel>
 
-        <Panel title="Transaction Status">
+        <Panel title="Status Transaksi">
           <div className="grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center xl:grid-cols-1 2xl:grid-cols-[180px_1fr]">
             <StatusDonut approved={approvedTransactions} pending={pendingTransactions} rejected={rejectedTransactions} />
             <div className="space-y-3">
-              <StatusLegend label="Approved" value={approvedTransactions} total={totalTransactions} color="bg-emerald-500" />
-              <StatusLegend label="Pending" value={pendingTransactions} total={totalTransactions} color="bg-amber-500" />
-              <StatusLegend label="Rejected" value={rejectedTransactions} total={totalTransactions} color="bg-coral" />
+              <StatusLegend label="Disetujui" value={approvedTransactions} total={totalTransactions} color="bg-emerald-500" />
+              <StatusLegend label="Menunggu" value={pendingTransactions} total={totalTransactions} color="bg-amber-500" />
+              <StatusLegend label="Ditolak" value={rejectedTransactions} total={totalTransactions} color="bg-coral" />
             </div>
           </div>
         </Panel>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel title="Admin Performance" action={<button className="rounded border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-forest hover:bg-emerald-100" onClick={() => window.print()}>Export report</button>}>
+        <Panel title="Kinerja Admin" action={<button className="rounded border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-forest hover:bg-emerald-100" onClick={() => window.print()}>Ekspor laporan</button>}>
           <div className="mb-5 grid gap-3 sm:grid-cols-3">
-            <PerformanceSummary label="Active admins" value={String(state.admins.length)} tone="slate" />
-            <PerformanceSummary label="Registrations" value={String(totals.registrations)} tone="green" />
-            <PerformanceSummary label="Pending requests" value={String(pendingTransactions)} tone="amber" />
+            <PerformanceSummary label="Admin aktif" value={String(state.admins.length)} tone="slate" />
+            <PerformanceSummary label="Pendaftaran" value={String(totals.registrations)} tone="green" />
+            <PerformanceSummary label="Permintaan menunggu" value={String(pendingTransactions)} tone="amber" />
           </div>
 
           <div className="mb-6 rounded bg-gradient-to-br from-slate-50 to-white p-4 ring-1 ring-slate-100">
@@ -118,7 +118,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
               </div>
               <div className="flex gap-3 text-xs font-black">
                 <span className="inline-flex items-center gap-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Deposit</span>
-                <span className="inline-flex items-center gap-1.5 text-coral"><span className="h-2.5 w-2.5 rounded-full bg-coral" /> Release</span>
+                <span className="inline-flex items-center gap-1.5 text-coral"><span className="h-2.5 w-2.5 rounded-full bg-coral" /> Pencairan</span>
               </div>
             </div>
             {state.admins.length ? (
@@ -127,7 +127,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-slate-800">{admin.name}</p>
-                      <p className="text-xs font-semibold text-slate-400">Code {admin.adminCode ?? admin.code}</p>
+                      <p className="text-xs font-semibold text-slate-400">Kode {admin.adminCode ?? admin.code}</p>
                     </div>
                     <div className="shrink-0 text-right text-xs font-black text-slate-600">
                       <span className="text-emerald-700">{formatRupiah(admin.todayDeposits)}</span>
@@ -175,7 +175,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                   <StackedFinanceBar key={admin.id} admin={admin} max={maxMonthlyFinance} />
                 ))
               ) : (
-                <EmptyChart text="No monthly finance data yet." />
+                <EmptyChart text="Belum ada data keuangan bulanan." />
               )}
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
 
         {canManageBanks && (
           <Panel
-            title="Deposit Bank Placements"
+            title="Rekening Deposit"
             action={
               <button
                 className="inline-flex items-center justify-center gap-1 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-forest hover:bg-emerald-100"
@@ -224,14 +224,14 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                   setShowBankForm(!showBankForm);
                 }}
               >
-                <Plus size={16} /> AMenambahkan
+                <Plus size={16} /> Tambah
               </button>
             }
           >
             {showBankForm && <BankForm onDone={() => setShowBankForm(false)} />}
 
             {bankMessage && (
-              <p className={`mt-3 rounded px-3 py-2 text-sm font-bold ${bankMessage.startsWith("Unable") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+              <p className={`mt-3 rounded px-3 py-2 text-sm font-bold ${bankMessage.includes("tidak dapat") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
                 {bankMessage}
               </p>
             )}
@@ -274,7 +274,7 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
                         }}
                       >
                         <Trash2 size={13} />
-                        {deletingBankId === bank.id ? "Deleting..." : "Delete"}
+                        {deletingBankId === bank.id ? "Menghapus..." : "Hapus"}
                       </button>
                     </div>
 
@@ -377,7 +377,7 @@ function DeleteBankDialog({
               disabled={isDeleting}
             >
               <Trash2 size={17} />
-              {isDeleting ? "Deleting..." : "Delete bank"}
+              {isDeleting ? "Menghapus..." : "Hapus bank"}
             </button>
           </div>
         </div>
@@ -409,7 +409,7 @@ function RegistrationBar({ label, sublabel, value, percent }: { label: string; s
         <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-forest to-emerald-400" style={{ width: `${Math.max(6, percent)}%` }} />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.25)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.25)_50%,rgba(255,255,255,.25)_75%,transparent_75%)] bg-[length:20px_20px] opacity-40" />
       </div>
-      <p className="mt-2 text-right text-[11px] font-black text-slate-400">{Math.round(percent)}% of top admin</p>
+      <p className="mt-2 text-right text-[11px] font-black text-slate-400">{Math.round(percent)}% dari admin teratas</p>
     </div>
   );
 }
@@ -427,7 +427,7 @@ function StatusDonut({ approved, pending, rejected }: { approved: number; pendin
 
   return (
     <div className="relative mx-auto h-44 w-44">
-      <svg className="-rotate-90" viewBox="0 0 140 140" role="img" aria-label="Transaction status donut chart">
+      <svg className="-rotate-90" viewBox="0 0 140 140" role="img" aria-label="Diagram donat status transaksi">
         <circle cx="70" cy="70" r={radius} fill="none" stroke="#eef2f7" strokeWidth="18" />
         <circle cx="70" cy="70" r={radius} fill="none" stroke="#10b981" strokeWidth="18" strokeLinecap="round" strokeDasharray={`${approvedSize} ${circumference - approvedSize}`} strokeDashoffset={approvedOffset} />
         <circle cx="70" cy="70" r={radius} fill="none" stroke="#f59e0b" strokeWidth="18" strokeLinecap="round" strokeDasharray={`${pendingSize} ${circumference - pendingSize}`} strokeDashoffset={pendingOffset} />
@@ -436,7 +436,7 @@ function StatusDonut({ approved, pending, rejected }: { approved: number; pendin
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
           <p className="text-3xl font-black text-slate-900">{approved + pending + rejected}</p>
-          <p className="text-xs font-black uppercase text-slate-400">Requests</p>
+          <p className="text-xs font-black uppercase text-slate-400">Permintaan</p>
         </div>
       </div>
     </div>
@@ -480,7 +480,7 @@ function FinanceTrendChart({ data }: { data: FinanceTrendPoint[] }) {
             <p className="text-sm font-black text-white">Alur pengisian saldo dan penarikan</p>
             <p className="text-xs font-semibold text-emerald-100/70">Tampilan tren berisi (filled), disesuaikan skalanya untuk desktop dan perangkat seluler.</p>
           </div>
-          <p className="text-xs font-black text-emerald-100">Peak: {formatRupiah(maxValue)}</p>
+          <p className="text-xs font-black text-emerald-100">Puncak: {formatRupiah(maxValue)}</p>
         </div>
         <svg className="block h-auto w-full" viewBox={`0 0 ${width} ${areaHeight}`} role="img" aria-label="Responsive seven day finance area chart" preserveAspectRatio="none">
           <defs>
@@ -506,8 +506,8 @@ function FinanceTrendChart({ data }: { data: FinanceTrendPoint[] }) {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-black text-white">Baris aktivitas permintaan</p>
           <div className="flex gap-3 text-[11px] font-black uppercase tracking-wide">
-            <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2 w-5 rounded-full bg-emerald-400" /> Top-up</span>
-            <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2 w-5 rounded-full bg-lime-300" /> Withdrawal</span>
+            <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2 w-5 rounded-full bg-emerald-400" /> Isi saldo</span>
+            <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2 w-5 rounded-full bg-lime-300" /> Penarikan</span>
           </div>
         </div>
         <svg className="block h-auto w-full" viewBox={`0 0 ${width} ${lineHeight}`} role="img" aria-label="Responsive seven day finance line chart" preserveAspectRatio="none">
@@ -608,7 +608,7 @@ function buildFinanceTrend(transactions: AppState["transactions"]) {
     const date = new Date();
     date.setDate(date.getDate() - (6 - index));
     const key = date.toISOString().slice(0, 10);
-    return { key, label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }), topup: 0, withdrawal: 0 };
+    return { key, label: date.toLocaleDateString("id-ID", { month: "short", day: "numeric" }), topup: 0, withdrawal: 0 };
   });
 
   transactions.forEach((transaction) => {

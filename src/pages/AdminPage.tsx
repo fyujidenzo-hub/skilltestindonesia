@@ -236,7 +236,7 @@ function parseRecordDate(value: string) {
 function buildAdminNotifications(members: Member[], transactions: Transaction[], orders: AppState["orders"]): AdminNotification[] {
   const registrationNotifications = members.map((member) => ({
     id: `member-${member.id}`,
-    title: "New registration",
+    title: "Pendaftaran baru",
     text: `${member.username} registered under ${member.referredBy || "admin scope"}.`,
     time: member.lastLogin,
     tone: "registration" as const,
@@ -247,7 +247,7 @@ function buildAdminNotifications(members: Member[], transactions: Transaction[],
     .filter((transaction) => transaction.status === "pending")
     .map((transaction) => ({
       id: `transaction-${transaction.id}`,
-      title: transaction.type === "topup" ? "New Top Up request" : transaction.type === "withdrawal" ? "Permintaan penarikan baru" : "Imbalan saldo baru",
+      title: transaction.type === "topup" ? "Permintaan isi saldo baru" : transaction.type === "withdrawal" ? "Permintaan penarikan baru" : "Imbalan saldo baru",
       text: `${transaction.member} requested ${formatNotificationAmount(transaction.amount)}. Status: Pending.`,
       time: transaction.createdAt,
       tone: transaction.type === "topup" ? ("topup" as const) : transaction.type === "withdrawal" ? ("withdrawal" as const) : ("completed" as const),
@@ -269,7 +269,7 @@ function buildAdminNotifications(members: Member[], transactions: Transaction[],
     .filter((order) => getAdminOrderStatus(order) === "completed")
     .map((order) => ({
       id: `completed-order-${order.id}`,
-      title: "Order completed",
+      title: "Pesanan selesai",
       text: `${order.member} completed ${order.productName || "sebuah tugas pemesanan"}.`,
       time: order.completedAt ?? order.createdAt,
       tone: "completed" as const,

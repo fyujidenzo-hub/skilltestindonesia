@@ -2,531 +2,376 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isString(value) {
-      return value is string && value.size() > 0;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    function isOptionalString(value) {
-      return value is string;
+    function rolePath() {
+      return /databases/$(database)/documents/authRoles/$(request.auth.uid);
     }
 
-    function isNumber(value) {
-      return value is number;
+    function memberPath(memberId) {
+      return /databases/$(database)/documents/members/$(memberId);
     }
 
-    function isBoolean(value) {
-      return value is bool;
+    function hasRole() {
+      return signedIn() && exists(rolePath());
     }
 
-    function isValidMemberCreate() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'username',
-        'email',
-        'phone',
-        'invitationCode',
-        'referredBy',
-        'level',
-        'balance',
-        'totalOrders',
-        'lastLogin',
+    function role() {
+      return get(rolePath()).data.role;
+    }
+
+    function subjectId() {
+      return get(rolePath()).data.subjectId;
+    }
+
+    function isMember() {
+      return hasRole() && role() == 'member';
+    }
+
+    function isMemberId(memberId) {
+      return signedIn()
+        && (
+          (isMember() && subjectId() == memberId)
+          || (
+            exists(memberPath(memberId))
+            && get(memberPath(memberId)).data.authUid == request.auth.uid
+          )
+        );
+    }
+
+    function isSuperAdmin() {
+      return hasRole() && role() == 'super_admin';
+    }
+
+    function isAdmin() {
+      return hasRole() && role() == 'admin';
+    }
+
+    function isEmployee() {
+      return hasRole() && role() == 'employee';
+    }
+
+    function isStaff() {
+      return isSuperAdmin() || isAdmin() || isEmployee();
+    }
+
+    function isFinanceStaff() {
+      return isSuperAdmin();
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(fields);
+    }
+
+    function hasNoLegacySecrets() {
+      return !request.resource.data.keys().hasAny([
         'accountPassword',
-        'withdrawalPassword',
-        'withdrawalLocked',
-        'withdrawalRemarks'
-      ])
-      && isString(request.resource.data.id)
-      && isString(request.resource.data.username)
-      && isString(request.resource.data.phone)
-      && isString(request.resource.data.invitationCode)
-      && isString(request.resource.data.referredBy)
-      && request.resource.data.level in ['Starter', 'Silver', 'Gold', 'VIP']
-      && isNumber(request.resource.data.balance)
-      && request.resource.data.balance >= 0
-      && request.resource.data.totalOrders == 0
-      && isString(request.resource.data.lastLogin)
-      && isString(request.resource.data.accountPassword)
-      && isString(request.resource.data.withdrawalPassword)
-      && (
-        !request.resource.data.keys().hasAny(['withdrawalLocked'])
-        || isBoolean(request.resource.data.withdrawalLocked)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['withdrawalRemarks'])
-        || isOptionalString(request.resource.data.withdrawalRemarks)
-      );
+        'password',
+        'withdrawalPassword'
+      ]);
     }
 
-    function isValidProduct() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'code',
-        'name',
-        'price',
-        'commission',
-        'requiredBalance',
-        'quantity',
-        'category',
-        'image'
-      ])
-      && isString(request.resource.data.id)
-      && isString(request.resource.data.code)
-      && isString(request.resource.data.name)
-      && isString(request.resource.data.category)
-      && isString(request.resource.data.image)
-      && isNumber(request.resource.data.price)
-      && isNumber(request.resource.data.commission)
-      && isNumber(request.resource.data.requiredBalance)
-      && isNumber(request.resource.data.quantity)
-      && request.resource.data.price >= 0
-      && request.resource.data.commission >= 0
-      && request.resource.data.requiredBalance >= 0
-      && request.resource.data.quantity >= 0;
+    function memberOrderAfter(orderId) {
+      return getAfter(/databases/$(database)/documents/orders/$(orderId));
     }
 
-    function isValidProductTaskUpdate() {
-      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['quantity', 'requiredBalance'])
-      && request.resource.data.id == resource.data.id
-      && isNumber(request.resource.data.quantity)
-      && isNumber(request.resource.data.requiredBalance)
-      && request.resource.data.quantity >= 0
-      && request.resource.data.requiredBalance >= 0;
+    function memberTransactionAfter(transactionId) {
+      return getAfter(/databases/$(database)/documents/transactions/$(transactionId));
     }
 
-    function isValidBank() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'bank',
-        'accountName',
-        'accountNumber',
-        'minDeposit',
-        'active'
-      ])
-      && isString(request.resource.data.id)
-      && isString(request.resource.data.bank)
-      && isString(request.resource.data.accountName)
-      && isString(request.resource.data.accountNumber)
-      && isNumber(request.resource.data.minDeposit)
-      && isBoolean(request.resource.data.active)
-      && request.resource.data.minDeposit >= 0;
+    function isValidOwnerCompletion(memberId) {
+      let orderId = request.resource.data.lastCompletedOrderId;
+      let orderBefore = get(/databases/$(database)/documents/orders/$(orderId));
+      let orderAfter = memberOrderAfter(orderId);
+      return changedOnly(['balance', 'totalOrders', 'lastCompletedOrderId'])
+        && orderBefore.data.memberId == memberId
+        && orderAfter.data.memberId == memberId
+        && !(orderBefore.data.status in ['completed', 'diserahkan'])
+        && orderAfter.data.status in ['completed', 'diserahkan']
+        && orderAfter.data.commissionCreditedAt is string
+        && orderAfter.data.commissionCreditedAt.size() > 0
+        && request.resource.data.totalOrders == resource.data.totalOrders + 1
+        && request.resource.data.balance == resource.data.balance + orderAfter.data.commission;
     }
 
-    function isValidOrder() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'referenceNumber',
-        'memberId',
-        'member',
-        'admin',
-        'productCode',
-        'productName',
-        'quantity',
-        'assignedProducts',
-        'value',
-        'commission',
-        'requiredBalance',
-        'status',
-        'createdAt',
-        'assignedAt',
-        'completedAt',
-        'submittedAt',
-        'shippedAt',
-        'requiresCustomerApproval',
-        'adminChangedAt',
-        'rating',
-        'review',
-        'reviewedAt',
-        'commissionCreditedAt'
-      ])
-      && isString(request.resource.data.id)
-      && isString(request.resource.data.referenceNumber)
-      && isString(request.resource.data.memberId)
-      && isString(request.resource.data.member)
-      && isString(request.resource.data.admin)
-      && isOptionalString(request.resource.data.productCode)
-      && isOptionalString(request.resource.data.productName)
-      && isNumber(request.resource.data.quantity)
-      && (
-        !request.resource.data.keys().hasAny(['assignedProducts'])
-        || request.resource.data.assignedProducts is list
-      )
-      && isNumber(request.resource.data.value)
-      && isNumber(request.resource.data.commission)
-      && isNumber(request.resource.data.requiredBalance)
-      && request.resource.data.status in ['no_task', 'waiting_assignment', 'product_assigned', 'waiting_shipment', 'belum_diserahkan', 'diserahkan', 'waiting', 'assigned', 'completed', 'frozen', 'rejected']
-      && isString(request.resource.data.createdAt)
-      && isOptionalString(request.resource.data.assignedAt)
-      && isOptionalString(request.resource.data.completedAt)
-      && isOptionalString(request.resource.data.submittedAt)
-      && isOptionalString(request.resource.data.shippedAt)
-      && (
-        !request.resource.data.keys().hasAny(['requiresCustomerApproval'])
-        || isBoolean(request.resource.data.requiresCustomerApproval)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['adminChangedAt'])
-        || isOptionalString(request.resource.data.adminChangedAt)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['rating'])
-        || isNumber(request.resource.data.rating)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['review'])
-        || isOptionalString(request.resource.data.review)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['reviewedAt'])
-        || isOptionalString(request.resource.data.reviewedAt)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['commissionCreditedAt'])
-        || isOptionalString(request.resource.data.commissionCreditedAt)
-      )
-      && request.resource.data.value >= 0
-      && request.resource.data.commission >= 0
-      && request.resource.data.requiredBalance >= 0
-      && (
-        !request.resource.data.keys().hasAny(['rating'])
-        || (request.resource.data.rating >= 1 && request.resource.data.rating <= 5)
-      );
-    }
-
-    function isValidTransactionCreate() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'requestId',
-        'member',
-        'admin',
-        'type',
-        'amount',
-        'status',
-        'createdAt',
-        'senderName',
-        'withdrawalBankName',
-        'withdrawalAccountName',
-        'withdrawalAccountNumber',
-        'proofName',
-        'proofType',
-        'proofDataUrl',
-        'proofUrl',
-        'proofPath',
-        'proofSize',
-        'creditedAt',
-        'balanceDeductedAt'
-      ])
-      && isString(request.resource.data.id)
-      && isString(request.resource.data.requestId)
-      && isString(request.resource.data.member)
-      && isString(request.resource.data.admin)
-      && request.resource.data.type in ['topup', 'withdrawal', 'reward']
-      && isNumber(request.resource.data.amount)
-      && (
-        (request.resource.data.type == 'withdrawal' && request.resource.data.amount >= 100000)
-        || (request.resource.data.type == 'topup' && request.resource.data.amount >= 10000)
-        || (request.resource.data.type == 'reward' && request.resource.data.amount > 0)
-      )
-      && (
-        (request.resource.data.type == 'reward' && request.resource.data.status == 'approved')
-        || (
-          request.resource.data.type in ['topup', 'withdrawal']
-          && request.resource.data.status == 'pending'
-        )
-      )
-      && isString(request.resource.data.createdAt)
-      && isOptionalString(request.resource.data.senderName)
-      && isOptionalString(request.resource.data.withdrawalBankName)
-      && isOptionalString(request.resource.data.withdrawalAccountName)
-      && isOptionalString(request.resource.data.withdrawalAccountNumber)
-      && isOptionalString(request.resource.data.proofName)
-      && isOptionalString(request.resource.data.proofType)
-      && (
-        !request.resource.data.keys().hasAny(['proofDataUrl'])
-        || isOptionalString(request.resource.data.proofDataUrl)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['proofUrl'])
-        || isOptionalString(request.resource.data.proofUrl)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['proofPath'])
-        || isOptionalString(request.resource.data.proofPath)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['proofSize'])
-        || (
-          isNumber(request.resource.data.proofSize)
-          && request.resource.data.proofSize >= 0
-          && request.resource.data.proofSize <= 5242880
-        )
-      )
-      && (
-        !request.resource.data.keys().hasAny(['creditedAt'])
-        || (
+    function isValidFinanceBalanceChange(memberId) {
+      let transactionId = request.resource.data.lastBalanceTransactionId;
+      let transactionBefore = get(/databases/$(database)/documents/transactions/$(transactionId));
+      let transactionAfter = memberTransactionAfter(transactionId);
+      return changedOnly(['balance', 'lastBalanceTransactionId'])
+        && transactionAfter.data.memberId == memberId
+        && (
           (
-            request.resource.data.type == 'reward'
-            && isString(request.resource.data.creditedAt)
+            transactionAfter.data.type == 'reward'
+            && transactionAfter.data.status == 'approved'
+            && request.resource.data.balance == resource.data.balance + transactionAfter.data.amount
           )
-          || (
-            request.resource.data.type in ['topup', 'withdrawal']
-            && request.resource.data.creditedAt == ''
-          )
-        )
-      )
-      && (
-        !request.resource.data.keys().hasAny(['balanceDeductedAt'])
-        || (
+          ||
           (
-            request.resource.data.type == 'withdrawal'
-            && isString(request.resource.data.balanceDeductedAt)
+            transactionBefore.data.status == 'pending'
+            && transactionAfter.data.status == 'approved'
+            && transactionAfter.data.type == 'topup'
+            && request.resource.data.balance == resource.data.balance + transactionAfter.data.amount
           )
-          || (
-            request.resource.data.type in ['topup', 'reward']
-            && request.resource.data.balanceDeductedAt == ''
-          )
-        )
-      )
-      && (
-        request.resource.data.type in ['withdrawal', 'reward']
-        || (
-          isString(request.resource.data.senderName)
-          && isString(request.resource.data.proofName)
-          && isString(request.resource.data.proofType)
-          && (
-            (
-              request.resource.data.keys().hasAny(['proofUrl'])
-              && isString(request.resource.data.proofUrl)
+          ||
+          (
+            transactionBefore.data.status == 'pending'
+            && transactionAfter.data.status == 'approved'
+            && transactionAfter.data.type == 'withdrawal'
+            && (
+              !transactionBefore.data.keys().hasAny(['balanceDeductedAt'])
+              || transactionBefore.data.balanceDeductedAt == ''
             )
-            || (
-              request.resource.data.keys().hasAny(['proofDataUrl'])
-              && isString(request.resource.data.proofDataUrl)
-            )
+            && request.resource.data.balance == resource.data.balance - transactionAfter.data.amount
+          )
+          ||
+          (
+            transactionBefore.data.status == 'pending'
+            && transactionAfter.data.status == 'rejected'
+            && transactionAfter.data.type == 'withdrawal'
+            && transactionBefore.data.balanceDeductedAt is string
+            && transactionBefore.data.balanceDeductedAt.size() > 0
+            && request.resource.data.balance == resource.data.balance + transactionAfter.data.amount
           )
         )
-      )
-      && (
-        request.resource.data.type in ['topup', 'reward']
-        || (
-          isString(request.resource.data.withdrawalBankName)
-          && isString(request.resource.data.withdrawalAccountName)
-          && isString(request.resource.data.withdrawalAccountNumber)
-        )
-      );
+        && request.resource.data.balance >= 0;
     }
 
-    function isValidTransactionStatusUpdate() {
+    function isValidMemberOwnerUpdate(memberId) {
+      return isMemberId(memberId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.authUid == resource.data.authUid
+        && request.resource.data.authEmail == resource.data.authEmail
+        && hasNoLegacySecrets()
+        && (
+          changedOnly(['favoriteProductIds'])
+          || changedOnly(['withdrawalPinHash'])
+          || changedOnly(['lastLogin'])
+          || isValidOwnerCompletion(memberId)
+        );
+    }
+
+    function isValidStaffProfileUpdate() {
+      return isStaff()
+        && hasNoLegacySecrets()
+        && changedOnly([
+          'username',
+          'usernameNormalized',
+          'phone',
+          'phoneNormalized',
+          'level'
+        ]);
+    }
+
+    function isValidSuperAdminMemberUpdate(memberId) {
+      return isSuperAdmin()
+        && hasNoLegacySecrets()
+        && (
+          changedOnly([
+            'username',
+            'usernameNormalized',
+            'phone',
+            'phoneNormalized',
+            'level',
+            'withdrawalLocked',
+            'withdrawalRemarks'
+          ])
+          || changedOnly(['withdrawalPinHash'])
+          || isValidFinanceBalanceChange(memberId)
+        );
+    }
+
+    function isValidFinanceMemberUpdate(memberId) {
+      return isFinanceStaff()
+        && hasNoLegacySecrets()
+        && isValidFinanceBalanceChange(memberId);
+    }
+
+    function orderBelongsToCurrentMember(data) {
+      return isMemberId(data.memberId);
+    }
+
+    function isCleanWaitingOrder(data) {
+      return data.status == 'waiting_assignment'
+        && data.productCode == ''
+        && data.productName == ''
+        && data.quantity == 0
+        && data.assignedProducts.size() == 0
+        && data.value == 0
+        && data.commission == 0
+        && data.requiredBalance == 0;
+    }
+
+    function isValidMemberOrderUpdate(orderId) {
+      let memberAfter = getAfter(/databases/$(database)/documents/members/$(resource.data.memberId));
       let changed = request.resource.data.diff(resource.data).changedKeys();
-
-      return changed.hasOnly(['status', 'creditedAt'])
-      && changed.hasAny(['status'])
-      && resource.data.status == 'pending'
-      && request.resource.data.status in ['approved', 'rejected']
-      && (
-        (request.resource.data.status == 'approved'
-          && changed.hasAny(['creditedAt'])
-          && isString(request.resource.data.creditedAt))
-        || (request.resource.data.status == 'rejected'
-          && (
-            !changed.hasAny(['creditedAt'])
-            || request.resource.data.creditedAt == resource.data.creditedAt
-            || request.resource.data.creditedAt == ''
-          ))
-      );
+      return orderBelongsToCurrentMember(resource.data)
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.member == resource.data.member
+        && request.resource.data.referenceNumber == resource.data.referenceNumber
+        && changed.hasOnly([
+          'status',
+          'submittedAt',
+          'shippedAt',
+          'completedAt',
+          'commissionCreditedAt',
+          'rating',
+          'review',
+          'reviewedAt'
+        ])
+        && request.resource.data.status in [
+          'product_assigned',
+          'waiting_shipment',
+          'belum_diserahkan',
+          'diserahkan',
+          'completed',
+          'rejected'
+        ]
+        && (
+          !(request.resource.data.status in ['completed', 'diserahkan'])
+          || (
+            memberAfter.data.lastCompletedOrderId == orderId
+            && memberAfter.data.totalOrders == get(/databases/$(database)/documents/members/$(resource.data.memberId)).data.totalOrders + 1
+          )
+        );
     }
 
-    function isValidMemberBalanceUpdate() {
-      // NOTE: This app writes member balance directly from client code.
-      // These rules validate shape only. Full anti-tamper protection needs Firebase Auth + Cloud Functions.
-      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['balance', 'totalOrders'])
-      && isNumber(request.resource.data.balance)
-      && request.resource.data.balance >= 0
-      && isNumber(request.resource.data.totalOrders)
-      && request.resource.data.totalOrders >= resource.data.totalOrders;
+    function isValidStaffOrderWrite() {
+      return isStaff()
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.member == resource.data.member
+        && request.resource.data.referenceNumber == resource.data.referenceNumber;
     }
 
-    function isValidMemberUpdate() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'username',
-        'email',
-        'phone',
-        'invitationCode',
-        'referredBy',
-        'level',
-        'balance',
-        'totalOrders',
-        'lastLogin',
-        'accountPassword',
-        'withdrawalPassword',
-        'withdrawalLocked',
-        'withdrawalRemarks',
-        'favoriteProductIds'
-      ])
-      && request.resource.data.id == resource.data.id
-      && isString(request.resource.data.username)
-      && isString(request.resource.data.phone)
-      && isString(request.resource.data.invitationCode)
-      && isString(request.resource.data.referredBy)
-      && request.resource.data.level in ['Starter', 'Silver', 'Gold', 'VIP']
-      && isNumber(request.resource.data.balance)
-      && request.resource.data.balance >= 0
-      && isNumber(request.resource.data.totalOrders)
-      && request.resource.data.totalOrders >= 0
-      && isString(request.resource.data.lastLogin)
-      && (
-        !request.resource.data.keys().hasAny(['accountPassword'])
-        || isOptionalString(request.resource.data.accountPassword)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['withdrawalPassword'])
-        || isOptionalString(request.resource.data.withdrawalPassword)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['withdrawalLocked'])
-        || isBoolean(request.resource.data.withdrawalLocked)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['withdrawalRemarks'])
-        || isOptionalString(request.resource.data.withdrawalRemarks)
-      )
-      && (
-        !('favoriteProductIds' in request.resource.data)
-        || (
-          request.resource.data.favoriteProductIds is list
-          && request.resource.data.favoriteProductIds.size() <= 200
-        )
-      );
+    function isValidMemberTransactionCreate(transactionId) {
+      let memberBefore = get(/databases/$(database)/documents/members/$(request.resource.data.memberId));
+      let memberAfter = getAfter(/databases/$(database)/documents/members/$(request.resource.data.memberId));
+      return isMemberId(request.resource.data.memberId)
+        && request.resource.data.id == transactionId
+        && request.resource.data.status == 'pending'
+        && request.resource.data.type == 'topup'
+        && request.resource.data.amount is int
+        && request.resource.data.amount >= 100000
+        && request.resource.data.amount <= 100000000
+        && request.resource.data.member == memberBefore.data.username
+        && !request.resource.data.keys().hasAny(['submittedWithdrawalPassword'])
+        && memberAfter.data.balance == memberBefore.data.balance;
     }
 
-    function isValidStaffCreate() {
-      return request.resource.data.keys().hasOnly([
-        'id',
-        'name',
-        'code',
-        'adminCode',
-        'invitationCode',
-        'registrationBonus',
-        'registrations',
-        'todayDeposits',
-        'monthDeposits',
-        'todayWithdrawals',
-        'monthWithdrawals',
-        'username',
-        'password',
-        'role'
-      ])
-      && isString(request.resource.data.id)
-      && isString(request.resource.data.name)
-      && isString(request.resource.data.code)
-      && isString(request.resource.data.adminCode)
-      && isString(request.resource.data.invitationCode)
-      && isString(request.resource.data.username)
-      && isString(request.resource.data.password)
-      && request.resource.data.role in ['admin', 'employee']
-      && isNumber(request.resource.data.registrationBonus)
-      && isNumber(request.resource.data.registrations)
-      && isNumber(request.resource.data.todayDeposits)
-      && isNumber(request.resource.data.monthDeposits)
-      && isNumber(request.resource.data.todayWithdrawals)
-      && isNumber(request.resource.data.monthWithdrawals)
-      && request.resource.data.registrations == 0
-      && request.resource.data.registrationBonus >= 0
-      && request.resource.data.todayDeposits == 0
-      && request.resource.data.monthDeposits == 0
-      && request.resource.data.todayWithdrawals == 0
-      && request.resource.data.monthWithdrawals == 0;
+    function isValidRewardCreate(transactionId) {
+      let memberBefore = get(/databases/$(database)/documents/members/$(request.resource.data.memberId));
+      let memberAfter = getAfter(/databases/$(database)/documents/members/$(request.resource.data.memberId));
+      return isSuperAdmin()
+        && request.resource.data.id == transactionId
+        && request.resource.data.type == 'reward'
+        && request.resource.data.status == 'approved'
+        && request.resource.data.amount > 0
+        && memberAfter.data.lastBalanceTransactionId == transactionId
+        && memberAfter.data.balance == memberBefore.data.balance + request.resource.data.amount;
     }
 
-    function isValidStaffUpdate() {
-      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
-        'name',
-        'username',
-        'password'
-      ])
-      && request.resource.data.id == resource.data.id
-      && request.resource.data.code == resource.data.code
-      && request.resource.data.adminCode == resource.data.adminCode
-      && request.resource.data.invitationCode == resource.data.invitationCode
-      && request.resource.data.role == resource.data.role
-      && isString(request.resource.data.name)
-      && isString(request.resource.data.username)
-      && isString(request.resource.data.password);
-    }
-
-    function isValidSettings(settingId) {
-      return settingId == 'account'
-      && request.resource.data.keys().hasOnly([
-        'username',
-        'password',
-        'withdrawalPassword',
-        'siteUrl',
-        'customerServiceTelegramUrl'
-      ])
-      && (
-        !request.resource.data.keys().hasAny(['username'])
-        || isString(request.resource.data.username)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['password'])
-        || isString(request.resource.data.password)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['withdrawalPassword'])
-        || isString(request.resource.data.withdrawalPassword)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['siteUrl'])
-        || isOptionalString(request.resource.data.siteUrl)
-      )
-      && (
-        !request.resource.data.keys().hasAny(['customerServiceTelegramUrl'])
-        || isOptionalString(request.resource.data.customerServiceTelegramUrl)
-      );
+    function isValidFinanceTransactionUpdate() {
+      return isFinanceStaff()
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'creditedAt'])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.amount == resource.data.amount;
     }
 
     match /members/{memberId} {
-      allow read: if true;
-      allow create: if request.resource.data.id == memberId && isValidMemberCreate();
-      allow update: if isValidMemberBalanceUpdate() || isValidMemberUpdate();
-      allow delete: if false;
+      allow get: if isMemberId(memberId) || isStaff();
+      allow list: if isStaff();
+      allow create: if false;
+      allow update: if isValidMemberOwnerUpdate(memberId)
+        || isValidStaffProfileUpdate()
+        || isValidSuperAdminMemberUpdate(memberId)
+        || isValidFinanceMemberUpdate(memberId);
+      allow delete: if isSuperAdmin();
     }
 
-    match /admins/{adminId} {
-      allow read: if true;
-      allow create: if request.resource.data.id == adminId && isValidStaffCreate();
-      allow update: if request.resource.data.id == adminId && isValidStaffUpdate();
-      allow delete: if resource.data.role in ['admin', 'employee'];
+    match /orders/{orderId} {
+      allow read: if isStaff() || orderBelongsToCurrentMember(resource.data);
+      // Customer orders are created by the authenticated server API, which
+      // enforces balance and one-active-task checks with the Admin SDK.
+      allow create: if false;
+      allow update: if isValidMemberOrderUpdate(orderId) || isValidStaffOrderWrite();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isStaff() || isMemberId(resource.data.memberId);
+      allow create: if isValidMemberTransactionCreate(transactionId) || isValidRewardCreate(transactionId);
+      allow update: if isValidFinanceTransactionUpdate();
+      allow delete: if isSuperAdmin();
     }
 
     match /products/{productId} {
       allow read: if true;
-      allow create, update: if request.resource.data.id == productId && isValidProduct();
-      allow delete: if true;
+      allow write: if isSuperAdmin();
     }
 
     match /banks/{bankId} {
-      allow read: if true;
-      allow create, update: if request.resource.data.id == bankId && isValidBank();
-      allow delete: if true;
-    }
-
-    match /orders/{orderId} {
-      allow read: if true;
-      allow create: if request.resource.data.id == orderId && isValidOrder();
-      allow update: if request.resource.data.id == orderId && isValidOrder();
-      allow delete: if false;
-    }
-
-    match /transactions/{transactionId} {
-      allow read: if true;
-      allow create: if request.resource.data.id == transactionId && isValidTransactionCreate();
-      allow update: if isValidTransactionStatusUpdate();
-      allow delete: if false;
+      allow read: if isSuperAdmin() || isMember();
+      allow write: if isSuperAdmin();
     }
 
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isValidSettings(settingId);
+      allow write: if isSuperAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isStaff();
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (
+        isStaff()
+        && subjectId() == adminId
+        && changedOnly(['name', 'username', 'usernameNormalized'])
+        && hasNoLegacySecrets()
+      );
+    }
+
+    match /authRoles/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isStaff());
+      allow list: if isStaff();
+      allow create: if false;
+      allow update, delete: if false;
+    }
+
+    match /loginIdentifiers/{identifierId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isStaff();
+    }
+
+    match /identityReservations/{reservationId} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update, delete: if isStaff();
+    }
+
+    match /invitationCodes/{invitationCode} {
+      allow get: if true;
+      allow list: if isStaff();
+      allow write: if isSuperAdmin();
+    }
+
+    match /securityAuditLogs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isStaff()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorAdminId == subjectId();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

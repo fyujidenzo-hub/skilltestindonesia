@@ -1,7 +1,8 @@
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction, limit, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db, waitForAuthReady } from "../firebase";
 import type { AssignedOrderProduct, Member, Order, OrderStatus, Product } from "../types";
 import { generateOrderCode } from "./orderCode";
+import { getAuthContext } from "./authService";
 
 const COLLECTION = "orders";
 
@@ -32,21 +33,22 @@ export async function getOrderById(id: string): Promise<Order | null> {
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Order) : null;
 }
 
-export async function getOrdersByMember(memberUsername: string): Promise<Order[]> {
+export async function getOrdersByMember(memberId: string, memberUsername: string): Promise<Order[]> {
   if (!db) return [];
-  const q = query(collection(db, COLLECTION), where("member", "==", memberUsername));
+  const q = query(collection(db, COLLECTION), where("memberId", "==", memberId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Order));
 }
 
 export function subscribeToOrdersByMember(
+  memberId: string,
   memberUsername: string,
   onOrders: (orders: Order[]) => void,
   onError?: (error: Error) => void,
 ) {
   if (!db) return () => {};
 
-  const q = query(collection(db, COLLECTION), where("member", "==", memberUsername));
+  const q = query(collection(db, COLLECTION), where("memberId", "==", memberId));
   return onSnapshot(
     q,
     (snapshot) => {
@@ -67,6 +69,25 @@ export async function getOrdersByStatus(status: Order["status"]): Promise<Order[
 
 export async function createOrder(order: Omit<Order, "id"> & { id?: string }): Promise<Order> {
   if (!db) throw new Error("Firebase not initialized");
+  const authContext = await getAuthContext();
+  if (authContext?.role !== "member" || authContext.subjectId !== order.memberId) {
+    throw new Error("Sesi akun tidak aktif. Silakan masuk kembali.");
+  }
+  if (order.status === "waiting_assignment") {
+    const user = auth?.currentUser ?? await waitForAuthReady();
+    if (!user) throw new Error("Sesi akun tidak aktif. Silakan masuk kembali.");
+    const response = await fetch("/api/member/orders", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${await user.getIdToken()}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Pesanan tidak dapat diterima.");
+    return result.order as Order;
+  }
   const id = order.id || crypto.randomUUID();
   const referenceNumber = order.referenceNumber || await createUniqueOrderCode();
   const nextOrder: Order = {
@@ -113,11 +134,19 @@ export async function deleteOrder(id: string): Promise<void> {
   await deleteDoc(doc(db, COLLECTION, id));
 }
 
-export async function assignOrderProduct(order: Order, product: Product, options: { requiresCustomerApproval?: boolean } = {}): Promise<Order> {
+export async function assignOrderProduct(
+  order: Order,
+  product: Product,
+  options: { requiresCustomerApproval?: boolean; assignedByAdminId?: string; assignedByName?: string } = {},
+): Promise<Order> {
   return assignOrderProducts(order, [{ product, quantity: 1 }], options);
 }
 
-export async function assignOrderProducts(order: Order, items: Array<{ product: Product; quantity: number }>, options: { requiresCustomerApproval?: boolean } = {}): Promise<Order> {
+export async function assignOrderProducts(
+  order: Order,
+  items: Array<{ product: Product; quantity: number }>,
+  options: { requiresCustomerApproval?: boolean; assignedByAdminId?: string; assignedByName?: string } = {},
+): Promise<Order> {
   if (!db) throw new Error("Firebase not initialized");
   const firestore = db;
   const normalizedItems = items
@@ -149,6 +178,8 @@ export async function assignOrderProducts(order: Order, items: Array<{ product: 
     requiredBalance,
     status: "product_assigned",
     assignedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+    assignedByAdminId: options.assignedByAdminId ?? order.assignedByAdminId ?? "",
+    assignedByName: options.assignedByName ?? order.assignedByName ?? "",
     requiresCustomerApproval: options.requiresCustomerApproval ?? false,
     adminChangedAt: options.requiresCustomerApproval ? new Date().toISOString().slice(0, 16).replace("T", " ") : order.adminChangedAt ?? "",
   };
@@ -168,13 +199,6 @@ export async function assignOrderProducts(order: Order, items: Array<{ product: 
       }
     });
 
-// Do NOT deduct product stock/quantity when assigning an order.
-// Quantity is only used as a display/reference value for the assigned order.
-productRefs.forEach((productRef, index) => {
-  transaction.update(productRef, {
-    requiredBalance: normalizedItems[index].product.requiredBalance ?? 0,
-  });
-});
     transaction.update(orderRef, {
       productCode: nextOrder.productCode,
       productName: nextOrder.productName,
@@ -185,6 +209,8 @@ productRefs.forEach((productRef, index) => {
       requiredBalance: nextOrder.requiredBalance,
       status: nextOrder.status,
       assignedAt: nextOrder.assignedAt,
+      assignedByAdminId: nextOrder.assignedByAdminId ?? "",
+      assignedByName: nextOrder.assignedByName ?? "",
       requiresCustomerApproval: nextOrder.requiresCustomerApproval ?? false,
       adminChangedAt: nextOrder.adminChangedAt ?? "",
       completedAt: nextOrder.completedAt ?? "",
@@ -242,10 +268,15 @@ export async function completeOrderTask(order: Order, member: Member): Promise<{
       ...liveMember,
       balance: Number(liveMember.balance ?? 0) + commission,
       totalOrders: Number(liveMember.totalOrders ?? 0) + 1,
+      lastCompletedOrderId: liveOrder.id,
     };
 
     transaction.update(orderRef, { status: "completed", completedAt, commission: nextOrder.commission, commissionCreditedAt });
-    transaction.update(memberRef, { balance: nextMember.balance, totalOrders: nextMember.totalOrders });
+    transaction.update(memberRef, {
+      balance: nextMember.balance,
+      totalOrders: nextMember.totalOrders,
+      lastCompletedOrderId: liveOrder.id,
+    });
   });
 
   return { order: nextOrder, member: nextMember };
@@ -338,6 +369,7 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
       ...liveMember,
       balance: nextBalance,
       totalOrders: Number(liveMember.totalOrders ?? 0) + 1,
+      lastCompletedOrderId: liveOrder.id,
     };
 
     transaction.update(orderRef, {
@@ -350,7 +382,11 @@ export async function completeWorkflowOrder(order: Order, member: Member): Promi
       commission: nextOrder.commission,
       commissionCreditedAt,
     });
-    transaction.update(memberRef, { balance: nextMember.balance, totalOrders: nextMember.totalOrders });
+    transaction.update(memberRef, {
+      balance: nextMember.balance,
+      totalOrders: nextMember.totalOrders,
+      lastCompletedOrderId: liveOrder.id,
+    });
   });
 
   return { order: nextOrder, member: nextMember };

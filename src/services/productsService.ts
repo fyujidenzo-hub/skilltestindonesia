@@ -4,23 +4,32 @@ import type { Product } from "../types";
 
 const COLLECTION = "products";
 
+function productFromSnapshot(snapshot: { id: string; data: () => Record<string, unknown> }): Product {
+  const data = snapshot.data();
+  return {
+    ...data,
+    id: snapshot.id,
+    name: String(data.name ?? "").replace(/\uFFFC/g, "").trim(),
+  } as Product;
+}
+
 export async function getProducts(): Promise<Product[]> {
   if (!db) return [];
   const snapshot = await getDocs(collection(db, COLLECTION));
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Product));
+  return snapshot.docs.map(productFromSnapshot);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
   if (!db) return null;
   const snapshot = await getDoc(doc(db, COLLECTION, id));
-  return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Product) : null;
+  return snapshot.exists() ? productFromSnapshot(snapshot) : null;
 }
 
 export async function getProductByCode(code: string): Promise<Product | null> {
   if (!db) return null;
   const q = query(collection(db, COLLECTION), where("code", "==", code));
   const snapshot = await getDocs(q);
-  return snapshot.empty ? null : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Product);
+  return snapshot.empty ? null : productFromSnapshot(snapshot.docs[0]);
 }
 
 export async function createProduct(product: Omit<Product, "id"> & { id?: string }): Promise<Product> {

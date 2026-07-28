@@ -1,5 +1,6 @@
 import type { AdminRole, StaffAdmin } from "../types";
 import { clearCookieSession, getCookieSession, setCookieSession } from "./browserSession";
+import { clearAuthenticatedSession } from "./authService";
 
 const activeAdminKey = "orderops-admin-session";
 
@@ -13,6 +14,7 @@ export function setActiveAdminId(adminId: string) {
 
 export function clearActiveAdminId() {
   clearCookieSession(activeAdminKey);
+  void clearAuthenticatedSession();
 }
 
 export function getActiveAdmin(admins: StaffAdmin[]) {

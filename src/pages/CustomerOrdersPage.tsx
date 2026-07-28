@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
+import ProductImage from "../components/ProductImage";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { completeWorkflowOrder, getOrdersByMember, submitWorkflowOrder, subscribeToOrdersByMember, updateOrderStatus } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
+import { belongsToMember } from "../services/memberOwnership";
 import { useAppStore } from "../store/AppStore";
 import type { Order } from "../types";
 import { formatRupiah, shortDate } from "../utils";
@@ -37,7 +39,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
     return (
       state.orders.find(
         (order) =>
-          order.member === currentMember.username &&
+          belongsToMember(order, currentMember) &&
           !["completed", "diserahkan", "rejected"].includes(order.status)
       ) ?? null
     );
@@ -48,6 +50,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   useEffect(() => {
     if (!currentMember?.username) return;
 
+    const memberId = currentMember.id;
     const memberUsername = currentMember.username;
     let cancelled = false;
     let realtimeActive = false;
@@ -55,18 +58,19 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
 
     const syncOrders = (nextOrders: Order[]) => {
       if (cancelled) return;
-      dispatch({ type: "replaceMemberOrders", payload: { member: memberUsername, orders: nextOrders } });
+      dispatch({ type: "replaceMemberOrders", payload: { memberId, orders: nextOrders } });
     };
 
     const pollOrders = async () => {
       try {
-        syncOrders(await getOrdersByMember(memberUsername));
+        syncOrders(await getOrdersByMember(memberId, memberUsername));
       } catch (error) {
         console.warn("Unable to refresh task orders:", error);
       }
     };
 
     const stopRealtime = subscribeToOrdersByMember(
+      memberId,
       memberUsername,
       (nextOrders) => {
         realtimeActive = true;
@@ -94,14 +98,14 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       window.clearTimeout(fallbackTimer);
       if (pollTimer) window.clearInterval(pollTimer);
     };
-  }, [currentMember?.username, dispatch]);
+  }, [currentMember?.id, currentMember?.username, dispatch]);
 
   useEffect(() => {
     if (!currentMember) return;
 
     const assignedOrders = state.orders.filter((order) => {
       const orderState = getOrderState(order);
-      return order.member === currentMember.username && (orderState === "product_assigned" || orderState === "waiting_shipment");
+      return belongsToMember(order, currentMember) && (orderState === "product_assigned" || orderState === "waiting_shipment");
     });
 
     const previousAssignedOrderIds = lastAssignedOrderIdsRef.current;
@@ -121,7 +125,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
   const orders = useMemo(() => {
     if (!currentMember) return [];
     return state.orders
-      .filter((order) => order.member === currentMember.username)
+      .filter((order) => belongsToMember(order, currentMember))
       .filter((order) => `${getOrderCode(order)} ${order.productName ?? ""} ${order.productCode ?? ""}`.toLowerCase().includes(query.toLowerCase()))
       .filter((order) => {
         const orderState = getOrderState(order);
@@ -144,14 +148,14 @@ const notifications = useMemo<CustomerNotification[]>(() => {
   const rejectedOrderNotifications = state.orders
     .filter(
       (order) =>
-        order.member === currentMember.username &&
+        belongsToMember(order, currentMember) &&
         getOrderState(order) === "rejected"
     )
     .slice(0, 3)
     .map((order) => ({
       id: `order-rejected-${order.id}`,
-      title: "Product request rejected",
-      text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+      title: "Permintaan produk ditolak",
+      text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
       tone: "danger" as const,
       targetPath: "/orders",
     }));
@@ -161,7 +165,7 @@ const notifications = useMemo<CustomerNotification[]>(() => {
       const orderState = getOrderState(order);
 
       return (
-        order.member === currentMember.username &&
+        belongsToMember(order, currentMember) &&
         orderState !== "diserahkan" &&
         orderState !== "rejected"
       );
@@ -189,14 +193,14 @@ const notifications = useMemo<CustomerNotification[]>(() => {
     });
 
   const transactionNotifications = state.transactions
-    .filter((transaction) => transaction.member === currentMember.username)
+    .filter((transaction) => belongsToMember(transaction, currentMember))
     .slice(0, 4)
     .map((transaction) => ({
       id: `transaction-${transaction.id}`,
       title:
         transaction.status === "pending"
-          ? `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} pending`
-          : `${transaction.type === "topup" ? "Top Up" : "Withdrawal"} ${transaction.status}`,
+          ? `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} menunggu`
+          : `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} ${transaction.status === "approved" ? "disetujui" : "ditolak"}`,
       text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
       tone:
         transaction.status === "approved"
@@ -259,7 +263,7 @@ const handleSubmitAssignmentOrder = async () => {
     setMessage("Pesanan berhasil dikirimkan. Saldo Anda tidak dipotong. Komisi akan ditambahkan setelah penyelesaian.");
   } catch (error) {
     console.error("Failed to submit order:", error);
-    setMessage(error instanceof Error ? error.message : "Unable to submit order. Please try again.");
+    setMessage(error instanceof Error ? error.message : "Pesanan tidak dapat dikirim. Silakan coba lagi.");
   } finally {
     setIsSubmitting(false);
   }
@@ -277,7 +281,7 @@ const handleConfirmDelivery = async () => {
     setMessage(`Order completed. Commission ${result.order.commission.toLocaleString("id-ID")} IDR added to your balance.`);
   } catch (error) {
     console.error("Failed to confirm delivery:", error);
-    setMessage(error instanceof Error ? error.message : "Unable to confirm delivery.");
+    setMessage(error instanceof Error ? error.message : "Pengiriman tidak dapat dikonfirmasi.");
   } finally {
     setIsSubmitting(false);
   }
@@ -296,7 +300,7 @@ const handleAcceptChangedProduct = async () => {
     setMessage("Produk yang diubah telah disetujui. Anda sekarang dapat mengirimkan pesanan tersebut.");
   } catch (error) {
     console.error("Failed to accept changed product:", error);
-    setMessage(error instanceof Error ? error.message : "Unable to accept changed product.");
+    setMessage(error instanceof Error ? error.message : "Produk pengganti tidak dapat diterima.");
   } finally {
     setIsSubmitting(false);
   }
@@ -316,7 +320,7 @@ const handleRejectChangedProduct = async () => {
     setMessage("Produk yang diubah ditolak. Anda dapat mengambil pesanan lain.");
   } catch (error) {
     console.error("Failed to reject changed product:", error);
-    setMessage(error instanceof Error ? error.message : "Unable to reject changed product.");
+    setMessage(error instanceof Error ? error.message : "Produk pengganti tidak dapat ditolak.");
   } finally {
     setIsSubmitting(false);
   }
@@ -337,7 +341,7 @@ const handleRejectChangedProduct = async () => {
 
     dispatch({ type: "completeOrderWithMember", payload: result });
     setConfirmOrder(null);
-    setMessage("Order sent successfully. Waiting for delivery confirmation.");
+    setMessage("Pesanan berhasil dikirim. Menunggu konfirmasi pengiriman.");
   } catch (error) {
     console.error("Failed to submit order:", error);
     setMessage(error instanceof Error ? error.message : "Tidak dapat mengirimkan pesanan. Silakan coba lagi..");
@@ -413,7 +417,7 @@ const handleRejectChangedProduct = async () => {
               className="h-12 w-full rounded border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-none focus:border-forest"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search products or order code"
+              placeholder="Cari produk atau kode pesanan"
             />
           </div>
 
@@ -424,14 +428,14 @@ const handleRejectChangedProduct = async () => {
                 className={`rounded px-3 py-2 ${activeTab === tab ? "bg-forest text-white shadow-sm" : "text-slate-500"}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab}
+                {tab === "All" ? "Semua" : tab === "Pending" ? "Menunggu" : "Selesai"}
               </button>
             ))}
           </div>
         </div>
 
         {message && (
-          <p className={`mt-4 rounded px-4 py-3 text-sm font-bold ${message.startsWith("Sorry") || message.startsWith("Unable") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+          <p className={`mt-4 rounded px-4 py-3 text-sm font-bold ${message.startsWith("Maaf") || message.includes("tidak dapat") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
             {message}
           </p>
         )}
@@ -542,7 +546,7 @@ function OrderCard({
   const primaryProduct = assignedProducts[0];
   const primaryImage = products.find((product) => product.id === primaryProduct?.productId || product.code === primaryProduct?.code)?.image;
   const isWaitingAssignment = state === "waiting_assignment" || !primaryProduct;
-  const statusBadgeLabel = isCompleted ? "Delivered" : isRejected ? "Rejected" : isWaitingAssignment ? "Not Assigned" : "Not Delivered";
+  const statusBadgeLabel = isCompleted ? "Terkirim" : isRejected ? "Ditolak" : isWaitingAssignment ? "Belum Ditugaskan" : "Belum Dikirim";
   const waitingText = isWaitingAssignment ? "Waiting for product assignment" : "Waiting for delivery";
   const canSendOrder = Boolean(primaryProduct) && !isCompleted && !isRejected && state !== "belum_diserahkan";
 
@@ -550,7 +554,7 @@ function OrderCard({
     <article className="rounded bg-white p-4 shadow-panel">
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <p className="text-xs font-bold text-slate-500">Transaction No.:</p>
+          <p className="text-xs font-bold text-slate-500">Nomor Transaksi:</p>
           <p className="font-black">{getOrderCode(order)}</p>
         </div>
         <span className={`rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : isRejected ? "bg-rose-100 text-rose-700" : "border border-amber-300 bg-amber-50 text-amber-700"}`}>
@@ -560,7 +564,7 @@ function OrderCard({
 
       {primaryProduct ? (
         <div className="mt-4 grid gap-4 sm:grid-cols-[96px_1fr]">
-          <img className="h-24 w-24 rounded object-cover" src={primaryImage || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=240&q=80"} alt={primaryProduct.name} />
+          <ProductImage className="h-24 w-24 rounded object-cover" src={primaryImage} alt={primaryProduct.name} />
           <div>
             <h2 className="font-black">{primaryProduct.name}</h2>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
@@ -636,7 +640,7 @@ function OrderDetailsModal({
       : [];
   const primaryProduct = assignedProducts[0];
   const image = products.find((product) => product.id === primaryProduct?.productId || product.code === primaryProduct?.code)?.image;
-  const statusLabel = state === "diserahkan" ? "Delivered" : state === "rejected" ? "Rejected" : primaryProduct ? "Not Delivered" : "Not Assigned";
+  const statusLabel = state === "diserahkan" ? "Terkirim" : state === "rejected" ? "Ditolak" : primaryProduct ? "Belum Dikirim" : "Belum Ditugaskan";
   const requiredBalance = order.requiredBalance ?? order.value ?? 0;
 
   return (
@@ -644,7 +648,7 @@ function OrderDetailsModal({
       <div className="max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-[1.5rem] bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest">Order Details</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest">Rincian Pesanan</p>
             <h2 className="mt-1 break-words text-xl font-black text-slate-900">{getOrderCode(order)}</h2>
           </div>
           <button className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600 hover:bg-slate-200" onClick={onClose}>
@@ -657,9 +661,9 @@ function OrderDetailsModal({
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
               {primaryProduct ? (
                 
-                <img
+                <ProductImage
                   className="h-40 w-full rounded-xl object-cover md:h-44"
-                  src={image || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=300&q=80"}
+                  src={image}
                   alt={primaryProduct.name}
                 />
               ) : (
@@ -677,14 +681,14 @@ function OrderDetailsModal({
                 {primaryProduct?.name ?? "Waiting for product assignment"}
               </h3>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                Product code: <span className="text-slate-800">{primaryProduct?.code || order.productCode || "-"}</span>
+                Kode produk: <span className="text-slate-800">{primaryProduct?.code || order.productCode || "-"}</span>
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <DetailStat label="Order Price" value={formatRupiah(order.value ?? 0)} />
-                <DetailStat label="Commission" value={formatRupiah(order.commission ?? 0)} accent />
-                <DetailStat label="Order Amount" value={formatRupiah(requiredBalance)} />
-                <DetailStat label="Created" value={shortDate(order.createdAt)} />
+                <DetailStat label="Harga Pesanan" value={formatRupiah(order.value ?? 0)} />
+                <DetailStat label="Komisi" value={formatRupiah(order.commission ?? 0)} accent />
+                <DetailStat label="Jumlah Pesanan" value={formatRupiah(requiredBalance)} />
+                <DetailStat label="Dibuat" value={shortDate(order.createdAt)} />
               </div>
             </div>
           </div>
@@ -692,11 +696,11 @@ function OrderDetailsModal({
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-sm font-black text-slate-900">Ringkasan transaksi</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <DetailRow label="Transaction No." value={getOrderCode(order)} />
+              <DetailRow label="Nomor Transaksi" value={getOrderCode(order)} />
               <DetailRow label="Current status" value={statusLabel} />
-              <DetailRow label="Assigned date" value={order.assignedAt ? shortDate(order.assignedAt) : "-"} />
+              <DetailRow label="Tanggal penugasan" value={order.assignedAt ? shortDate(order.assignedAt) : "-"} />
               <DetailRow label="Completed date" value={order.completedAt ? shortDate(order.completedAt) : "-"} />
-              <DetailRow label="Submitted date" value={order.submittedAt ? shortDate(order.submittedAt) : "-"} />
+              <DetailRow label="Tanggal pengajuan" value={order.submittedAt ? shortDate(order.submittedAt) : "-"} />
               <DetailRow label="Rating" value={order.rating ? `${order.rating} / 5` : "-"} />
             </div>
             {order.review && (
@@ -738,7 +742,7 @@ function ConfirmOrderModal({ order, products, isSubmitting, onCancel, onConfirm 
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 px-4">
       <div className="w-full max-w-sm rounded bg-white p-5 shadow-panel">
         <h2 className="text-center text-lg font-black">Konfirmasi Pengiriman Pesanan</h2>
-        {primaryProduct && <img className="mx-auto mt-5 h-40 w-40 rounded object-cover" src={image || "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=300&q=80"} alt={primaryProduct.name} />}
+        {primaryProduct && <ProductImage className="mx-auto mt-5 h-40 w-40 rounded object-cover" src={image} alt={primaryProduct.name} />}
         <p className="mt-4 text-center text-sm font-semibold text-slate-600">Apakah Anda yakin ingin mengirim pesanan ini?</p>
         <div className="mt-4 divide-y divide-slate-200 rounded border border-slate-200 text-sm">
           <div className="flex justify-between px-4 py-3">

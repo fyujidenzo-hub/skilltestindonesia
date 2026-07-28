@@ -7,14 +7,14 @@ interface AmountSortControlsProps {
   className?: string;
 }
 
-export default function AmountSortControls({ value, onChange, label = "Amount", className = "" }: AmountSortControlsProps) {
+export default function AmountSortControls({ value, onChange, label = "jumlah", className = "" }: AmountSortControlsProps) {
   const toggleSort = (nextValue: Exclude<AmountSort, "none">) => {
     onChange(value === nextValue ? "none" : nextValue);
   };
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <span className="text-xs font-black uppercase tracking-wide text-slate-500">Sort {label}</span>
+      <span className="text-xs font-black uppercase tracking-wide text-slate-500">Urutkan {label}</span>
       <button
         type="button"
         className={sortButtonClass(value === "asc")}

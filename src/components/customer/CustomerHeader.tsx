@@ -24,7 +24,7 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
   return (
     <header className="sticky top-0 z-40 border-b border-emerald-100/70 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
-        <button className="flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-white px-1.5 pr-3 shadow-sm ring-1 ring-emerald-100 hover:shadow-panel" onClick={() => navigate("/")} aria-label="Go to customer store">
+        <button className="flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-white px-1.5 pr-3 shadow-sm ring-1 ring-emerald-100 hover:shadow-panel" onClick={() => navigate("/")} aria-label="Buka halaman kerja pelanggan">
           <span className="grid h-8 w-8 overflow-hidden rounded-xl">
             <img
               className="h-full w-full object-cover"
@@ -41,11 +41,11 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
             className="h-11 w-full rounded-full border border-slate-200 bg-slate-50/80 pl-10 pr-4 text-sm outline-none focus:border-forest focus:bg-white"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search products or order code"
+            placeholder="Cari produk atau kode pesanan"
           />
         </div>
         <div className="group relative">
-          <button className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-emerald-200 hover:bg-mint hover:text-forest" aria-label="Notifications">
+          <button className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-emerald-200 hover:bg-mint hover:text-forest" aria-label="Notifikasi">
             <Bell size={18} />
             {notifications.length > 0 && (
               <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-[10px] font-black text-white">

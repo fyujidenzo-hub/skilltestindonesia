@@ -1,6 +1,7 @@
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db, waitForAuthReady } from "../firebase";
 import type { Member, Order, Transaction } from "../types";
+import { belongsToMember } from "./memberOwnership";
 
 const COLLECTION = "transactions";
 export const MIN_WITHDRAWAL_AMOUNT = 100000;
@@ -26,22 +27,26 @@ export type CreateTransactionResult = {
   updatedMember?: Member;
 };
 
-export type CreateTransactionInput = Omit<Transaction, "id"> & {
+export type CreateTransactionInput = Omit<Transaction, "id" | "memberId"> & {
   id?: string;
-  memberId?: string;
+  memberId: string;
   submittedWithdrawalPassword?: string;
 };
 
-export function hasActiveTasksForUser(memberUsername: string, orders: Order[]) {
-  return orders.some((order) => order.member === memberUsername && ACTIVE_ORDER_STATUSES.has(String(order.status).toLowerCase()));
+export function hasActiveTasksForUser(member: Pick<Member, "id" | "username">, orders: Order[]) {
+  return orders.some((order) => belongsToMember(order, member) && ACTIVE_ORDER_STATUSES.has(String(order.status).toLowerCase()));
 }
 
-export function validateWithdrawalRequest(member: Pick<Member, "username" | "balance" | "withdrawalLocked" | "withdrawalRemarks">, orders: Order[], amount: number) {
+export function validateWithdrawalRequest(
+  member: Pick<Member, "id" | "username" | "balance" | "withdrawalLocked" | "withdrawalRemarks">,
+  orders: Order[],
+  amount: number,
+) {
   // SAFETY: keep this validation in submit/service logic, not only disabled UI buttons.
   if (member.withdrawalLocked) {
     return member.withdrawalRemarks?.trim() || "Withdrawals are temporarily locked for this account. Please contact Customer Service.";
   }
-  if (hasActiveTasksForUser(member.username, orders)) {
+  if (hasActiveTasksForUser(member, orders)) {
     return "You cannot withdraw while you still have active or incomplete tasks.";
   }
   if (member.balance < MIN_WITHDRAWAL_AMOUNT || amount < MIN_WITHDRAWAL_AMOUNT) {
@@ -51,24 +56,6 @@ export function validateWithdrawalRequest(member: Pick<Member, "username" | "bal
     return "Insufficient balance.";
   }
   return "";
-}
-
-async function getLiveMemberAndOrders(memberUsername: string, memberId?: string) {
-  if (!db) throw new Error("Firebase not initialized");
-
-  const memberDoc = memberId
-    ? await getDoc(doc(db, "members", memberId))
-    : (await getDocs(query(collection(db, "members"), where("username", "==", memberUsername)))).docs[0];
-  if (!memberDoc?.exists()) throw new Error("Member no longer exists.");
-
-  const ordersSnapshot = await getDocs(query(collection(db, "orders"), where("member", "==", memberUsername)));
-  const liveOrders = ordersSnapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Order));
-
-  return {
-    memberRef: doc(db, "members", memberDoc.id),
-    member: { id: memberDoc.id, ...memberDoc.data() } as Member,
-    orders: liveOrders,
-  };
 }
 
 function nowStamp() {
@@ -84,7 +71,6 @@ function requestPrefix(type: Transaction["type"]) {
 function buildTransaction(transaction: CreateTransactionInput, forcedId?: string, forcedRequestId?: string): Transaction {
   const {
     submittedWithdrawalPassword: _submittedWithdrawalPassword,
-    memberId: _memberId,
     ...transactionData
   } = transaction;
   const id = forcedId || transactionData.id || crypto.randomUUID();
@@ -125,9 +111,9 @@ export async function getTransactionById(id: string): Promise<Transaction | null
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Transaction) : null;
 }
 
-export async function getTransactionsByMember(memberUsername: string): Promise<Transaction[]> {
+export async function getTransactionsByMember(memberId: string, memberUsername: string): Promise<Transaction[]> {
   if (!db) return [];
-  const q = query(collection(db, COLLECTION), where("member", "==", memberUsername));
+  const q = query(collection(db, COLLECTION), where("memberId", "==", memberId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Transaction));
 }
@@ -146,63 +132,42 @@ export async function createTransaction(transaction: CreateTransactionInput): Pr
     return { transaction: nextTransaction };
   }
 
-  const { memberRef, member, orders } = await getLiveMemberAndOrders(transaction.member, transaction.memberId);
-  const txRef = doc(db, COLLECTION, id);
-  let updatedMember: Member = member;
-
-  await runTransaction(db, async (firestoreTransaction) => {
-    const [memberSnap, txSnap] = await Promise.all([firestoreTransaction.get(memberRef), firestoreTransaction.get(txRef)]);
-
-    if (txSnap.exists()) throw new Error("This request already exists.");
-    if (!memberSnap.exists()) throw new Error("Member no longer exists.");
-
-    const liveMember = { id: memberSnap.id, ...memberSnap.data() } as Member;
-    const currentBalance = Number(liveMember.balance ?? 0);
-    const amount = Number(nextTransaction.amount ?? 0);
-    const validationMessage = validateWithdrawalRequest({ ...liveMember, balance: currentBalance }, orders, amount);
-    if (validationMessage) throw new Error(validationMessage);
-
-    const savedWithdrawalPassword = String(liveMember.withdrawalPassword ?? "").trim();
-    const submittedWithdrawalPassword = String(transaction.submittedWithdrawalPassword ?? "").trim();
-    if (!savedWithdrawalPassword) {
-      throw new Error("Withdrawal password is not set. Please contact Super Admin to reset it.");
-    }
-    if (!submittedWithdrawalPassword) {
-      throw new Error("Withdrawal password is required.");
-    }
-    if (submittedWithdrawalPassword !== savedWithdrawalPassword) {
-      throw new Error("Incorrect withdrawal password.");
-    }
-
-    const balanceDeductedAt = nowStamp();
-    const nextBalance = currentBalance - amount;
-    const withdrawalTransaction: Transaction = {
-      ...nextTransaction,
-      balanceDeductedAt,
-      creditedAt: "",
-    };
-
-    firestoreTransaction.set(txRef, withdrawalTransaction);
-    firestoreTransaction.update(memberRef, { balance: nextBalance });
-    updatedMember = { ...liveMember, balance: nextBalance };
-    Object.assign(nextTransaction, withdrawalTransaction);
+  const user = auth?.currentUser ?? await waitForAuthReady();
+  if (!user) throw new Error("Sesi anggota tidak aktif.");
+  const response = await fetch("/api/member/withdrawals", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${await user.getIdToken()}`,
+    },
+    body: JSON.stringify({
+      amount: nextTransaction.amount,
+      withdrawalPin: transaction.submittedWithdrawalPassword,
+      withdrawalBankName: nextTransaction.withdrawalBankName,
+      withdrawalAccountName: nextTransaction.withdrawalAccountName,
+      withdrawalAccountNumber: nextTransaction.withdrawalAccountNumber,
+    }),
   });
-
-  return { transaction: nextTransaction, updatedMember };
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Permintaan penarikan tidak dapat diproses.");
+  return result as CreateTransactionResult;
 }
 
 export async function createRewardTransaction({
+  memberId,
   member,
   admin = "Super Admin",
   amount,
   createdAt = nowStamp(),
 }: {
+  memberId: string;
   member: string;
   admin?: string;
   amount: number;
   createdAt?: string;
 }): Promise<Transaction> {
   if (!db) throw new Error("Firebase not initialized");
+  const firestore = db;
 
   const safeAmount = Math.max(0, Number(amount) || 0);
   if (safeAmount <= 0) throw new Error("Reward amount must be greater than zero.");
@@ -211,6 +176,7 @@ export async function createRewardTransaction({
   const rewardTransaction: Transaction = {
     id,
     requestId: `RW-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    memberId,
     member,
     admin,
     type: "reward",
@@ -231,7 +197,22 @@ export async function createRewardTransaction({
     proofSize: 0,
   };
 
-  await setDoc(doc(db, COLLECTION, id), rewardTransaction);
+  await runTransaction(firestore, async (firestoreTransaction) => {
+    const memberRef = doc(firestore, "members", memberId);
+    const transactionRef = doc(firestore, COLLECTION, id);
+    const [memberSnapshot, transactionSnapshot] = await Promise.all([
+      firestoreTransaction.get(memberRef),
+      firestoreTransaction.get(transactionRef),
+    ]);
+    if (!memberSnapshot.exists()) throw new Error("Member no longer exists.");
+    if (transactionSnapshot.exists()) throw new Error("This reward already exists.");
+    const currentBalance = Number(memberSnapshot.data().balance ?? 0);
+    firestoreTransaction.set(transactionRef, rewardTransaction);
+    firestoreTransaction.update(memberRef, {
+      balance: currentBalance + safeAmount,
+      lastBalanceTransactionId: id,
+    });
+  });
   return rewardTransaction;
 }
 
@@ -274,12 +255,12 @@ export async function approveTransactionRequest(transactionItem: Transaction, me
         if (!wasWithdrawalDeductedOnSubmit) {
           if (amount > currentBalance) throw new Error("Insufficient balance.");
           nextBalance = Math.max(0, currentBalance - amount);
-          transaction.update(memberRef, { balance: nextBalance });
+          transaction.update(memberRef, { balance: nextBalance, lastBalanceTransactionId: liveTransaction.id });
         }
       } else {
         if (liveTransaction.creditedAt) throw new Error("This request has already been credited.");
         nextBalance = currentBalance + amount;
-        transaction.update(memberRef, { balance: nextBalance });
+        transaction.update(memberRef, { balance: nextBalance, lastBalanceTransactionId: liveTransaction.id });
       }
 
       transaction.update(txRef, { status, creditedAt: nowStamp() });
@@ -288,7 +269,7 @@ export async function approveTransactionRequest(transactionItem: Transaction, me
 
     if (liveTransaction.type === "withdrawal" && wasWithdrawalDeductedOnSubmit) {
       nextBalance = currentBalance + amount;
-      transaction.update(memberRef, { balance: nextBalance });
+      transaction.update(memberRef, { balance: nextBalance, lastBalanceTransactionId: liveTransaction.id });
     }
 
     transaction.update(txRef, { status });

@@ -2,9 +2,6 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 export interface AppSettings {
-  username: string;
-  password: string;
-  withdrawalPassword: string;
   siteUrl?: string;
   customerServiceTelegramUrl?: string;
 }

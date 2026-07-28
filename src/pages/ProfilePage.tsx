@@ -19,7 +19,10 @@ import { Panel } from "../components/common";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import { clearActiveCustomerId, getActiveCustomer } from "../services/customerSession";
 import { getOrderState } from "../services/orderStateService";
-import { updateMember } from "../services/membersService";
+import { belongsToMember } from "../services/memberOwnership";
+import { updateMember, updateMemberWithdrawalPin } from "../services/membersService";
+import { updateCurrentAccountPassword } from "../services/authService";
+import { hashWithdrawalPin } from "../services/pinSecurity";
 import { useAppStore } from "../store/AppStore";
 import { formatRupiah, shortDate } from "../utils";
 
@@ -38,12 +41,12 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
 
   const memberOrders = useMemo(() => {
     if (!member) return [];
-    return state.orders.filter((order) => order.member === member.username);
+    return state.orders.filter((order) => belongsToMember(order, member));
   }, [member, state.orders]);
 
   const memberTransactions = useMemo(() => {
     if (!member) return [];
-    return state.transactions.filter((transaction) => transaction.member === member.username);
+    return state.transactions.filter((transaction) => belongsToMember(transaction, member));
   }, [member, state.transactions]);
 
   // const frozenBalance = useMemo(() => {
@@ -102,25 +105,35 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
 
   const savePassword = async () => {
     if (!settingsMode || !newPassword.trim()) {
-      setSettingsMessage("Enter a new password first.");
+      setSettingsMessage("Masukkan kata sandi baru terlebih dahulu.");
+      return;
+    }
+    if (settingsMode === "account" && newPassword.trim().length < 6) {
+      setSettingsMessage("Kata sandi akun minimal 6 karakter.");
       return;
     }
 
     setIsSavingSettings(true);
-    setSettingsMessage("Saving...");
+    setSettingsMessage("Menyimpan...");
     try {
       const updatedMember = {
         ...member,
-        ...(settingsMode === "account" ? { accountPassword: newPassword.trim() } : { withdrawalPassword: newPassword.trim() }),
       };
-      await updateMember(member.id, settingsMode === "account" ? { accountPassword: newPassword.trim() } : { withdrawalPassword: newPassword.trim() });
+      if (settingsMode === "account") {
+        await updateCurrentAccountPassword(newPassword.trim());
+      } else {
+        const withdrawalPinHash = await hashWithdrawalPin(newPassword.trim());
+        updatedMember.withdrawalPinHash = withdrawalPinHash;
+        delete updatedMember.withdrawalPassword;
+        await updateMemberWithdrawalPin(member.id, withdrawalPinHash);
+      }
       dispatch({ type: "updateMember", payload: updatedMember });
       setSettingsMessage(settingsMode === "account" ? "Kata sandi akun telah diperbarui." : "Kata sandi penarikan telah diperbarui.");
       setSettingsMode(null);
       setNewPassword("");
     } catch (error) {
       console.error("Failed to update member password:", error);
-      setSettingsMessage("Unable to save. Check Firestore member rules.");
+      setSettingsMessage(error instanceof Error ? error.message : "Perubahan tidak dapat disimpan.");
     } finally {
       setIsSavingSettings(false);
     }
@@ -137,11 +150,11 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
       },
     },
     { label: "Withdraw", description: "Create a withdrawal request", icon: <Wallet size={19} />, onClick: () => navigate("/withdraw") },
-    { label: "Withdrawal Information", description: "Review withdrawal rules", icon: <FileText size={19} />, onClick: () => scrollToSection("withdrawal-info") },
-    { label: "Withdrawal History", description: "Check past withdrawal requests", icon: <History size={19} />, onClick: () => scrollToSection("withdrawal-history") },
-    { label: "Top Up History", description: "Check past top-up requests", icon: <CreditCard size={19} />, onClick: () => scrollToSection("topup-history") },
+    { label: "Informasi Penarikan", description: "Tinjau aturan penarikan", icon: <FileText size={19} />, onClick: () => scrollToSection("withdrawal-info") },
+    { label: "Riwayat Penarikan", description: "Lihat permintaan penarikan sebelumnya", icon: <History size={19} />, onClick: () => scrollToSection("withdrawal-history") },
+    { label: "Riwayat Isi Saldo", description: "Lihat permintaan isi saldo sebelumnya", icon: <CreditCard size={19} />, onClick: () => scrollToSection("topup-history") },
     {
-      label: "Password",
+      label: "Kata Sandi",
       description: "Update account security",
       icon: <KeyRound size={19} />,
       onClick: () => {
@@ -189,7 +202,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                   <img
                     className="h-full w-full object-cover"
                     src={customerLogo}
-                    alt="Customer avatar"
+                    alt="Foto profil pelanggan"
                     decoding="async"
                   />
                 </div>
@@ -244,13 +257,13 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             </section>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <ProfileMetric icon={<WalletCards />} label="Work Account Balance" value={formatRupiah(member.balance)} />
-              <ProfileMetric icon={<Wallet />} label="Effective Balance" value={formatRupiah(effectiveBalance)} />
-              <ProfileMetric icon={<ShieldCheck />} label="Frozen Balance" value={formatRupiah(frozenBalance)} />
-              <ProfileMetric icon={<PackageCheck />} label="Total Orders" value={`${member.totalOrders} / ${dailyOrderTarget}`} />
+              <ProfileMetric icon={<WalletCards />} label="Saldo Akun Kerja" value={formatRupiah(member.balance)} />
+              <ProfileMetric icon={<Wallet />} label="Saldo Efektif" value={formatRupiah(effectiveBalance)} />
+              <ProfileMetric icon={<ShieldCheck />} label="Saldo Dibekukan" value={formatRupiah(frozenBalance)} />
+              <ProfileMetric icon={<PackageCheck />} label="Total Pesanan" value={`${member.totalOrders} / ${dailyOrderTarget}`} />
             </div>
 
-            <Panel title="Account menu">
+            <Panel title="Menu akun">
               {menuMessage && (
                 <div className="mb-4 flex items-start justify-between gap-3 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
                   <span>{menuMessage}</span>
@@ -277,7 +290,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
               </div>
             </Panel>
 
-            <Panel title="Order history">
+            <Panel title="Riwayat pesanan">
               <div className="space-y-3">
                 {memberOrders.length ? (
                   memberOrders.map((order) => (
@@ -286,7 +299,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                         <div>
                           <p className="font-bold">{order.productName || "Waiting for product assignment"}</p>
                           <p className="text-xs text-slate-500">
-                            {order.productCode || "No product code"} - {shortDate(order.createdAt)}
+                            {order.productCode || "Tanpa kode produk"} - {shortDate(order.createdAt)}
                           </p>
                         </div>
                         <span className="rounded bg-mint px-2 py-1 text-xs font-bold capitalize text-forest">{order.status.replace(/_/g, " ")}</span>
@@ -301,22 +314,22 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
           </div>
 
           <aside className="space-y-5">
-            <Panel title="Account details">
-              <ProfileRow label="Phone" value={member.phone || "-"} />
+            <Panel title="Rincian akun">
+              <ProfileRow label="Telepon" value={member.phone || "-"} />
               <ProfileRow label="Invitation code" value={member.invitationCode || "-"} />
               <ProfileRow label="Referred by" value={member.referredBy || "-"} />
               <ProfileRow label="Level" value={displayLevel(member.level)} />
-              <ProfileRow label="Last login" value={member.lastLogin || "-"} />
+              <ProfileRow label="Login terakhir" value={member.lastLogin || "-"} />
             </Panel>
 
-            <Panel title="Balance summary">
-              <ProfileRow label="Work Account Balance" value={formatRupiah(member.balance)} />
-              <ProfileRow label="Effective Balance" value={formatRupiah(effectiveBalance)} />
-              <ProfileRow label="Frozen Balance" value={formatRupiah(frozenBalance)} />
+            <Panel title="Ringkasan saldo">
+              <ProfileRow label="Saldo Akun Kerja" value={formatRupiah(member.balance)} />
+              <ProfileRow label="Saldo Efektif" value={formatRupiah(effectiveBalance)} />
+              <ProfileRow label="Saldo Dibekukan" value={formatRupiah(frozenBalance)} />
             </Panel>
 
             <div id="loan-info">
-              <Panel title="Loan">
+              <Panel title="Pinjaman">
                 <p className="text-sm leading-6 text-slate-600">
                 Layanan pinjaman saat ini tidak tersedia untuk akun ini. Jika fitur ini diaktifkan di kemudian hari, rincian pinjaman yang memenuhi syarat akan muncul di sini.
                 </p>
@@ -324,18 +337,18 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             </div>
 
             <div id="withdrawal-info">
-              <Panel title="Withdrawal Information">
+              <Panel title="Informasi Penarikan">
                 <p className="text-sm leading-6 text-slate-600">
                   Permintaan penarikan ditinjau oleh administrator. Permintaan yang disetujui akan ditandai dalam riwayat penarikan Anda.
                 </p>
               </Panel>
             </div>
 
-            <HistoryPanel id="withdrawal-history" title="Withdrawal History" emptyText="No withdrawal history yet." transactions={withdrawalHistory} />
-            <HistoryPanel id="topup-history" title="Top Up History" emptyText="No top up history yet." transactions={topUpHistory} />
+            <HistoryPanel id="withdrawal-history" title="Riwayat Penarikan" emptyText="Belum ada riwayat penarikan." transactions={withdrawalHistory} />
+            <HistoryPanel id="topup-history" title="Riwayat Isi Saldo" emptyText="Belum ada riwayat isi saldo." transactions={topUpHistory} />
 
             <div id="settings">
-              <Panel title="Password">
+              <Panel title="Kata Sandi">
                 <button
                   className="flex w-full items-center gap-3 rounded border border-slate-200 px-3 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
                   onClick={() => {
@@ -361,14 +374,14 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                 {settingsMode && (
                   <div className="mt-4 rounded bg-slate-50 p-4">
                     <p className="text-sm font-black text-slate-800">
-                      {settingsMode === "account" ? "New account password" : "New withdrawal password"}
+                      {settingsMode === "account" ? "Kata sandi akun baru" : "PIN penarikan baru"}
                     </p>
                     <input
                       className="mt-2 h-11 w-full rounded border border-slate-200 px-3 text-sm outline-none focus:border-forest"
                       type="password"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
-                      placeholder="Enter new password"
+                      placeholder={settingsMode === "account" ? "Minimal 6 karakter" : "Masukkan PIN baru"}
                     />
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button

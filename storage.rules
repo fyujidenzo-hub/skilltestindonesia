@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return firestore.get(/databases/(default)/documents/authRoles/$(request.auth.uid)).data;
+    }
+
+    function isStaff() {
+      return signedIn() && role().role in ['super_admin', 'admin', 'employee'];
+    }
+
+    match /payment-proofs/{memberId}/{transactionId}/{fileName} {
+      allow read: if isStaff() || (signedIn() && role().role == 'member' && role().subjectId == memberId);
+      allow create: if signedIn()
+        && role().role == 'member'
+        && role().subjectId == memberId
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow update: if false;
+      allow delete: if isStaff() || (signedIn() && role().role == 'member' && role().subjectId == memberId);
+    }
+
+    match /payment-proofs/{transactionId}/{fileName} {
+      allow read: if isStaff();
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

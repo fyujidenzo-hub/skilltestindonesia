@@ -1,7 +1,14 @@
 dist/
+.next/
 node_modules/
 .env
+.env.*
+!.env.example
+*.log
 serviceAccountKey.json
+skilltestindonesia-service-account.json
+*-firebase-adminsdk-*.json
+*service-account*.json
 firestore-backup.json
 scripts/export-firebase-data.mjs
 scripts/import-firebase-export.mjs

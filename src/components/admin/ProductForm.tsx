@@ -3,8 +3,19 @@ import { inputClass } from "../common";
 import { createProduct } from "../../services/productsService";
 import { useAppStore } from "../../store/AppStore";
 import type { Product } from "../../types";
+import { normalizeProductImage } from "../ProductImage";
 
 const CATEGORIES = ["Electronics", "Health", "Home", "Lifestyle", "Fashion", "Beauty", "Sports", "Books"];
+const CATEGORY_LABELS: Record<string, string> = {
+  Electronics: "Elektronik",
+  Health: "Kesehatan",
+  Home: "Rumah",
+  Lifestyle: "Gaya Hidup",
+  Fashion: "Mode",
+  Beauty: "Kecantikan",
+  Sports: "Olahraga",
+  Books: "Buku",
+};
 
 function generateProductCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -45,15 +56,18 @@ export default function ProductForm() {
       onSubmit={async (event) => {
         event.preventDefault();
         if (!form.name.trim()) {
-          setMessage("Product name is required.");
+          setMessage("Nama produk wajib diisi.");
           return;
         }
 
         setSaving(true);
-        setMessage("Saving product...");
+        setMessage("Menyimpan produk...");
 
         try {
-          const savedProduct = await createProduct(form);
+          const savedProduct = await createProduct({
+            ...form,
+            image: normalizeProductImage(form.image),
+          });
           dispatch({ type: "addProduct", payload: savedProduct });
           setForm({
             code: generateProductCode(),
@@ -65,10 +79,10 @@ export default function ProductForm() {
             category: "Electronics",
             image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=600&q=80",
           });
-          setMessage("Product saved to Firebase.");
+          setMessage("Produk berhasil disimpan.");
         } catch (error) {
           console.error("Failed to save product:", error);
-          setMessage("Firebase save failed. Check Firestore product rules.");
+          setMessage("Gagal menyimpan produk.");
         } finally {
           setSaving(false);
         }
@@ -76,7 +90,7 @@ export default function ProductForm() {
     >
       <div className="grid gap-4 lg:grid-cols-3">
         <div>
-          <label className="text-xs font-bold text-slate-600">Code (Auto-generated)</label>
+          <label className="text-xs font-bold text-slate-600">Kode (dibuat otomatis)</label>
           <div className="mt-1 flex gap-2">
             <input className={`${inputClass} min-w-0 flex-1`} disabled value={form.code} />
             <button
@@ -84,16 +98,16 @@ export default function ProductForm() {
               onClick={handleRegenCode}
               className="shrink-0 rounded bg-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-400"
             >
-              Regen
+              Buat ulang
             </button>
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-bold text-slate-600">Name *</label>
+          <label className="text-xs font-bold text-slate-600">Nama *</label>
           <input
             className={inputClass}
-            placeholder="Product name"
+            placeholder="Nama produk"
             required
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
@@ -101,7 +115,7 @@ export default function ProductForm() {
         </div>
 
         <div>
-          <label className="text-xs font-bold text-slate-600">Category *</label>
+          <label className="text-xs font-bold text-slate-600">Kategori *</label>
           <select
             className={inputClass}
             required
@@ -110,7 +124,7 @@ export default function ProductForm() {
           >
             {CATEGORIES.map((cat) => (
               <option key={cat} value={cat}>
-                {cat}
+                {CATEGORY_LABELS[cat] ?? cat}
               </option>
             ))}
           </select>
@@ -136,7 +150,7 @@ export default function ProductForm() {
       </div>
 
       <div>
-        <label className="text-xs font-bold text-slate-600">Keseimbangan pekerjaan yang diperlukan (IDR)</label>
+        <label className="text-xs font-bold text-slate-600">Saldo kerja yang diperlukan (IDR)</label>
         <input
           className={inputClass}
           type="number"
@@ -147,7 +161,7 @@ export default function ProductForm() {
       </div>
 
       <div>
-        <label className="text-xs font-bold text-slate-600">Image URL</label>
+        <label className="text-xs font-bold text-slate-600">URL gambar</label>
         <input
           className={inputClass}
           placeholder="https://..."
@@ -157,13 +171,13 @@ export default function ProductForm() {
       </div>
 
       {message && (
-        <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") || message.includes("required") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+        <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("Gagal") || message.includes("wajib") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
           {message}
         </p>
       )}
 
       <button disabled={saving} className="rounded bg-forest px-4 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400">
-        {saving ? "Saving..." : "Save product"}
+        {saving ? "Menyimpan..." : "Simpan produk"}
       </button>
     </form>
   );

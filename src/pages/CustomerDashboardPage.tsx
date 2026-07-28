@@ -7,6 +7,7 @@ import { clearActiveCustomerId, getActiveCustomerId } from "../services/customer
 import { createOrder } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
+import { belongsToMember } from "../services/memberOwnership";
 import { useAppStore } from "../store/AppStore";
 import type { Transaction } from "../types";
 import { formatRupiah } from "../utils";
@@ -25,7 +26,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
   const memberOrders = useMemo(() => {
     if (!currentMember) return [];
-    return state.orders.filter((order) => order.member === currentMember.username);
+    return state.orders.filter((order) => belongsToMember(order, currentMember));
   }, [currentMember, state.orders]);
 
   const completedOrders = memberOrders.filter((order) => ["completed", "diserahkan"].includes(order.status));
@@ -49,29 +50,29 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
     if (!currentMember) return [];
 
     const rejectedOrderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && getOrderState(order) === "rejected")
+      .filter((order) => belongsToMember(order, currentMember) && getOrderState(order) === "rejected")
       .slice(0, 3)
       .map((order) => ({
         id: `order-rejected-${order.id}`,
-        title: "Product request rejected",
-        text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+        title: "Permintaan produk ditolak",
+        text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
         tone: "danger" as const,
         targetPath: "/orders",
       }));
 
     const orderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan", "rejected"].includes(order.status))
+      .filter((order) => belongsToMember(order, currentMember) && !["completed", "diserahkan", "rejected"].includes(order.status))
       .slice(0, 3)
       .map((order) => ({
         id: `order-${order.id}`,
         title: `Order ${order.status}`,
-        text: `${order.productName || "Pending assignment"} · ${getOrderCode(order)}`,
+        text: `${order.productName || "Menunggu penugasan"} · ${getOrderCode(order)}`,
         tone: "info" as const,
         targetPath: "/orders",
       }));
 
     const transactionNotifications = state.transactions
-      .filter((transaction) => transaction.member === currentMember.username)
+      .filter((transaction) => belongsToMember(transaction, currentMember))
       .slice(0, 3)
       .map((transaction) => ({
         id: `transaction-${transaction.id}`,
@@ -120,9 +121,11 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "addOrder", payload: order });
+      setAlertMessage("✓ Pesanan berhasil diterima. Menunggu admin menetapkan produk.");
       navigate("/take-order");
     } catch (error) {
       console.error("Failed to accept task:", error);
+      setAlertMessage(error instanceof Error ? error.message : "Pesanan tidak dapat diterima. Silakan coba lagi.");
     } finally {
       setIsAcceptingTask(false);
     }
@@ -137,7 +140,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
   if (!ready) {
     return (
       <main className="grid min-h-screen place-items-center customer-page-bg text-ink">
-        <div className="rounded-2xl bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
+        <div className="rounded-2xl bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Memulihkan sesi anggota...</div>
       </main>
     );
   }
@@ -155,15 +158,25 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
 
       {alertMessage && (
         <div className="fixed inset-x-0 top-20 z-50 mx-auto w-[calc(100%-2rem)] max-w-md">
-          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-amber-100">
+          <div
+            className={`rounded bg-white p-4 shadow-panel ring-1 ${
+              alertMessage.startsWith("✓") ? "ring-emerald-200" : "ring-amber-100"
+            }`}
+          >
             <div className="flex items-start gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-amber-50 text-amber-600">
-                <AlertCircle size={20} />
+              <div
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded ${
+                  alertMessage.startsWith("✓")
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-600"
+                }`}
+              >
+                {alertMessage.startsWith("✓") ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-black text-slate-900">{alertMessage}</p>
               </div>
-              <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={() => setAlertMessage("")} aria-label="Close alert">
+              <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={() => setAlertMessage("")} aria-label="Tutup pemberitahuan">
                 <X size={17} />
               </button>
             </div>
@@ -191,7 +204,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
                 <div className="h-full rounded-full bg-white" style={{ width: `${completionPercent}%` }} />
               </div>
               <p className="mt-4 text-center text-sm font-semibold text-white/90">Tugas selesai</p>
-              <p className="text-center text-4xl font-black">{completedOrders.length}</p>
+              <p className="text-center text-4xl font-black">{currentMember?.totalOrders ?? completedOrders.length}</p>
               <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest">
                 Selesaikan tugas pertama Anda <Star className="ml-1 inline" size={16} fill="currentColor" />
               </div>
@@ -214,7 +227,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
             <DashboardMetric
               icon={<Coins size={22} />}
               label="Daily commission"
-              description="Commission released after completed task orders"
+              description="Komisi diberikan setelah pesanan tugas selesai"
               value={formatRupiah(todayCommission)}
             />
             <div className="my-4 h-px bg-slate-100" />
@@ -236,7 +249,7 @@ export default function CustomerDashboardPage({ navigate }: { navigate: Navigate
               disabled={isAcceptingTask || (currentMember?.balance === 0)}
             >
               {currentMember ? <Banknote size={20} /> : <LogIn size={20} />}
-              {isAcceptingTask ? "Accepting..." : currentMember?.balance === 0 ? "Butuh Bonus Pendaftaran atau Isi Saldo?" : currentMember ? "Terima Pesanan" : "Masuk untuk Menerima Pesanan"}
+              {isAcceptingTask ? "Menerima..." : currentMember?.balance === 0 ? "Butuh Bonus Pendaftaran atau Isi Saldo?" : currentMember ? "Terima Pesanan" : "Masuk untuk Menerima Pesanan"}
             </button>
           </section>
 
@@ -280,6 +293,6 @@ function DashboardMetric({ icon, label, description, value }: { icon: React.Reac
 
 
 function getCustomerTransactionTitle(transaction: Transaction) {
-  const label = transaction.type === "reward" ? "Balance Reward" : transaction.type === "topup" ? "Isi Saldo" : "Penarikan";
+  const label = transaction.type === "reward" ? "Bonus Saldo" : transaction.type === "topup" ? "Isi Saldo" : "Penarikan";
   return transaction.status === "pending" ? `${label} pending` : `${label} ${transaction.status}`;
 }

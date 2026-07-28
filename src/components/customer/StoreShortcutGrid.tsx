@@ -17,25 +17,25 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
   return (
     <>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-        <StoreShortcut icon={<PackageCheck />} label="Orders" onClick={() => navigate("/orders")} />
-        <StoreShortcut icon={<WalletCards />} label="Top Up" onClick={onTopUp} />
-        <StoreShortcut icon={<Banknote />} label="Withdraw" onClick={onWithdraw} />
-        <StoreShortcut icon={<ReceiptText />} label="Records" onClick={() => setModal("records")} />
-        <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => setModal("security")} />
-        <StoreShortcut icon={<User />} label="Account" onClick={() => setModal("account")} />
+        <StoreShortcut icon={<PackageCheck />} label="Pesanan" onClick={() => navigate("/orders")} />
+        <StoreShortcut icon={<WalletCards />} label="Isi Saldo" onClick={onTopUp} />
+        <StoreShortcut icon={<Banknote />} label="Penarikan" onClick={onWithdraw} />
+        <StoreShortcut icon={<ReceiptText />} label="Catatan" onClick={() => setModal("records")} />
+        <StoreShortcut icon={<ShieldCheck />} label="Keamanan" onClick={() => setModal("security")} />
+        <StoreShortcut icon={<User />} label="Akun" onClick={() => setModal("account")} />
       </div>
 
       {modal === "records" && (
         <ShortcutInfoModal
           icon={<ReceiptText size={24} />}
-          title="Records"
+          title="Catatan"
           description="Tinjau pesanan tugas, riwayat isi saldo, riwayat penarikan, dan aktivitas akun Anda melalui halaman profil dan tugas."
-          primaryLabel="Open profile records"
+          primaryLabel="Buka catatan profil"
           onPrimary={() => {
             setModal(null);
             navigate(isLoggedIn ? "/profile" : "/login");
           }}
-          secondaryLabel="Task orders"
+          secondaryLabel="Pesanan tugas"
           onSecondary={() => {
             setModal(null);
             navigate("/orders");
@@ -47,7 +47,7 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
       {modal === "security" && (
         <ShortcutInfoModal
           icon={<ShieldCheck size={24} />}
-          title="Security Settings"
+          title="Pengaturan Keamanan"
           description="Kelola kata sandi akun dan kata sandi penarikan Anda melalui bagian keamanan profil."
           primaryLabel={isLoggedIn ? "Keamanan terbuka" : "Masuk terlebih dahulu"}
           onPrimary={() => {
@@ -118,11 +118,11 @@ function ShortcutInfoModal({
           <div className="flex items-center gap-3">
             <div className="grid h-12 w-12 place-items-center rounded bg-mint text-forest">{icon}</div>
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-forest">Customer shortcut</p>
+              <p className="text-xs font-black uppercase tracking-wide text-forest">Pintasan pelanggan</p>
               <h2 className="text-xl font-black text-slate-900">{title}</h2>
             </div>
           </div>
-          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close shortcut details">
+          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Tutup rincian pintasan">
             <X size={18} />
           </button>
         </div>

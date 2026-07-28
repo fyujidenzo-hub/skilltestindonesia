@@ -8,7 +8,15 @@ import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
 import AmountSortControls, { type AmountSort } from "./AmountSortControls";
-import Filters from "./Filters";
+import Filters, {
+  emptyAdminFilters,
+  getPhoneFilterVariants,
+  hasActiveAdminFilters,
+  normalizePhoneFilter,
+  type AdminFilterValues,
+} from "./Filters";
+import { getActiveAdmin } from "../../services/adminSession";
+import ProductImage from "../ProductImage";
 
 const productPageSize = 5;
 const rowPageSize = 10;
@@ -29,7 +37,8 @@ export default function OrderTable({
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }) {
-  const { dispatch } = useAppStore();
+  const { state, dispatch } = useAppStore();
+  const activeAdmin = getActiveAdmin(state.admins);
   const [targetOrder, setTargetOrder] = useState<Order | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productPage, setProductPage] = useState(0);
@@ -39,9 +48,49 @@ export default function OrderTable({
   const [amountSort, setAmountSort] = useState<AmountSort>("none");
   const [showFilters, setShowFilters] = useState(true);
   const [productSort, setProductSort] = useState<ProductSort>("none");
+  const [filterDraft, setFilterDraft] = useState<AdminFilterValues>(emptyAdminFilters);
+  const [appliedFilters, setAppliedFilters] = useState<AdminFilterValues>(emptyAdminFilters);
+
+  const membersByIdentity = useMemo(() => {
+    const lookup = new Map<string, Member>();
+    members.forEach((member) => {
+      lookup.set(member.id, member);
+      lookup.set(member.username.toLowerCase(), member);
+    });
+    return lookup;
+  }, [members]);
 
   const orderedRows = useMemo(() => {
-    return [...orders].sort((a, b) => {
+    const promotionCode = appliedFilters.promotionCode.trim().toLowerCase();
+    const usernameOrId = appliedFilters.usernameOrId.trim().toLowerCase();
+    const phoneSearches = getPhoneFilterVariants(appliedFilters.phone);
+
+    return orders
+      .filter((order) => {
+        const member =
+          (order.memberId ? membersByIdentity.get(order.memberId) : undefined) ??
+          membersByIdentity.get(order.member.toLowerCase());
+
+        const promotionMatch =
+          !promotionCode ||
+          [member?.invitationCode, member?.referredBy, order.admin]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(promotionCode));
+
+        const memberMatch =
+          !usernameOrId ||
+          [member?.username, member?.id, order.member, order.memberId]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(usernameOrId));
+
+        const memberPhone = normalizePhoneFilter(member?.phone);
+        const phoneMatch =
+          !phoneSearches.length ||
+          phoneSearches.some((phone) => memberPhone.includes(phone));
+
+        return promotionMatch && memberMatch && phoneMatch;
+      })
+      .sort((a, b) => {
       if (amountSort !== "none") {
         const difference = getOrderAmount(a) - getOrderAmount(b);
         return amountSort === "asc" ? difference : -difference;
@@ -51,7 +100,7 @@ export default function OrderTable({
       const right = new Date(b.createdAt.replace(" ", "T")).getTime();
       return right - left;
     });
-  }, [amountSort, orders]);
+  }, [amountSort, appliedFilters, membersByIdentity, orders]);
   const visibleRows = orderedRows;
   const totalRowPages = Math.max(1, Math.ceil(visibleRows.length / rowPageSize));
   const pagedRows = visibleRows.slice(rowPage * rowPageSize, rowPage * rowPageSize + rowPageSize);
@@ -73,7 +122,24 @@ export default function OrderTable({
 
   useEffect(() => {
     setRowPage(0);
-  }, [amountSort, orders.length]);
+  }, [amountSort, appliedFilters, orders.length]);
+
+  useEffect(() => {
+    if (rowPage > totalRowPages - 1) setRowPage(totalRowPages - 1);
+  }, [rowPage, totalRowPages]);
+
+  const applyOrderFilters = () => {
+    setAppliedFilters({
+      promotionCode: filterDraft.promotionCode.trim(),
+      usernameOrId: filterDraft.usernameOrId.trim(),
+      phone: filterDraft.phone.trim(),
+    });
+  };
+
+  const clearOrderFilters = () => {
+    setFilterDraft(emptyAdminFilters);
+    setAppliedFilters(emptyAdminFilters);
+  };
 
   const openProductModal = (order: Order) => {
     setTargetOrder(order);
@@ -108,9 +174,11 @@ export default function OrderTable({
         Boolean(targetOrder.productName || targetOrder.assignedProducts?.length);
       const updatedOrder = await assignOrderProduct(targetOrder, selectedProduct, {
         requiresCustomerApproval: isChangingCustomerRequest,
+        assignedByAdminId: activeAdmin?.id,
+        assignedByName: activeAdmin?.name,
       });
       dispatch({ type: "updateOrder", payload: updatedOrder });
-      setMessage(isChangingCustomerRequest ? "Product was changed. Customer must accept or reject the new product." : "Product was added to the pending order.");
+      setMessage(isChangingCustomerRequest ? "Produk berhasil diganti. Pelanggan harus menerima atau menolak produk baru." : "Produk berhasil ditambahkan ke pesanan yang menunggu.");
       closeProductModal();
       window.setTimeout(() => setMessage(""), 3500);
     } catch (error) {
@@ -142,9 +210,12 @@ export default function OrderTable({
     setIsSaving(true);
     setMessage("");
     try {
-      const updatedOrder = await assignOrderProducts(order, selectedItems);
+      const updatedOrder = await assignOrderProducts(order, selectedItems, {
+        assignedByAdminId: activeAdmin?.id,
+        assignedByName: activeAdmin?.name,
+      });
       dispatch({ type: "updateOrder", payload: updatedOrder });
-      setMessage("Product request approved. Customer can now send the order.");
+      setMessage("Permintaan produk disetujui. Pelanggan sekarang dapat mengirim pesanan.");
       window.setTimeout(() => setMessage(""), 3500);
     } catch (error) {
       console.error("Failed to approve product request:", error);
@@ -162,7 +233,7 @@ export default function OrderTable({
         completedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "updateOrder", payload: updatedOrder });
-      setMessage("Product request rejected.");
+      setMessage("Permintaan produk ditolak.");
       window.setTimeout(() => setMessage(""), 3500);
     } catch (error) {
       console.error("Failed to reject product request:", error);
@@ -175,7 +246,7 @@ export default function OrderTable({
   return (
     <>
       <Panel
-        title="Order Intake Records"
+        title="Catatan Pesanan Masuk"
         action={
           <div className="flex flex-wrap gap-2">
             <button
@@ -203,7 +274,14 @@ export default function OrderTable({
           </p>
         )}
         {showFilters && (
-          <Filters>
+          <Filters
+            values={filterDraft}
+            onChange={(field, value) =>
+              setFilterDraft((current) => ({ ...current, [field]: value }))
+            }
+            onSearch={applyOrderFilters}
+            onClear={clearOrderFilters}
+          >
             <AmountSortControls value={amountSort} onChange={setAmountSort} label="price" />
           </Filters>
         )}
@@ -276,7 +354,7 @@ export default function OrderTable({
                             {assignedProducts.map((product) => (
                               <span key={`${order.id}-${product.code}-${product.name}`} className="max-w-[270px] whitespace-pre-line font-semibold leading-5 text-slate-800">
                                 {product.name}
-                                <span className="block text-xs font-medium text-slate-500">Product price: {formatRupiah(getAssignedProductTotal(product))}</span>
+                                <span className="block text-xs font-medium text-slate-500">Harga produk: {formatRupiah(getAssignedProductTotal(product))}</span>
                               </span>
                             ))}
                           </div>
@@ -354,7 +432,9 @@ export default function OrderTable({
               ) : (
                 <tr>
                   <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
-                    Belum ada catatan pesanan dalam lingkup admin ini.
+                    {hasActiveAdminFilters(appliedFilters)
+                      ? "Tidak ada pesanan yang cocok dengan pencarian ini."
+                      : "Belum ada catatan pesanan dalam lingkup admin ini."}
                   </td>
                 </tr>
               )}
@@ -371,7 +451,7 @@ export default function OrderTable({
           <div className="w-full max-w-2xl rounded bg-white shadow-panel">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <h3 className="text-lg font-black">{targetOrder.productName || targetOrder.assignedProducts?.length ? "Change Product Request" : "Add Product to Order"}</h3>
+                <h3 className="text-lg font-black">{targetOrder.productName || targetOrder.assignedProducts?.length ? "Ubah Permintaan Produk" : "Tambahkan Produk ke Pesanan"}</h3>
                 <p className="text-xs font-semibold text-slate-500">{getOrderCode(targetOrder)}</p>
               </div>
               <button className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={closeProductModal}>
@@ -405,11 +485,11 @@ export default function OrderTable({
                       className={`grid grid-cols-[64px_1fr_auto] items-center gap-3 rounded border p-3 text-left transition hover:border-forest ${selectedProductId === product.id ? "border-forest bg-mint" : "border-slate-200"}`}
                       onClick={() => setSelectedProductId(product.id)}
                     >
-                      <img className="h-16 w-16 rounded object-cover" src={product.image} alt={product.name} />
+                      <ProductImage className="h-16 w-16 rounded object-cover" src={product.image} alt={product.name} />
                       <span className="min-w-0">
                         <span className="block truncate font-black text-slate-800">{product.name}</span>
                         <span className="block text-xs font-semibold text-slate-500">
-                          {product.code} · {product.quantity > 0 ? "Available" : "Unavailable"}
+                          {product.code} · {product.quantity > 0 ? "Tersedia" : "Tidak tersedia"}
                         </span>
                       </span>
                       <span className="text-right text-sm font-black text-forest">{formatRupiah(product.price)}</span>
@@ -417,7 +497,7 @@ export default function OrderTable({
                   ))}
                 </div>
               ) : (
-                <p className="rounded bg-slate-50 p-5 text-center text-sm text-slate-500">No products available. Add products in Catalog first.</p>
+                <p className="rounded bg-slate-50 p-5 text-center text-sm text-slate-500">Tidak ada produk tersedia. Tambahkan produk di Katalog terlebih dahulu.</p>
               )}
 
               <div className="mt-4 flex items-center justify-between">
@@ -450,7 +530,7 @@ export default function OrderTable({
                 disabled={isSaving || !selectedProductId}
                 onClick={saveProductAssignment}
               >
-                <CheckCircle2 size={18} /> {isSaving ? "Saving..." : "Save"}
+                <CheckCircle2 size={18} /> {isSaving ? "Menyimpan..." : "Simpan"}
               </button>
             </div>
           </div>
@@ -515,7 +595,7 @@ function OrderAction({ hasProduct, isCompleted, onAdd }: { hasProduct: boolean; 
     );
   }
 
-  return <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">Completed</span>;
+  return <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">Selesai</span>;
 }
 
 function TablePagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (page: number) => void }) {

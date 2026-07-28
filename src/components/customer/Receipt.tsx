@@ -41,7 +41,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Receipt ${getOrderCode(order)}</title>
+        <title>Struk ${getOrderCode(order)}</title>
         <style>
           body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
@@ -80,7 +80,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
           </div>
           <div class="row">
             <span class="label">Tanggal Pengajuan:</span>
-            <span class="value">${order.submittedAt || "Pending"}</span>
+            <span class="value">${order.submittedAt || "Menunggu"}</span>
           </div>
           <div class="row">
             <span class="label">Status Saat Ini:</span>
@@ -122,7 +122,7 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
             <tbody>
               <tr>
                 <td>${order.productCode || "-"}</td>
-                <td>${order.productName || "Pending Assignment"}</td>
+                <td>${order.productName || "Menunggu Penugasan"}</td>
                 <td>${formatRupiah(order.value || 0)}</td>
                 <td>${formatRupiah(order.commission || 0)}</td>
               </tr>
@@ -133,14 +133,14 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
         <div class="section">
           <div class="total">
             <div class="row">
-              <span>Total Amount Required:</span>
+              <span>Total Jumlah yang Diperlukan:</span>
               <span>${formatRupiah(order.requiredBalance || order.value || 0)}</span>
             </div>
           </div>
         </div>
 
         <div class="section">
-          <h3>Transaction ID</h3>
+          <h3>ID Transaksi</h3>
           <div class="row">
             <span class="label">ID:</span>
             <span class="value" style="font-family: monospace; font-size: 12px;">${order.id}</span>
@@ -148,9 +148,9 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
         </div>
 
         <div class="footer">
-          <p>This is a computer-generated receipt. No signature required.</p>
+          <p>Bukti ini dibuat secara otomatis oleh sistem. Tidak memerlukan tanda tangan.</p>
           <p>Generated on ${date.toLocaleString()}</p>
-          <p>Keep this receipt for your records.</p>
+          <p>Simpan bukti ini untuk arsip Anda.</p>
         </div>
       </body>
       </html>
@@ -163,21 +163,21 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
         {/* Receipt Display */}
         <div className="p-8 bg-white">
           <div className="text-center border-b-2 border-slate-300 pb-6 mb-6">
-            <h1 className="text-4xl font-bold">RECEIPT</h1>
+            <h1 className="text-4xl font-bold">BUKTI PEMBAYARAN</h1>
             <p className="text-slate-600">Tokopedia Kari Indonesia</p>
-            <p className="text-sm text-slate-500">Order Confirmation & Transaction Proof</p>
+            <p className="text-sm text-slate-500">Konfirmasi Pesanan & Bukti Transaksi</p>
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
-              <h3 className="font-bold mb-3 pb-2 border-b">Order Information</h3>
+              <h3 className="font-bold mb-3 pb-2 border-b">Informasi Pesanan</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Order Number:</span>
+                  <span className="text-slate-600">Nomor Pesanan:</span>
                   <span className="font-bold">{getOrderCode(order)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Order Date:</span>
+                  <span className="text-slate-600">Tanggal Pesanan:</span>
                   <span>{order.createdAt}</span>
                 </div>
                 <div className="flex justify-between">
@@ -188,18 +188,18 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
             </div>
 
             <div>
-              <h3 className="font-bold mb-3 pb-2 border-b">Member Information</h3>
+              <h3 className="font-bold mb-3 pb-2 border-b">Informasi Anggota</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Name:</span>
+                  <span className="text-slate-600">Nama:</span>
                   <span className="font-bold">{member.username}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Phone:</span>
+                  <span className="text-slate-600">Telepon:</span>
                   <span>{member.phone}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Level:</span>
+                  <span className="text-slate-600">Tingkat:</span>
                   <span>{member.level}</span>
                 </div>
               </div>
@@ -207,22 +207,22 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
           </div>
 
           <div className="mb-6">
-            <h3 className="font-bold mb-3 pb-2 border-b">Product Details</h3>
+            <h3 className="font-bold mb-3 pb-2 border-b">Rincian Produk</h3>
             <div className="bg-slate-50 p-4 rounded text-sm space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-600">Product Code:</span>
+                <span className="text-slate-600">Kode Produk:</span>
                 <span className="font-mono">{order.productCode || "-"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Product Name:</span>
-                <span>{order.productName || "Pending Assignment"}</span>
+                <span className="text-slate-600">Nama Produk:</span>
+                <span>{order.productName || "Menunggu Penugasan"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Price:</span>
+                <span className="text-slate-600">Harga:</span>
                 <span>{formatRupiah(order.value || 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Commission:</span>
+                <span className="text-slate-600">Komisi:</span>
                 <span className="text-emerald-700 font-bold">{formatRupiah(order.commission || 0)}</span>
               </div>
             </div>
@@ -230,13 +230,13 @@ export default function Receipt({ order, member, onClose }: ReceiptProps) {
 
           <div className="bg-forest/10 p-4 rounded mb-6">
             <div className="flex justify-between">
-              <span className="font-bold">Total Required:</span>
+              <span className="font-bold">Total yang Diperlukan:</span>
               <span className="text-2xl font-bold text-forest">{formatRupiah(order.requiredBalance || order.value || 0)}</span>
             </div>
           </div>
 
           <div className="text-xs text-slate-500 text-center pb-4 border-b">
-            <p>Transaction ID: <span className="font-mono text-slate-700">{order.id}</span></p>
+            <p>ID Transaksi: <span className="font-mono text-slate-700">{order.id}</span></p>
             <p className="mt-2">Generated on {new Date().toLocaleString()}</p>
           </div>
         </div>

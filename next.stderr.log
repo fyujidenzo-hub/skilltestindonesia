@@ -1,1 +1,0 @@
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Users\Admin\Documents\tokopediakaririndonesia\.next\cache\webpack\client-development\2.pack.gz_' -> 'C:\Users\Admin\Documents\tokopediakaririndonesia\.next\cache\webpack\client-development\2.pack.gz'

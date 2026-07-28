@@ -54,26 +54,26 @@ export default function WalletValidation({
         <div className="w-full max-w-sm rounded bg-white p-6 shadow-panel">
           <div className="mb-4 flex items-start gap-3">
             <AlertCircle className="mt-1 flex-shrink-0 text-rose-600" size={24} />
-            <h3 className="text-xl font-bold">Top Up Required</h3>
+            <h3 className="text-xl font-bold">Isi Saldo Diperlukan</h3>
           </div>
 
           <div className="mb-4 space-y-2 rounded bg-rose-50 p-4">
             <div className="flex justify-between gap-4">
-              <span className="text-sm text-slate-600">Order Amount:</span>
+              <span className="text-sm text-slate-600">Jumlah Pesanan:</span>
               <span className="font-bold text-slate-900">
                 {formatRupiah(orderAmount)}
               </span>
             </div>
 
             <div className="flex justify-between gap-4">
-              <span className="text-sm text-slate-600">Your Balance:</span>
+              <span className="text-sm text-slate-600">Saldo Anda:</span>
               <span className="font-bold text-rose-700">
                 {formatRupiah(currentBalance)}
               </span>
             </div>
 
             <div className="flex justify-between gap-4 border-t border-rose-200 pt-2">
-              <span className="text-sm font-bold text-slate-600">Shortage:</span>
+              <span className="text-sm font-bold text-slate-600">Kekurangan:</span>
               <span className="font-bold text-rose-700">
                 {formatRupiah(shortage)}
               </span>

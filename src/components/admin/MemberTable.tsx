@@ -1,11 +1,19 @@
 import { Panel } from "../common";
 import type { Member } from "../../types";
 import { formatRupiah } from "../../utils";
-import Filters from "./Filters";
+import Filters, {
+  emptyAdminFilters,
+  getPhoneFilterVariants,
+  hasActiveAdminFilters,
+  normalizePhoneFilter,
+  type AdminFilterValues,
+} from "./Filters";
 import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { getMemberById, updateMember } from "../../services/membersService";
+import { getMemberById, updateMemberProfile, updateMemberWithdrawalPin } from "../../services/membersService";
 import { createRewardTransaction } from "../../services/transactionsService";
+import { hashWithdrawalPin } from "../../services/pinSecurity";
+import { resetMemberAccountPassword } from "../../services/adminSecurityService";
 import { useAppStore } from "../../store/AppStore";
 
 const pageSize = 10;
@@ -38,15 +46,40 @@ const taskTarget = 15;
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [showWithdrawalPassword, setShowWithdrawalPassword] = useState(false);
   const [page, setPage] = useState(0);
+  const [filterDraft, setFilterDraft] = useState<AdminFilterValues>(emptyAdminFilters);
+  const [appliedFilters, setAppliedFilters] = useState<AdminFilterValues>(emptyAdminFilters);
 
   const sortedMembers = useMemo(
     () =>
-      [...members].sort((left, right) => {
+      members
+        .filter((member) => {
+          const promotionCode = appliedFilters.promotionCode.trim().toLowerCase();
+          const usernameOrId = appliedFilters.usernameOrId.trim().toLowerCase();
+          const phoneSearches = getPhoneFilterVariants(appliedFilters.phone);
+
+          const promotionMatch =
+            !promotionCode ||
+            [member.invitationCode, member.referredBy]
+              .filter(Boolean)
+              .some((value) => String(value).toLowerCase().includes(promotionCode));
+          const memberMatch =
+            !usernameOrId ||
+            [member.username, member.id, member.email]
+              .filter(Boolean)
+              .some((value) => String(value).toLowerCase().includes(usernameOrId));
+          const memberPhone = normalizePhoneFilter(member.phone);
+          const phoneMatch =
+            !phoneSearches.length ||
+            phoneSearches.some((phone) => memberPhone.includes(phone));
+
+          return promotionMatch && memberMatch && phoneMatch;
+        })
+        .sort((left, right) => {
         const rightDate = new Date(right.lastLogin.replace(" ", "T")).getTime();
         const leftDate = new Date(left.lastLogin.replace(" ", "T")).getTime();
         return (Number.isNaN(rightDate) ? 0 : rightDate) - (Number.isNaN(leftDate) ? 0 : leftDate);
       }),
-    [members],
+    [appliedFilters, members],
   );
   const totalPages = Math.max(1, Math.ceil(sortedMembers.length / pageSize));
   const visibleMembers = sortedMembers.slice(page * pageSize, page * pageSize + pageSize);
@@ -57,7 +90,24 @@ const taskTarget = 15;
 
   useEffect(() => {
     setPage(0);
-  }, [members.length]);
+  }, [appliedFilters, members.length]);
+
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(totalPages - 1);
+  }, [page, totalPages]);
+
+  const applyMemberFilters = () => {
+    setAppliedFilters({
+      promotionCode: filterDraft.promotionCode.trim(),
+      usernameOrId: filterDraft.usernameOrId.trim(),
+      phone: filterDraft.phone.trim(),
+    });
+  };
+
+  const clearMemberFilters = () => {
+    setFilterDraft(emptyAdminFilters);
+    setAppliedFilters(emptyAdminFilters);
+  };
 
 const openModal = (member: Member, type: "edit" | "balance") => {
   if (type === "balance" && !canManageMemberFinance) return;
@@ -97,31 +147,39 @@ const openModal = (member: Member, type: "edit" | "balance") => {
       const isDirectBalanceCredit = modalType === "balance";
       const resetAccountPassword = modalType === "edit" && canManageMemberFinance ? form.accountPassword.trim() : "";
       const resetWithdrawalPassword = modalType === "edit" && canManageMemberFinance ? form.withdrawalPassword.trim() : "";
-      const memberChanges: Partial<Member> =
-        modalType === "edit"
-          ? {
-              username: form.username.trim(),
-              phone: form.phone.trim(),
-              level: form.level as Member["level"],
-              ...(resetAccountPassword ? { accountPassword: resetAccountPassword } : {}),
-              ...(resetWithdrawalPassword ? { withdrawalPassword: resetWithdrawalPassword } : {}),
-              ...(canManageWithdrawalLock
-                ? {
-                    withdrawalLocked: form.withdrawalLocked,
-                    withdrawalRemarks: form.withdrawalRemarks.trim(),
-                  }
-                : {}),
-            }
-          : { balance: activeMember.balance + amount };
+      if (modalType === "edit") {
+        await updateMemberProfile(activeMember, {
+          username: form.username.trim(),
+          phone: form.phone.trim(),
+          level: form.level as Member["level"],
+          ...(canManageWithdrawalLock
+            ? {
+                withdrawalLocked: form.withdrawalLocked,
+                withdrawalRemarks: form.withdrawalRemarks.trim(),
+              }
+            : {}),
+        });
+        if (resetAccountPassword) await resetMemberAccountPassword(activeMember.id, resetAccountPassword);
+        if (resetWithdrawalPassword) {
+          await updateMemberWithdrawalPin(activeMember.id, await hashWithdrawalPin(resetWithdrawalPassword));
+        }
+      }
 
-      await updateMember(activeMember.id, memberChanges);
+      if (isDirectBalanceCredit && amount > 0) {
+        const rewardTransaction = await createRewardTransaction({
+          memberId: activeMember.id,
+          member: activeMember.username,
+          admin: "Super Admin",
+          amount,
+        });
+
+        dispatch({ type: "addTransaction", payload: rewardTransaction });
+      }
+
       const savedMember = await getMemberById(activeMember.id);
       if (!savedMember) throw new Error("Data anggota tidak dapat dimuat ulang setelah disimpan.");
 
-      if (resetAccountPassword && savedMember.accountPassword !== resetAccountPassword) {
-        throw new Error("Kata sandi akun tidak berhasil disimpan.");
-      }
-      if (resetWithdrawalPassword && savedMember.withdrawalPassword !== resetWithdrawalPassword) {
+      if (resetWithdrawalPassword && !savedMember.withdrawalPinHash) {
         throw new Error("PIN penarikan tidak berhasil disimpan.");
       }
       if (canManageWithdrawalLock && Boolean(savedMember.withdrawalLocked) !== form.withdrawalLocked) {
@@ -130,16 +188,6 @@ const openModal = (member: Member, type: "edit" | "balance") => {
 
       dispatch({ type: "updateMember", payload: savedMember });
       setActiveMember(savedMember);
-
-      if (isDirectBalanceCredit && amount > 0) {
-        const rewardTransaction = await createRewardTransaction({
-          member: activeMember.username,
-          admin: "Super Admin",
-          amount,
-        });
-
-        dispatch({ type: "addTransaction", payload: rewardTransaction });
-      }
 
       const savedItems = [
         resetAccountPassword ? "kata sandi akun diatur ulang" : "",
@@ -161,8 +209,15 @@ const openModal = (member: Member, type: "edit" | "balance") => {
   };
 
   return (
-    <Panel title="Member Management">
-      <Filters />
+    <Panel title="Manajemen Anggota">
+      <Filters
+        values={filterDraft}
+        onChange={(field, value) =>
+          setFilterDraft((current) => ({ ...current, [field]: value }))
+        }
+        onSearch={applyMemberFilters}
+        onClear={clearMemberFilters}
+      />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <MemberSummary label="Total members" value={String(sortedMembers.length)} />
@@ -242,7 +297,9 @@ const openModal = (member: Member, type: "edit" | "balance") => {
               ) : (
                 <tr>
                   <td colSpan={8} className="p-6 text-center text-sm text-slate-500">
-                    Tidak ada anggota yang ditemukan dalam cakupan admin ini.
+                    {hasActiveAdminFilters(appliedFilters)
+                      ? "Tidak ada anggota yang cocok dengan pencarian ini."
+                      : "Tidak ada anggota yang ditemukan dalam cakupan admin ini."}
                   </td>
                 </tr>
               )}
@@ -257,7 +314,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
           <form className="w-full max-w-sm rounded bg-white p-6 shadow-panel" onSubmit={saveMemberChange}>
             <h3 className="text-xl font-black">
-              {modalType === "edit" ? "Edit Member" : "Add Balance"}
+              {modalType === "edit" ? "Edit Anggota" : "Tambah Saldo"}
             </h3>
             <p className="mt-1 text-sm text-slate-500">{activeMember.username}</p>
 
@@ -292,7 +349,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                         onChange={(event) => setForm({ ...form, accountPassword: event.target.value })}
                         type={showAccountPassword ? "text" : "password"}
                         autoComplete="off"
-                        placeholder="Enter new account password"
+                        placeholder="Masukkan kata sandi akun baru"
                       />
                         <PasswordVisibilityButton visible={showAccountPassword} onToggle={() => setShowAccountPassword((visible) => !visible)} />
                       </div>
@@ -306,7 +363,7 @@ const openModal = (member: Member, type: "edit" | "balance") => {
                         onChange={(event) => setForm({ ...form, withdrawalPassword: event.target.value })}
                         type={showWithdrawalPassword ? "text" : "password"}
                         autoComplete="off"
-                        placeholder="Enter new withdrawal password / PIN"
+                        placeholder="Masukkan kata sandi / PIN penarikan baru"
                       />
                         <PasswordVisibilityButton visible={showWithdrawalPassword} onToggle={() => setShowWithdrawalPassword((visible) => !visible)} />
                       </div>

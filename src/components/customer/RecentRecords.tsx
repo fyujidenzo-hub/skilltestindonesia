@@ -22,7 +22,7 @@ export default function RecentRecords({ transactions }: { transactions: Transact
               <div className="min-w-0">
                 <p className="font-black text-slate-900">{getRecordLabel(transaction)}</p>
                 <p className="mt-0.5 text-xs font-semibold text-slate-500">
-                  {transaction.status === "pending" ? "Pending" : transaction.status === "rejected" ? "Ditolak" : "Disetujui"}
+                  {transaction.status === "pending" ? "Menunggu" : transaction.status === "rejected" ? "Ditolak" : "Disetujui"}
                   {transaction.createdAt ? ` · ${shortDate(transaction.createdAt)}` : ""}
                 </p>
               </div>
@@ -42,9 +42,9 @@ export default function RecentRecords({ transactions }: { transactions: Transact
 }
 
 function getRecordLabel(transaction: Transaction) {
-  if (transaction.type === "reward") return "Balance Reward";
-  if (transaction.type === "topup") return "Balance Top-up";
-  return "Balance Withdrawal";
+  if (transaction.type === "reward") return "Bonus Saldo";
+  if (transaction.type === "topup") return "Isi Saldo";
+  return "Penarikan Saldo";
 }
 
 function parseRecordTime(value: string) {

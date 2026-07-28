@@ -5,6 +5,8 @@ export type OrderStatus = "no_task" | "waiting_assignment" | "product_assigned" 
 
 export interface StaffAdmin {
   id: string;
+  authUid?: string;
+  authEmail?: string;
   name: string;
   code: string;
   adminCode?: string;
@@ -16,23 +18,32 @@ export interface StaffAdmin {
   todayWithdrawals: number;
   monthWithdrawals: number;
   username?: string;
+  usernameNormalized?: string;
   password?: string;
   role?: AdminRole;
 }
 
 export interface Member {
   id: string;
+  authUid?: string;
+  authEmail?: string;
   username: string;
+  usernameNormalized?: string;
   email?: string;
   phone: string;
+  phoneNormalized?: string;
   invitationCode: string;
   referredBy: string;
+  referredByAdminId?: string;
   level: UserLevel;
   balance: number;
   totalOrders: number;
+  lastCompletedOrderId?: string;
+  lastBalanceTransactionId?: string;
   lastLogin: string;
   accountPassword?: string;
   withdrawalPassword?: string;
+  withdrawalPinHash?: string;
   withdrawalLocked?: boolean;
   withdrawalRemarks?: string;
   favoriteProductIds?: string[];
@@ -72,6 +83,7 @@ export interface BankPlacement {
 export interface Transaction {
   id: string;
   requestId?: string;
+  memberId?: string;
   member: string;
   admin: string;
   type: "topup" | "withdrawal" | "reward";
@@ -110,6 +122,8 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   assignedAt?: string;
+  assignedByAdminId?: string;
+  assignedByName?: string;
   completedAt?: string;
   submittedAt?: string;
   shippedAt?: string;
@@ -130,9 +144,6 @@ export interface AppState {
   transactions: Transaction[];
   orders: Order[];
   account: {
-    username: string;
-    password: string;
-    withdrawalPassword: string;
     siteUrl?: string;
     customerServiceTelegramUrl?: string;
   };

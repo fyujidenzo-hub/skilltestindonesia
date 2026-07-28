@@ -32,7 +32,7 @@ export default function AdminHeader({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-emerald-100">
-            <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
+            <img className="h-full w-full object-cover" src={customerLogo} alt="Akun kerja Tokopedia" />
           </div>
           <div>
             <h1 className="text-lg font-bold leading-tight">Dewan Admin</h1>
@@ -46,7 +46,7 @@ export default function AdminHeader({
           <div className="relative">
             <button
               className={`relative grid h-10 w-10 place-items-center rounded border text-slate-600 transition ${showNotifications ? "border-forest bg-mint text-forest" : "border-slate-200 hover:bg-slate-50"}`}
-              aria-label="Notifications"
+              aria-label="Notifikasi"
               aria-expanded={showNotifications}
               onClick={() => setShowNotifications((isOpen) => !isOpen)}
             >
@@ -61,10 +61,10 @@ export default function AdminHeader({
               <div className="absolute right-0 top-12 z-50 w-[min(380px,calc(100vw-2rem))] rounded border border-slate-200 bg-white shadow-panel">
                 <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
                   <div>
-                    <p className="text-sm font-black text-slate-900">Notifications</p>
-                    <p className="text-xs text-slate-500">{notifications.length ? "Latest admin activity" : "No notifications currently"}</p>
+                    <p className="text-sm font-black text-slate-900">Notifikasi</p>
+                    <p className="text-xs text-slate-500">{notifications.length ? "Aktivitas admin terbaru" : "Belum ada notifikasi"}</p>
                   </div>
-                  <button className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close notifications" onClick={() => setShowNotifications(false)}>
+                  <button className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Tutup notifikasi" onClick={() => setShowNotifications(false)}>
                     <X size={15} />
                   </button>
                 </div>

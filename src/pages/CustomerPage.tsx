@@ -11,6 +11,7 @@ import { clearActiveCustomerId, getActiveCustomerId } from "../services/customer
 import { completeWorkflowOrder, createOrder, submitWorkflowOrder, updateOrderStatus } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
+import { belongsToMember } from "../services/memberOwnership";
 import { updateMember } from "../services/membersService";
 import { useAppStore } from "../store/AppStore";
 import type { Order, Product, Transaction } from "../types";
@@ -66,7 +67,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   const activeOrder = currentMember
     ? state.orders.find((order) => 
-        order.member === currentMember.username && 
+        belongsToMember(order, currentMember) &&
         !["completed", "diserahkan", "rejected"].includes(order.status)
       ) ?? null
     : null;
@@ -75,29 +76,29 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     if (!currentMember) return [];
 
     const rejectedOrderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && getOrderState(order) === "rejected")
+      .filter((order) => belongsToMember(order, currentMember) && getOrderState(order) === "rejected")
       .slice(0, 3)
       .map((order) => ({
         id: `order-rejected-${order.id}`,
-        title: "Product request rejected",
-        text: `${order.productName || "Selected product"} · ${getOrderCode(order)}`,
+        title: "Permintaan produk ditolak",
+        text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
         tone: "danger" as const,
         targetPath: "/orders",
       }));
 
     const orderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan", "rejected"].includes(order.status))
+      .filter((order) => belongsToMember(order, currentMember) && !["completed", "diserahkan", "rejected"].includes(order.status))
       .slice(0, 3)
       .map((order) => ({
         id: `order-${order.id}`,
         title: `Order ${order.status}`,
-        text: `${order.productName || "Pending assignment"} · ${getOrderCode(order)}`,
+        text: `${order.productName || "Menunggu penugasan"} · ${getOrderCode(order)}`,
         tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
         targetPath: "/orders",
       }));
 
     const transactionNotifications = state.transactions
-      .filter((transaction) => transaction.member === currentMember.username)
+      .filter((transaction) => belongsToMember(transaction, currentMember))
       .slice(0, 4)
       .map((transaction) => ({
         id: `transaction-${transaction.id}`,
@@ -142,9 +143,9 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     }
   };
 
-  const handleAcceptTask = async (product?: Product) => {
+  const handleAcceptTask = async (_product?: Product) => {
     if (!currentMember) {
-      setLoginAlert("You have to log in first!");
+      setLoginAlert("Anda harus masuk terlebih dahulu!");
       return;
     }
     if (activeOrder) {
@@ -158,30 +159,18 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         memberId: currentMember.id,
         member: currentMember.username,
         admin: currentMember.referredBy,
-        productCode: product?.code ?? "",
-        productName: product?.name ?? "",
-        quantity: product ? 1 : 0,
-        assignedProducts: product
-          ? [
-              {
-                productId: product.id,
-                code: product.code,
-                name: product.name,
-                price: product.price,
-                commission: product.commission,
-                quantity: 1,
-                total: product.price,
-              },
-            ]
-          : [],
-        value: product?.price ?? 0,
-        commission: product?.commission ?? 0,
-        requiredBalance: product?.price ?? 0,
+        productCode: "",
+        productName: "",
+        quantity: 0,
+        assignedProducts: [],
+        value: 0,
+        commission: 0,
+        requiredBalance: 0,
         status: "waiting_assignment",
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "addOrder", payload: order });
-      setTaskMessage(product ? "Permintaan produk telah dikirim. Menunggu persetujuan admin." : "Pesanan berhasil diterima. Menunggu admin menetapkan produk.");
+      setTaskMessage("✓ Pesanan berhasil diterima. Menunggu admin menetapkan produk.");
     } catch (error) {
       console.error("Failed to accept task:", error);
       setTaskMessage("Tidak dapat menerima tugas. Silakan coba lagi.");
@@ -249,7 +238,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       setTaskMessage("Produk yang diubah telah disetujui. Anda sekarang dapat mengirimkan pesanan tersebut.");
     } catch (error) {
       console.error("Failed to accept changed product:", error);
-      setTaskMessage(error instanceof Error ? error.message : "Unable to accept changed product.");
+      setTaskMessage(error instanceof Error ? error.message : "Produk pengganti tidak dapat diterima.");
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -359,9 +348,29 @@ return (
       />
 
       {taskMessage && (
-        <p className="mt-5 rounded-2xl bg-emerald-50/95 p-4 text-sm font-bold text-emerald-700 shadow-sm backdrop-blur">
-          {taskMessage}
-        </p>
+        <div
+          className={`mt-5 flex items-start gap-3 rounded-2xl p-4 text-sm font-bold shadow-sm backdrop-blur ${
+            taskMessage.startsWith("✓")
+              ? "bg-emerald-50/95 text-emerald-700"
+              : "bg-amber-50/95 text-amber-800"
+          }`}
+          role="alert"
+        >
+          {taskMessage.startsWith("✓") ? (
+            <CheckCircle2 className="mt-0.5 shrink-0" size={19} />
+          ) : (
+            <AlertCircle className="mt-0.5 shrink-0" size={19} />
+          )}
+          <span className="min-w-0 flex-1">{taskMessage.replace(/^✓\s*/, "")}</span>
+          <button
+            type="button"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg hover:bg-black/5"
+            onClick={() => setTaskMessage("")}
+            aria-label="Tutup pemberitahuan"
+          >
+            <X size={16} />
+          </button>
+        </div>
       )}
 
       <div className="mx-auto mt-6 w-full max-w-4xl">
@@ -370,7 +379,7 @@ return (
             currentMember
               ? state.transactions.filter(
                   (transaction) =>
-                    transaction.member === currentMember.username
+                    belongsToMember(transaction, currentMember)
                 )
               : []
           }
@@ -426,14 +435,14 @@ function TaskStatusModal({
   const state = getOrderState(order);
   const assignedProduct = order?.assignedProducts?.[0];
   const fallbackProduct = order?.productCode ? products.find((product) => product.code === order.productCode) : undefined;
-  const productName = assignedProduct?.name ?? order?.productName ?? fallbackProduct?.name ?? "No product assigned yet";
+  const productName = assignedProduct?.name ?? order?.productName ?? fallbackProduct?.name ?? "Belum ada produk yang ditugaskan";
   const requiredBalance = order?.requiredBalance ?? order?.value ?? 0;
   const shortage = Math.max(0, requiredBalance - balance);
   const steps = [
-    { key: "waiting_assignment", label: "Task taken", icon: <Clock size={16} /> },
-    { key: "product_assigned", label: "Product assigned", icon: <PackageCheck size={16} /> },
-    { key: "waiting_shipment", label: "Waiting shipment", icon: <Truck size={16} /> },
-    { key: "diserahkan", label: "Completed", icon: <CheckCircle2 size={16} /> },
+    { key: "waiting_assignment", label: "Tugas diambil", icon: <Clock size={16} /> },
+    { key: "product_assigned", label: "Produk ditugaskan", icon: <PackageCheck size={16} /> },
+    { key: "waiting_shipment", label: "Menunggu pengiriman", icon: <Truck size={16} /> },
+    { key: "diserahkan", label: "Selesai", icon: <CheckCircle2 size={16} /> },
   ];
   const activeIndex = state === "no_task" ? -1 : state === "belum_diserahkan" ? 2 : steps.findIndex((step) => step.key === state);
 
@@ -456,7 +465,7 @@ function TaskStatusModal({
             <p className="text-xs font-black uppercase tracking-wide text-forest">Laporan status tugas</p>
             <h2 className="mt-1 text-2xl font-black text-slate-900">{statusLabel}</h2>
           </div>
-          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close task status">
+          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Tutup status tugas">
             <X size={18} />
           </button>
         </div>
@@ -477,11 +486,11 @@ function TaskStatusModal({
           </div>
 
           <div className="grid gap-4 rounded bg-slate-50 p-4 sm:grid-cols-2">
-            <StatusItem label="Transaction number" value={order ? getOrderCode(order) : "No task accepted"} />
-            <StatusItem label="Date" value={order?.createdAt ? shortDate(order.createdAt) : "-"} />
-            <StatusItem label="Assigned product" value={productName} />
-            <StatusItem label="Order amount" value={formatRupiah(requiredBalance)} />
-            <StatusItem label="Commission" value={formatRupiah(order?.commission ?? 0)} />
+            <StatusItem label="Nomor transaksi" value={order ? getOrderCode(order) : "Belum ada tugas yang diambil"} />
+            <StatusItem label="Tanggal" value={order?.createdAt ? shortDate(order.createdAt) : "-"} />
+            <StatusItem label="Produk yang ditugaskan" value={productName} />
+            <StatusItem label="Jumlah pesanan" value={formatRupiah(requiredBalance)} />
+            <StatusItem label="Komisi" value={formatRupiah(order?.commission ?? 0)} />
           </div>
 
           {shortage > 0 && (
@@ -534,7 +543,7 @@ function LoginRequiredAlert({ message, onClose, onLogin }: { message: string; on
               Masuk sekarang
             </button>
           </div>
-          <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close login alert">
+          <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Tutup pemberitahuan masuk">
             <X size={17} />
           </button>
         </div>
@@ -545,6 +554,6 @@ function LoginRequiredAlert({ message, onClose, onLogin }: { message: string; on
 
 
 function getCustomerTransactionTitle(transaction: Transaction) {
-  const label = transaction.type === "reward" ? "Balance Reward" : transaction.type === "topup" ? "Balance Top-up" : "Withdrawal";
+  const label = transaction.type === "reward" ? "Bonus Saldo" : transaction.type === "topup" ? "Isi Saldo" : "Penarikan";
   return transaction.status === "pending" ? `${label} pending` : `${label} ${transaction.status}`;
 }
