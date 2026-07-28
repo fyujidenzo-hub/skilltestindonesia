@@ -22,6 +22,17 @@ Then edit `.env.local` and add your actual API keys:
 - Firebase credentials
 - Resend API key
 
+For the production Node server, Firebase Admin must also be configured. On
+Hostinger, set one of the following:
+
+- `FIREBASE_SERVICE_ACCOUNT_BASE64`: Base64-encoded service account JSON
+- `FIREBASE_SERVICE_ACCOUNT_JSON`: Complete service account JSON
+- `FIREBASE_SERVICE_ACCOUNT_FILE`: Absolute path to a private JSON file uploaded outside the public web directory
+
+After changing the environment variables, restart the Node application. Verify
+`https://skilltestindonesia.com/api/health` returns
+`"firebaseAdminReady":true`.
+
 **⚠️ NEVER commit `.env` or `.env.local` to git. They are in `.gitignore` for a reason.**
 
 ### 4. Run development server

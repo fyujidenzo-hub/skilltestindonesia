@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { cert, getApps, initializeApp as initializeAdminApp } from "firebase-admin/app";
+import { applicationDefault, cert, getApps, initializeApp as initializeAdminApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 import { createHash, pbkdf2Sync, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
@@ -17,20 +17,68 @@ app.disable("x-powered-by");
 let adminAuth = null;
 let adminFirestore = null;
 
-try {
-  const serviceAccountFile = process.env.FIREBASE_SERVICE_ACCOUNT_FILE;
-  const serviceAccountJson =
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
-    (serviceAccountFile ? readFileSync(path.resolve(serviceAccountFile), "utf8") : "");
-  const expectedProjectId = process.env.VITE_FIREBASE_PROJECT_ID;
-  if (!serviceAccountJson) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_FILE is missing.");
+function parseServiceAccountJson(value) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  const candidates = [
+    trimmed,
+    trimmed.replace(/^['"]|['"]$/g, ""),
+    Buffer.from(trimmed, "base64").toString("utf8"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed?.project_id && parsed?.client_email && parsed?.private_key) {
+        return {
+          ...parsed,
+          private_key: parsed.private_key.replace(/\\n/g, "\n"),
+        };
+      }
+    } catch {
+      // Try the next supported environment-variable format.
+    }
   }
-  const serviceAccount = JSON.parse(serviceAccountJson);
+  return null;
+}
+
+try {
+  const expectedProjectId = process.env.VITE_FIREBASE_PROJECT_ID;
+  const serviceAccountFile =
+    process.env.FIREBASE_SERVICE_ACCOUNT_FILE ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const serviceAccountFromFile = serviceAccountFile
+    ? readFileSync(path.resolve(serviceAccountFile), "utf8")
+    : "";
+  const serviceAccountFromFields =
+    process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY
+      ? JSON.stringify({
+          project_id: process.env.FIREBASE_PROJECT_ID || expectedProjectId,
+          client_email: process.env.FIREBASE_CLIENT_EMAIL,
+          private_key: process.env.FIREBASE_PRIVATE_KEY,
+        })
+      : "";
+  const serviceAccount = parseServiceAccountJson(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+      process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 ||
+      serviceAccountFromFile ||
+      serviceAccountFromFields,
+  );
+  const hasApplicationDefaultEnvironment = Boolean(
+    process.env.GOOGLE_CLOUD_PROJECT ||
+      process.env.GCLOUD_PROJECT ||
+      process.env.K_SERVICE ||
+      process.env.FUNCTION_TARGET ||
+      process.env.FUNCTION_NAME,
+  );
+
   if (serviceAccount?.project_id && expectedProjectId && serviceAccount.project_id !== expectedProjectId) {
     throw new Error(`Firebase Admin project mismatch: expected ${expectedProjectId}, received ${serviceAccount.project_id}.`);
   }
-  const credential = cert(serviceAccount);
+  if (!serviceAccount && !hasApplicationDefaultEnvironment) {
+    throw new Error("Firebase Admin credentials are missing.");
+  }
+  const credential = serviceAccount ? cert(serviceAccount) : applicationDefault();
   const adminApp = getApps()[0] ?? initializeAdminApp({ credential, projectId: expectedProjectId });
   if (expectedProjectId && adminApp.options.projectId && adminApp.options.projectId !== expectedProjectId) {
     throw new Error(`Firebase Admin project mismatch: expected ${expectedProjectId}, received ${adminApp.options.projectId}.`);
@@ -178,6 +226,10 @@ app.post("/api/register/check-identity", async (req, res) => {
     console.error("Identity availability check failed:", error);
     return res.status(500).json({ error: "Ketersediaan akun tidak dapat diperiksa." });
   }
+});
+
+app.get("/api/register/check-identity", (_req, res) => {
+  res.status(405).json({ error: "Endpoint ini menggunakan metode POST." });
 });
 
 app.post("/api/register", async (req, res) => {
