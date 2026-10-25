@@ -103,6 +103,7 @@ app.use((_req, res, next) => {
 });
 const allowedOrigins = new Set([
   "https://skilltestindonesia.com",
+  "https://skillmitraindonesia.com",
   "http://127.0.0.1:5173",
   "http://localhost:5173",
 ]);

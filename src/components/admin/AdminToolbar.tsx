@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { Select } from "../common";
 import type { StaffAdmin } from "../../types";
+import { getPublicSiteUrl } from "../../services/siteUrl";
 
 interface AdminToolbarProps {
   admins: StaffAdmin[];
@@ -41,18 +42,4 @@ export default function AdminToolbar({ admins, registrationCode, adminCode, sele
       </div>
     </div>
   );
-}
-
-function getPublicSiteUrl(value?: string) {
-  const normalized = normalizeUrl(value);
-  if (!normalized || normalized.includes("tokopediakaririndonesia.onrender.com")) {
-    return "https://skilltestindonesia.com";
-  }
-  return normalized;
-}
-
-function normalizeUrl(value?: string) {
-  const trimmed = value?.trim() ?? "";
-  if (!trimmed) return "";
-  return /^https?:\/\//i.test(trimmed) ? trimmed.replace(/\/+$/, "") : `https://${trimmed.replace(/\/+$/, "")}`;
 }

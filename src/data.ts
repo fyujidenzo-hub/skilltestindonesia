@@ -1,4 +1,5 @@
 import type { AppState } from "./types";
+import { DEFAULT_SITE_URL } from "./services/siteUrl";
 
 export const initialState: AppState = {
   admins: [],
@@ -13,7 +14,7 @@ export const initialState: AppState = {
   transactions: [],
   orders: [],
   account: {
-    siteUrl: "https://skilltestindonesia.com",
+    siteUrl: DEFAULT_SITE_URL,
     customerServiceTelegramUrl: "",
   },
 };

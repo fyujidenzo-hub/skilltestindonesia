@@ -7,6 +7,7 @@ import { updateSettings } from "../../services/settingsService";
 import { useAppStore } from "../../store/AppStore";
 import type { StaffAdmin } from "../../types";
 import { updateCurrentAccountPassword } from "../../services/authService";
+import { getPublicSiteUrl } from "../../services/siteUrl";
 
 export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin }) {
   const { state, dispatch } = useAppStore();
@@ -26,7 +27,7 @@ export default function AccountPanel({ activeAdmin }: { activeAdmin: StaffAdmin 
   const [savingSettings, setSavingSettings] = useState(false);
   const inviteCode = activeAdmin.invitationCode ?? activeAdmin.code;
   const adminCode = activeAdmin.adminCode ?? activeAdmin.code;
-  const siteUrl = normalizeUrl(state.account.siteUrl) || window.location.origin;
+  const siteUrl = getPublicSiteUrl(state.account.siteUrl);
   const inviteLink = `${siteUrl}/register?code=${inviteCode}`;
 
   const saveProfile = async () => {

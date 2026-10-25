@@ -2,6 +2,7 @@ import { firebaseReady } from "../firebase";
 import { initialState } from "../data";
 import type { AppState } from "../types";
 import { getAuthContext, type AuthContext } from "./authService";
+import { getPublicSiteUrl } from "./siteUrl";
 
 const storageKey = "orderops-app-state";
 
@@ -66,7 +67,11 @@ function mergeWithRequiredDefaults(state: AppState): AppState {
     banks: state.banks,
     transactions: state.transactions,
     orders: state.orders,
-    account: { ...emptyAccount, ...state.account },
+    account: {
+      ...emptyAccount,
+      ...state.account,
+      siteUrl: getPublicSiteUrl(state.account.siteUrl),
+    },
   };
 }
 
