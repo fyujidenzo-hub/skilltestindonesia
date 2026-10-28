@@ -14,6 +14,15 @@ if (( node_major < 22 )); then
   exit 1
 fi
 
+if [[ ! -f .env.production ]]; then
+  for required in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_APP_ID; do
+    if [[ -z "${!required:-}" ]]; then
+      echo "Provide the public Firebase build variables through the cPanel environment or a private .env.production file before deploying." >&2
+      exit 1
+    fi
+  done
+fi
+
 npm ci
 npm run build
 
