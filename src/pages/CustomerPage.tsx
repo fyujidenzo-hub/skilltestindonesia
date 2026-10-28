@@ -2,7 +2,7 @@ import { AlertCircle, CheckCircle2, Clock, PackageCheck, Truck, X } from "lucide
 import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
-import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
+import CustomerHeader from "../components/customer/CustomerHeader";
 import CustomerHero from "../components/customer/CustomerHero";
 import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
@@ -14,7 +14,7 @@ import { getOrderState } from "../services/orderStateService";
 import { belongsToMember } from "../services/memberOwnership";
 import { updateMember } from "../services/membersService";
 import { useAppStore } from "../store/AppStore";
-import type { Order, Product, Transaction } from "../types";
+import type { Order, Product } from "../types";
 import { formatRupiah, shortDate } from "../utils";
 
 const favoriteStoragePrefix = "tokopedia-product-favorites";
@@ -66,54 +66,13 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   }, [currentMember, favoriteStorageKey]);
 
   const activeOrder = currentMember
-    ? state.orders.find((order) => 
+    ? state.orders.find((order) =>
         belongsToMember(order, currentMember) &&
         !["completed", "diserahkan", "rejected"].includes(order.status)
       ) ?? null
     : null;
 
-  const notifications = useMemo<CustomerNotification[]>(() => {
-    if (!currentMember) return [];
 
-    const rejectedOrderNotifications = state.orders
-      .filter((order) => belongsToMember(order, currentMember) && getOrderState(order) === "rejected")
-      .slice(0, 3)
-      .map((order) => ({
-        id: `order-rejected-${order.id}`,
-        title: "Permintaan produk ditolak",
-        text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
-        tone: "danger" as const,
-        targetPath: "/orders",
-      }));
-
-    const orderNotifications = state.orders
-      .filter((order) => belongsToMember(order, currentMember) && !["completed", "diserahkan", "rejected"].includes(order.status))
-      .slice(0, 3)
-      .map((order) => ({
-        id: `order-${order.id}`,
-        title: `Order ${order.status}`,
-        text: `${order.productName || "Menunggu penugasan"} · ${getOrderCode(order)}`,
-        tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
-        targetPath: "/orders",
-      }));
-
-    const transactionNotifications = state.transactions
-      .filter((transaction) => belongsToMember(transaction, currentMember))
-      .slice(0, 4)
-      .map((transaction) => ({
-        id: `transaction-${transaction.id}`,
-        title: getCustomerTransactionTitle(transaction),
-        text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
-        tone:
-          transaction.status === "approved"
-            ? ("success" as const)
-            : transaction.status === "rejected"
-              ? ("danger" as const)
-              : ("warning" as const),
-      }));
-
-    return [...rejectedOrderNotifications, ...orderNotifications, ...transactionNotifications].slice(0, 6);
-  }, [currentMember, state.orders, state.transactions]);
 
   const filteredProducts = useMemo(
     () => state.products.filter((product) => `${product.name} ${product.code} ${product.category}`.toLowerCase().includes(query.toLowerCase())),
@@ -314,7 +273,7 @@ return (
     <CustomerHeader
       query={query}
       activeUsername={currentMember?.username}
-      notifications={notifications}
+
       onQueryChange={setQuery}
       onLogout={logout}
       navigate={navigate}
@@ -550,10 +509,4 @@ function LoginRequiredAlert({ message, onClose, onLogin }: { message: string; on
       </div>
     </div>
   );
-}
-
-
-function getCustomerTransactionTitle(transaction: Transaction) {
-  const label = transaction.type === "reward" ? "Bonus Saldo" : transaction.type === "topup" ? "Isi Saldo" : "Penarikan";
-  return transaction.status === "pending" ? `${label} pending` : `${label} ${transaction.status}`;
 }

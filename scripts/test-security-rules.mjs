@@ -4,7 +4,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { ref, uploadBytes } from "firebase/storage";
 
 const projectId = "demo-skilltest";
@@ -82,6 +82,15 @@ try {
   const superDb = testEnvironment.authenticatedContext("super-uid").firestore();
   const directOwnerDb = testEnvironment.authenticatedContext("direct-owner-uid").firestore();
   const impostorDb = testEnvironment.authenticatedContext("impostor-uid").firestore();
+
+  const ownNotification = doc(memberDb, "notificationStates", "member-uid", "items", "order-1-created");
+  await assertSucceeds(setDoc(ownNotification, { readAt: serverTimestamp() }, { merge: true }));
+  await assertSucceeds(getDocs(collection(memberDb, "notificationStates", "member-uid", "items")));
+  await assertFails(getDoc(doc(employeeDb, "notificationStates", "member-uid", "items", "order-1-created")));
+  await assertFails(setDoc(doc(employeeDb, "notificationStates", "member-uid", "items", "order-1-created"), { clearedAt: serverTimestamp() }, { merge: true }));
+  await assertFails(setDoc(doc(memberDb, "notificationStates", "member-uid", "items", "malformed"), { title: "injected" }));
+  await assertFails(getDoc(doc(memberDb, "notificationDeviceTokens", "some-token")));
+  await assertFails(setDoc(doc(memberDb, "notificationDeviceTokens", "some-token"), { uid: "member-uid", token: "spoofed" }));
 
   await assertFails(getDoc(doc(anonymousDb, "members", "member-1")));
   await assertSucceeds(getDoc(doc(anonymousDb, "products", "product-1")));

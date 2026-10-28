@@ -5,6 +5,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, authPersistenceReady, db, waitForAuthReady } from "../firebase";
+import { detachCurrentPushToken } from "./pushNotifications";
 import { identityKey, type IdentityKeyType } from "./identityKey";
 import { normalizePhone, normalizeUsername } from "./memberOwnership";
 
@@ -52,6 +53,7 @@ function normalizeFirebasePassword(password: string) {
 }
 
 export async function clearAuthenticatedSession() {
+  await detachCurrentPushToken().catch(() => undefined);
   if (auth) await signOut(auth);
 }
 

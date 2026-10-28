@@ -1,0 +1,12 @@
+{
+  "name": "Tokopedia Work Account",
+  "short_name": "Tokopedia",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b6b50",
+  "icons": [
+    { "src": "/assets/customer-logo.jpeg", "sizes": "515x594", "type": "image/jpeg", "purpose": "any" }
+  ]
+}

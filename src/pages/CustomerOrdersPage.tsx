@@ -3,7 +3,7 @@ import AssignmentPanel from "../components/customer/AssignmentPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
-import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
+import CustomerHeader from "../components/customer/CustomerHeader";
 import ProductImage from "../components/ProductImage";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { completeWorkflowOrder, getOrdersByMember, submitWorkflowOrder, subscribeToOrdersByMember, updateOrderStatus } from "../services/ordersService";
@@ -142,81 +142,7 @@ export default function CustomerOrdersPage({ navigate }: { navigate: Navigate })
       ? orders.filter((order) => order.id !== activeOrder.id)
       : orders;
 
-const notifications = useMemo<CustomerNotification[]>(() => {
-  if (!currentMember) return [];
 
-  const rejectedOrderNotifications = state.orders
-    .filter(
-      (order) =>
-        belongsToMember(order, currentMember) &&
-        getOrderState(order) === "rejected"
-    )
-    .slice(0, 3)
-    .map((order) => ({
-      id: `order-rejected-${order.id}`,
-      title: "Permintaan produk ditolak",
-      text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
-      tone: "danger" as const,
-      targetPath: "/orders",
-    }));
-
-  const orderNotifications = state.orders
-    .filter((order) => {
-      const orderState = getOrderState(order);
-
-      return (
-        belongsToMember(order, currentMember) &&
-        orderState !== "diserahkan" &&
-        orderState !== "rejected"
-      );
-    })
-    .slice(0, 3)
-    .map((order) => {
-      const orderState = getOrderState(order);
-
-      return {
-        id: `order-${order.id}`,
-        title:
-          orderState === "waiting_assignment"
-            ? "Menunggu penugasan"
-            : orderState === "product_assigned"
-              ? "Produk telah ditetapkan"
-              : orderState === "waiting_shipment"
-                ? "Menunggu pengiriman"
-                : orderState === "belum_diserahkan"
-                  ? "Menunggu pengiriman"
-                  : "Pembaruan pesanan",
-        text: `${getOrderCode(order)} · ${order.productName || "Waiting for delivery"}`,
-        tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
-        targetPath: "/orders",
-      };
-    });
-
-  const transactionNotifications = state.transactions
-    .filter((transaction) => belongsToMember(transaction, currentMember))
-    .slice(0, 4)
-    .map((transaction) => ({
-      id: `transaction-${transaction.id}`,
-      title:
-        transaction.status === "pending"
-          ? `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} menunggu`
-          : `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} ${transaction.status === "approved" ? "disetujui" : "ditolak"}`,
-      text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
-      tone:
-        transaction.status === "approved"
-          ? ("success" as const)
-          : transaction.status === "rejected"
-            ? ("danger" as const)
-            : ("warning" as const),
-      targetPath: transaction.type === "topup" ? "/topup" : "/withdraw",
-    }));
-
-  return [
-    ...rejectedOrderNotifications,
-    ...orderNotifications,
-    ...transactionNotifications,
-  ].slice(0, 6);
-}, [currentMember, state.orders, state.transactions]);
 
 
   const logout = () => {
@@ -397,7 +323,7 @@ const handleRejectChangedProduct = async () => {
 
   return (
     <main className="min-h-screen customer-page-bg pb-24 text-ink">
-      <CustomerHeader query={query} activeUsername={currentMember.username} notifications={notifications} onQueryChange={setQuery} onLogout={logout} navigate={navigate} />
+      <CustomerHeader query={query} activeUsername={currentMember.username}  onQueryChange={setQuery} onLogout={logout} navigate={navigate} />
 
       <section className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
         <div className="mb-4 flex items-center justify-between gap-4">

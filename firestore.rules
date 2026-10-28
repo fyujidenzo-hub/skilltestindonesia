@@ -370,6 +370,18 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // The inbox content is derived from records already visible to each account.
+    // Only the authenticated owner can store read/clear markers for their inbox.
+    match /notificationStates/{uid}/items/{eventId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['readAt', 'clearedAt'])
+        && (!request.resource.data.keys().hasAny(['readAt']) || request.resource.data.readAt is timestamp)
+        && (!request.resource.data.keys().hasAny(['clearedAt']) || request.resource.data.clearedAt is timestamp);
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

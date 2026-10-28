@@ -1,13 +1,10 @@
 import { ArrowLeft, CheckCircle2, CreditCard, ShieldCheck, Wallet } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
-import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
+import CustomerHeader from "../components/customer/CustomerHeader";
 import TransactionModal from "../components/customer/TransactionModal";
 import { clearActiveCustomerId, getActiveCustomer } from "../services/customerSession";
-import { getOrderCode } from "../services/orderCode";
-import { getOrderState } from "../services/orderStateService";
-import { belongsToMember } from "../services/memberOwnership";
 import { useAppStore } from "../store/AppStore";
 
 export default function CustomerTransactionPage({ navigate, type }: { navigate: Navigate; type: "topup" | "withdraw" }) {
@@ -15,52 +12,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
   const [query, setQuery] = useState("");
   const member = getActiveCustomer(state.members);
 
-  const notifications = useMemo<CustomerNotification[]>(() => {
-    if (!member) return [];
 
-    const rejectedOrderNotifications = state.orders
-      .filter((order) => belongsToMember(order, member) && getOrderState(order) === "rejected")
-      .slice(0, 3)
-      .map((order) => ({
-        id: `order-rejected-${order.id}`,
-        title: "Permintaan produk ditolak",
-        text: `${order.productName || "Produk yang dipilih"} · ${getOrderCode(order)}`,
-        tone: "danger" as const,
-        targetPath: "/orders",
-      }));
-
-    const orderNotifications = state.orders
-      .filter((order) => belongsToMember(order, member) && !["completed", "diserahkan", "rejected"].includes(order.status))
-      .slice(0, 3)
-      .map((order) => ({
-        id: `order-${order.id}`,
-        title: `Order ${order.status}`,
-        text: `${order.productName || "Menunggu penugasan"} · ${getOrderCode(order)}`,
-        tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
-        targetPath: "/orders",
-      }));
-
-    const transactionNotifications = state.transactions
-      .filter((transaction) => belongsToMember(transaction, member))
-      .slice(0, 4)
-      .map((transaction) => ({
-        id: `transaction-${transaction.id}`,
-        title:
-          transaction.status === "pending"
-            ? `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} menunggu`
-            : `${transaction.type === "topup" ? "Isi saldo" : "Penarikan"} ${transaction.status === "approved" ? "disetujui" : "ditolak"}`,
-        text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
-        tone:
-          transaction.status === "approved"
-            ? ("success" as const)
-            : transaction.status === "rejected"
-              ? ("danger" as const)
-              : ("warning" as const),
-        targetPath: transaction.type === "topup" ? "/topup" : "/withdraw",
-      }));
-
-    return [...rejectedOrderNotifications, ...orderNotifications, ...transactionNotifications].slice(0, 6);
-  }, [member, state.orders, state.transactions]);
 
   const logout = () => {
     clearActiveCustomerId();
@@ -94,7 +46,7 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
       <CustomerHeader
         query={query}
         activeUsername={member.username}
-        notifications={notifications}
+
         onQueryChange={setQuery}
         onLogout={logout}
         navigate={navigate}

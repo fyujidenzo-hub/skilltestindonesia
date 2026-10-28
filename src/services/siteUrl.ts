@@ -1,7 +1,12 @@
-export const DEFAULT_SITE_URL = "https://skillmitraindonesia.com";
+export const DEFAULT_SITE_URL = "https://testskillindonesia.com";
 
 const legacyHosts = new Set([
+  "skillmitraindonesia.com",
   "skilltestindonesia.com",
+  "www.skilltestindonesia.com",
+  "trainingtestindonesia.com",
+  "www.trainingtestindonesia.com",
+  "www.testskillindonesia.com",
   "tokopediakaririndonesia.onrender.com",
 ]);
 

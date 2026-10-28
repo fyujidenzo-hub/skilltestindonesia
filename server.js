@@ -8,6 +8,7 @@ import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 import { createHash, pbkdf2Sync, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { installNotificationPush } from "./push-notifications.js";
 
 dotenv.config();
 
@@ -102,6 +103,10 @@ app.use((_req, res, next) => {
   next();
 });
 const allowedOrigins = new Set([
+  "https://testskillindonesia.com",
+  "https://www.testskillindonesia.com",
+  "https://trainingtestindonesia.com",
+  "https://www.trainingtestindonesia.com",
   "https://skilltestindonesia.com",
   "https://skillmitraindonesia.com",
   "http://127.0.0.1:5173",
@@ -732,6 +737,8 @@ async function requireMember(req, res, next) {
   }
 }
 
+installNotificationPush(app, adminAuth, adminFirestore);
+
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API endpoint tidak ditemukan." });
 });
@@ -744,7 +751,7 @@ app.use(
     maxAge: "1y",
     immutable: true,
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith("index.html")) {
+      if (filePath.endsWith("index.html") || filePath.endsWith("sw.js") || filePath.endsWith("manifest.webmanifest")) {
         res.setHeader("Cache-Control", "no-cache");
       }
     },

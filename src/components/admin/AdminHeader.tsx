@@ -1,31 +1,22 @@
-import { Bell, CheckCircle2, Clock, LogOut, PackagePlus, UserPlus, WalletCards, X } from "lucide-react";
-import { useState } from "react";
+import { LogOut } from "lucide-react";
 import type { Navigate } from "../../App";
 import { roleLabel } from "../../services/adminSession";
 import type { StaffAdmin } from "../../types";
+import NotificationBell from "../NotificationBell";
 
 const customerLogo = "/assets/customer-logo.jpeg";
 
-export interface AdminNotification {
-  id: string;
-  title: string;
-  text: string;
-  time?: string;
-  tone: "registration" | "topup" | "withdrawal" | "order" | "completed";
-}
-
 export default function AdminHeader({
   activeAdmin,
-  notifications,
   navigate,
   onLogout,
+  onNotificationTab,
 }: {
   activeAdmin: StaffAdmin;
-  notifications: AdminNotification[];
   navigate: Navigate;
   onLogout: () => void;
+  onNotificationTab?: (tab: "Members" | "Tasks" | "Orders" | "Finance") => void;
 }) {
-  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-xl">
@@ -43,56 +34,7 @@ export default function AdminHeader({
           <button className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm hover:border-emerald-200 hover:bg-mint hover:text-forest sm:block" onClick={() => navigate("/")}>
             Halaman kerja
           </button>
-          <div className="relative">
-            <button
-              className={`relative grid h-10 w-10 place-items-center rounded border text-slate-600 transition ${showNotifications ? "border-forest bg-mint text-forest" : "border-slate-200 hover:bg-slate-50"}`}
-              aria-label="Notifikasi"
-              aria-expanded={showNotifications}
-              onClick={() => setShowNotifications((isOpen) => !isOpen)}
-            >
-              <Bell size={18} />
-              {notifications.length > 0 && (
-                <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-[10px] font-black text-white">
-                  {notifications.length}
-                </span>
-              )}
-            </button>
-            {showNotifications && (
-              <div className="absolute right-0 top-12 z-50 w-[min(380px,calc(100vw-2rem))] rounded border border-slate-200 bg-white shadow-panel">
-                <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
-                  <div>
-                    <p className="text-sm font-black text-slate-900">Notifikasi</p>
-                    <p className="text-xs text-slate-500">{notifications.length ? "Aktivitas admin terbaru" : "Belum ada notifikasi"}</p>
-                  </div>
-                  <button className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Tutup notifikasi" onClick={() => setShowNotifications(false)}>
-                    <X size={15} />
-                  </button>
-                </div>
-                <div className="max-h-[380px] overflow-y-auto p-2">
-                  {notifications.length ? (
-                    notifications.map((notification) => (
-                      <div key={notification.id} className="flex gap-3 rounded px-3 py-3 hover:bg-slate-50">
-                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${notificationToneClass(notification.tone)}`}>
-                          {notificationIcon(notification.tone)}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-black text-slate-800">{notification.title}</span>
-                          <span className="mt-0.5 block text-xs leading-5 text-slate-500">{notification.text}</span>
-                          {notification.time && <span className="mt-1 block text-[11px] font-bold text-slate-400">{notification.time}</span>}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="grid place-items-center px-4 py-8 text-center">
-                      <Bell size={22} className="text-slate-300" />
-                      <p className="mt-3 text-sm font-bold text-slate-700">Saat ini tidak ada notifikasi.</p>
-                      <p className="mt-1 text-xs text-slate-500">Pendaftaran, permintaan, dan pesanan baru akan muncul di sini.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <NotificationBell scope="admin" admin={activeAdmin} navigate={navigate} onAdminTab={onNotificationTab} />
           <div className="hidden text-right sm:block">
             <p className="text-sm font-bold">{activeAdmin.name}</p>
             <p className="text-xs text-slate-500">{roleLabel(activeAdmin.role)}</p>
@@ -105,23 +47,4 @@ export default function AdminHeader({
       </div>
     </header>
   );
-}
-
-function notificationToneClass(tone: AdminNotification["tone"]) {
-  const classes: Record<AdminNotification["tone"], string> = {
-    registration: "bg-emerald-50 text-emerald-700",
-    topup: "bg-mint text-forest",
-    withdrawal: "bg-rose-50 text-rose-700",
-    order: "bg-amber-50 text-amber-700",
-    completed: "bg-blue-50 text-blue-700",
-  };
-  return classes[tone];
-}
-
-function notificationIcon(tone: AdminNotification["tone"]) {
-  if (tone === "registration") return <UserPlus size={17} />;
-  if (tone === "topup") return <WalletCards size={17} />;
-  if (tone === "withdrawal") return <Clock size={17} />;
-  if (tone === "completed") return <CheckCircle2 size={17} />;
-  return <PackagePlus size={17} />;
 }

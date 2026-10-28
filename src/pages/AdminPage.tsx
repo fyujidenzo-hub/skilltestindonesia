@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import AccountPanel from "../components/admin/AccountPanel";
-import AdminHeader, { type AdminNotification } from "../components/admin/AdminHeader";
+import AdminHeader from "../components/admin/AdminHeader";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import AdminToolbar from "../components/admin/AdminToolbar";
 import CatalogAdmin from "../components/admin/CatalogAdmin";
@@ -104,10 +104,6 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
     return adminMatch && textMatch;
   });
 
-  const adminNotifications = useMemo(() => {
-    return buildAdminNotifications(scopedMembersForOverview, scopedTransactionsForOverview, filteredOrders);
-  }, [filteredOrders, scopedMembersForOverview, scopedTransactionsForOverview]);
-
   const selectedAdminCode =
     selectedAdmin === "All admins"
       ? activeAdmin?.invitationCode ?? activeAdmin?.code ?? visibleAdmins[0]?.invitationCode ?? visibleAdmins[0]?.code ?? ""
@@ -143,8 +139,8 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
     <main className="min-h-screen bg-cloud text-ink">
       <AdminHeader
         activeAdmin={activeAdmin}
-        notifications={adminNotifications}
         navigate={navigate}
+        onNotificationTab={(tab) => setActiveTab(allowedTabs.includes(tab) ? tab : allowedTabs[0])}
         onLogout={() => {
           clearActiveAdminId();
           navigate("/admin/login");
@@ -231,65 +227,4 @@ function isInPeriod(value: string, period: "today" | "month") {
 function parseRecordDate(value: string) {
   const parsed = new Date(value.replace(" ", "T"));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function buildAdminNotifications(members: Member[], transactions: Transaction[], orders: AppState["orders"]): AdminNotification[] {
-  const registrationNotifications = members.map((member) => ({
-    id: `member-${member.id}`,
-    title: "Pendaftaran baru",
-    text: `${member.username} registered under ${member.referredBy || "admin scope"}.`,
-    time: member.lastLogin,
-    tone: "registration" as const,
-    sortTime: parseRecordDate(member.lastLogin)?.getTime() ?? 0,
-  }));
-
-  const transactionNotifications = transactions
-    .filter((transaction) => transaction.status === "pending")
-    .map((transaction) => ({
-      id: `transaction-${transaction.id}`,
-      title: transaction.type === "topup" ? "Permintaan isi saldo baru" : transaction.type === "withdrawal" ? "Permintaan penarikan baru" : "Imbalan saldo baru",
-      text: `${transaction.member} requested ${formatNotificationAmount(transaction.amount)}. Status: Pending.`,
-      time: transaction.createdAt,
-      tone: transaction.type === "topup" ? ("topup" as const) : transaction.type === "withdrawal" ? ("withdrawal" as const) : ("completed" as const),
-      sortTime: parseRecordDate(transaction.createdAt)?.getTime() ?? 0,
-    }));
-
-  const orderNotifications = orders
-    .filter((order) => getAdminOrderStatus(order) !== "completed")
-    .map((order) => ({
-      id: `order-${order.id}`,
-      title: getAdminOrderStatus(order) === "pending" ? "Pesanan menunggu penugasan" : "Pesanan sedang diproses",
-      text: `${order.member} has ${order.productName ? order.productName : "tugas pesanan"} tertunda.`,
-      waktu: order.createdAt,
-      tone: "order" as const,
-      sortTime: parseRecordDate(order.createdAt)?.getTime() ?? 0,
-    }));
-
-  const completedOrderNotifications = orders
-    .filter((order) => getAdminOrderStatus(order) === "completed")
-    .map((order) => ({
-      id: `completed-order-${order.id}`,
-      title: "Pesanan selesai",
-      text: `${order.member} completed ${order.productName || "sebuah tugas pemesanan"}.`,
-      time: order.completedAt ?? order.createdAt,
-      tone: "completed" as const,
-      sortTime: parseRecordDate(order.completedAt ?? order.createdAt)?.getTime() ?? 0,
-    }));
-
-  return [...registrationNotifications, ...transactionNotifications, ...orderNotifications, ...completedOrderNotifications]
-    .sort((left, right) => right.sortTime - left.sortTime)
-    .slice(0, 12)
-    .map(({ sortTime: _sortTime, ...notification }) => notification);
-}
-
-function getAdminOrderStatus(order: AppState["orders"][number]) {
-  return order.status === "diserahkan" || order.status === "completed" ? "completed" : "pending";
-}
-
-function formatNotificationAmount(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
