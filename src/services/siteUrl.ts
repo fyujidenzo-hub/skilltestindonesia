@@ -1,4 +1,4 @@
-export const DEFAULT_SITE_URL = "https://testskillindonesia.com";
+export const DEFAULT_SITE_URL = "https://testkemitraanindonesia.com";
 
 const legacyHosts = new Set([
   "skillmitraindonesia.com",
@@ -6,6 +6,7 @@ const legacyHosts = new Set([
   "www.skilltestindonesia.com",
   "trainingtestindonesia.com",
   "www.trainingtestindonesia.com",
+  "testskillindonesia.com",
   "www.testskillindonesia.com",
   "tokopediakaririndonesia.onrender.com",
 ]);

@@ -103,6 +103,8 @@ app.use((_req, res, next) => {
   next();
 });
 const allowedOrigins = new Set([
+  "https://testkemitraanindonesia.com",
+  "https://www.testkemitraanindonesia.com",
   "https://testskillindonesia.com",
   "https://www.testskillindonesia.com",
   "https://trainingtestindonesia.com",
